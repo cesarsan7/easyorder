@@ -41,46 +41,88 @@ export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia' | 'bizum' |
 // ─── Menú ────────────────────────────────────────────────────────────────────
 
 export interface MenuCategory {
-  id: number
+  menu_category_id: number
   name: string
   sort_order: number
+  is_active: boolean
   items: MenuItem[]
 }
 
 export interface MenuItem {
-  id: number
-  category_id: number
+  menu_item_id: number
   name: string
   description: string | null
   base_price: number
   image_url: string | null
   is_active: boolean
-  requires_variant: boolean
+  is_pizza: boolean
+  tags: string | null
+  requires_variant?: boolean  // optional UI helper
   variants: MenuVariant[]
   extras: Extra[]
 }
 
 export interface MenuVariant {
-  id: number
-  item_id: number
-  name: string
+  menu_variant_id: number
+  variant_name: string
   price: number
+  is_default: boolean
+  is_active: boolean
+  sku: string | null
 }
 
 export interface Extra {
-  id: number
+  extra_id: number
   name: string
-  price: number
+  price: number | null
+  allergens: string | null
+  is_active: boolean
 }
 
 // ─── Respuestas de endpoints públicos ────────────────────────────────────────
 
+// Matches GET /public/:slug/restaurant
 export interface RestaurantPublicResponse {
-  business: Business
+  id: number
+  slug: string
+  name: string
+  description: string | null
+  logo_url: string | null
+  brand_color: string | null
+  address: string | null
+  phone: string | null
+  moneda: string
+  zona_horaria: string
+  delivery_enabled: boolean
+  pickup_enabled: boolean
+  delivery_min_order: number
+  payment_methods: string[]
+  datos_bancarios: Record<string, string | null> | null
+  is_open: boolean
+  is_open_override: boolean | null
+  next_opening?: string | null   // optional, may not be returned yet
+  mensaje_bienvenida?: string | null
+  mensaje_cerrado?: string | null
+  horario_hoy: HorarioHoy | null
 }
 
+export interface HorarioHoy {
+  dia: string
+  disponible: boolean
+  apertura_1: string | null
+  cierre_1: string | null
+  apertura_2: string | null
+  cierre_2: string | null
+}
+
+// Matches GET /public/:slug/menu
 export interface MenuPublicResponse {
-  business: Pick<Business, 'id' | 'slug' | 'name' | 'logo_url' | 'brand_color' | 'is_open' | 'next_opening' | 'delivery_min_order'>
+  restaurante_id: number
+  moneda: string
+  restaurant_name: string
+  brand_color: string | null
+  logo_url: string | null
+  delivery_min_order: number
   categories: MenuCategory[]
 }
 

@@ -242,7 +242,7 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
   const accent = restaurant.brand_color ?? '#E63946'
   const isOpen = restaurant.is_open
   const deliveryMinOrder = menu.delivery_min_order ?? restaurant.delivery_min_order ?? 0
-  const moneda: string = (menu as any).moneda ?? (restaurant as any).moneda ?? 'EUR'
+  const moneda: string = menu.moneda ?? restaurant.moneda ?? 'EUR'
 
   const setMoneda = useCartStore((s) => s.setMoneda)
   useEffect(() => { setMoneda(moneda) }, [moneda, setMoneda])
