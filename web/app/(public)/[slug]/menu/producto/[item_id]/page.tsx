@@ -65,7 +65,7 @@ export default function ProductoPage() {
 
   const accent = ACCENT_FALLBACK
   const basePrice = selectedVariant ? selectedVariant.price : item.base_price
-  const extrasTotal = selectedExtras.reduce((s, e) => s + e.price, 0)
+  const extrasTotal = selectedExtras.reduce((s, e) => s + (e.price ?? 0), 0)
   const lineTotal = (basePrice + extrasTotal) * qty
   const canAdd = item.variants.length === 0 || selectedVariant !== null
 
