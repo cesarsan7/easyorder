@@ -12,6 +12,16 @@ const supabase = (() => {
   return createClient(url, key, { auth: { persistSession: false } });
 })();
 
+// Exported helper: validates a raw Bearer token (no slug required).
+// Returns the Supabase user or null if the token is invalid/expired.
+export async function validateBearerToken(authHeader: string | undefined) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user;
+}
+
 // Verifies the Supabase JWT via supabase.auth.getUser() (works with ES256)
 // and checks that the user has a row in local_memberships for the
 // restaurante_id resolved by resolveTenant.

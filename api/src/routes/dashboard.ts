@@ -3,12 +3,35 @@ import type { Variables } from '../types.js';
 import sql from '../lib/db.js';
 import { calcIsOpen, getHorarioHoy, getLocalContext, type Horario } from '../lib/is-open.js';
 import { resolveTenant } from '../middleware/tenant.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, validateBearerToken } from '../middleware/auth.js';
 
 const dashboardRoutes = new Hono<{ Variables: Variables }>();
 
 // All dashboard routes: slug resolution first, then JWT auth.
 dashboardRoutes.use('/:slug/*', resolveTenant, requireAuth);
+
+// ----------------------------------------------------------------------------
+// GET /dashboard/me
+//
+// Returns the list of restaurants the authenticated user belongs to.
+// Does NOT require a slug — used by the dashboard index page to find where
+// to redirect the user after login.
+// ----------------------------------------------------------------------------
+dashboardRoutes.get('/me', async (c) => {
+  const user = await validateBearerToken(c.req.header('Authorization'));
+  if (!user) return c.json({ error: 'unauthorized' }, 401);
+
+  const rows = await sql<{ slug: string; nombre: string; rol: string }[]>`
+    SELECT r.slug, r.nombre, lm.rol
+    FROM   local_memberships lm
+    JOIN   restaurante r ON r.id = lm.restaurante_id
+    WHERE  lm.user_id = ${user.id}
+    ORDER  BY lm.restaurante_id ASC
+    LIMIT  10
+  `;
+
+  return c.json({ restaurants: rows });
+});
 
 // ----------------------------------------------------------------------------
 // GET /dashboard/:slug/orders
