@@ -5,22 +5,35 @@ interface Props {
   params: Promise<{ slug: string }>
 }
 
+// API_URL (sin prefijo NEXT_PUBLIC_) se lee en runtime desde el servidor.
+// NEXT_PUBLIC_API_URL queda como fallback para compatibilidad con builds locales.
+const API_BASE =
+  process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? ''
+
 async function getRestaurant(slug: string): Promise<RestaurantPublicResponse | null> {
-  const base = process.env.NEXT_PUBLIC_API_URL
-  const res = await fetch(`${base}/public/${slug}/restaurant`, {
-    next: { revalidate: 60 },
-  })
-  if (!res.ok) return null
-  return res.json()
+  if (!API_BASE) return null
+  try {
+    const res = await fetch(`${API_BASE}/public/${slug}/restaurant`, {
+      next: { revalidate: 60 },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
 }
 
 async function getMenu(slug: string): Promise<MenuPublicResponse | null> {
-  const base = process.env.NEXT_PUBLIC_API_URL
-  const res = await fetch(`${base}/public/${slug}/menu`, {
-    next: { revalidate: 120 },
-  })
-  if (!res.ok) return null
-  return res.json()
+  if (!API_BASE) return null
+  try {
+    const res = await fetch(`${API_BASE}/public/${slug}/menu`, {
+      next: { revalidate: 120 },
+    })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
 }
 
 export default async function MenuPage({ params }: Props) {
