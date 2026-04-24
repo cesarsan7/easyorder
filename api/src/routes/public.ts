@@ -891,7 +891,11 @@ function groupBy<T>(items: T[], key: (item: T) => number): Map<number, T[]> {
 
 interface RestauranteRow {
   id: number;
+  slug: string;
   nombre: string;
+  descripcion: string | null;
+  logo_url: string | null;
+  brand_color: string | null;
   direccion: string | null;
   telefono: string | null;
   moneda: string;
@@ -901,6 +905,11 @@ interface RestauranteRow {
   radio_cobertura_km: string | null;
   tarifa_envio_tipo: string | null;
   tarifa_envio_valor: string | null;
+  delivery_enabled: boolean | null;
+  pickup_enabled: boolean | null;
+  delivery_min_order: string | null;
+  payment_methods: string[] | null;
+  datos_bancarios: Record<string, string | null> | null;
 }
 
 interface CategoryRow {
@@ -918,6 +927,8 @@ interface ItemRow {
   is_pizza: boolean;
   is_active: boolean;
   tags: string | null;
+  image_url: string | null;
+  base_price: string | null;  // postgres numeric → string
 }
 
 interface VariantRow {
