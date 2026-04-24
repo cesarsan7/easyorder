@@ -1,0 +1,2675 @@
+{
+  "name": "[MVP] Pizzeria",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatwootnew",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -48,
+        1024
+      ],
+      "id": "ad45b567-e25f-48e1-9440-86a514134c20",
+      "name": "Webhook",
+      "webhookId": "4e670c56-c403-465b-9052-a744af040529"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b672ef29-3bce-4bfe-97b4-03279f23bb8a",
+                    "leftValue": "={{ $('Webhook').item.json.body.conversation.messages[0].attachments[0].file_type }}",
+                    "rightValue": "=location",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ubicacion"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "dc6cae79-cec0-4400-9c52-c0c1c6b2a58f",
+                    "leftValue": "={{ $('Webhook').item.json.body.conversation.messages[0].attachments[0].file_type }}",
+                    "rightValue": "audio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f020befa-ad2f-443f-982e-9d072db2ab29",
+                    "leftValue": "={{ $('Webhook').item.json.body.conversation.messages[0].attachments[0].file_type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Imagen"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        976
+      ],
+      "id": "0f0b6329-dea4-4e63-898a-90c6c0badb1c",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "es"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1344,
+        928
+      ],
+      "id": "7e376798-4793-48d0-9b42-35637b3bfdde",
+      "name": "OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "MjjYLoIl0GDk3Exw",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "110ecd26-35c1-4912-9b57-3e35bf3dd30b",
+              "name": "ubicacion",
+              "value": "={{ Number($('Webhook').item.json.body.attachments[0].coordinates_lat) }}\n,{{ Number($('Webhook').item.json.body.attachments[0].coordinates_long) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        784
+      ],
+      "id": "6dd5d36a-0eee-4802-987d-61b1c7a44025",
+      "name": "Ubicación"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        816
+      ],
+      "id": "a3a69a23-16fb-4521-9f30-4e4b281d91ec",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "key": "={{ $('Input').item.json.telefono }}_buffer"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2432,
+        992
+      ],
+      "id": "ef9f8fac-9bdd-47b5-82aa-4fb4d1ca7c03",
+      "name": "Redis2",
+      "credentials": {
+        "redis": {
+          "id": "KHlGLPxHsn0uxbtL",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message?.last() || '' }}",
+                    "rightValue": "={{ $('Input').item.json.input }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    },
+                    "id": "232870fe-40d2-4d7d-8029-162f6ffeca1c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "No hacer nada"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "70afb62a-8092-41fe-9f1a-913ca0c2a80c",
+                    "leftValue": "={{ DateTime.fromISO($('Webhook').item.json.body.created_at).setZone(\"America/Argentina/Cordoba\").toISO() }}",
+                    "rightValue": "={{ $now.minus({ seconds: 1 }).setZone(\"America/Santiago\").toISO() }}",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "before"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Seguir"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Esperar"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2240,
+        976
+      ],
+      "id": "6fcdce77-8b50-42fb-8a5b-3e1299b6b90b",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2432,
+        1152
+      ],
+      "id": "4ffa9d4a-d768-4d19-bff0-8016b87ab3c5",
+      "name": "Wait7",
+      "webhookId": "8838bbfa-9e88-4516-8ad6-49f10c91d0b0"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.conversation.messages[0].attachments[0].data_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        1072
+      ],
+      "id": "9cc583ab-d5aa-45e2-900c-95453749f346",
+      "name": "Descargar Imagen",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body.attachments[0].data_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1168,
+        928
+      ],
+      "id": "1bc175ff-b489-4367-aef4-0c2cec437bb7",
+      "name": "Descargar Audio",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.bot_status || \"\"}}",
+                    "rightValue": "on",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7d017a90-f18f-4781-aed2-d731e97fbe0f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "on"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d7df03fb-af2e-4744-aa6c-3579cfa3591e",
+                    "leftValue": "={{ $json.bot_status }}",
+                    "rightValue": "Off",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Off"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        576,
+        1024
+      ],
+      "id": "d1515905-34f8-4531-953a-9415d3027dd9",
+      "name": "Bot"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "Describe la imagen para enviársela al Agente de Whatsapp",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        1072
+      ],
+      "id": "d4e55e45-a1d2-4e9a-ad7a-1ffb460bab19",
+      "name": "Analyze an image",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "92988da8-22bf-433c-b1b2-dcf9dc5404d2",
+              "name": "input",
+              "value": "={{ $json.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        1248
+      ],
+      "id": "9d142706-3125-4799-b6a8-af0693bf2b49",
+      "name": "Texto"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "10c3ceaf-26e3-4486-bfa8-939a06073d75",
+              "name": "telefono",
+              "value": "={{ $json.body.sender.phone_number }}",
+              "type": "string"
+            },
+            {
+              "id": "afa59e82-7ce2-4415-844c-b526444bb33f",
+              "name": "account_id",
+              "value": "={{ $json.body.account.id }}",
+              "type": "number"
+            },
+            {
+              "id": "8324b390-557b-466d-bb9e-3f09660c6cf6",
+              "name": "contact_id",
+              "value": "={{ $json.body.conversation.contact_inbox.contact_id }}",
+              "type": "number"
+            },
+            {
+              "id": "dc9ef220-7cee-4278-aed7-61ca625c3784",
+              "name": "conversation_id",
+              "value": "={{ $json.body.conversation.id }}",
+              "type": "number"
+            },
+            {
+              "id": "275f0c48-14c4-43e9-b72a-4082ae995979",
+              "name": "bot_status",
+              "value": "={{ $json.body.conversation.messages[0].sender.custom_attributes.bot }}",
+              "type": "string"
+            },
+            {
+              "id": "a5328ad7-b177-4ea7-aab8-54ab15a2eece",
+              "name": "message_type",
+              "value": "={{ $json.body.conversation.messages[0].content_type }}",
+              "type": "string"
+            },
+            {
+              "id": "724acd4f-13c4-4a36-891d-7af859fc1a43",
+              "name": "body",
+              "value": "={{ $json.body.conversation.messages[0].content }}",
+              "type": "string"
+            },
+            {
+              "id": "ddc0540a-2a71-4247-bd75-5079f471dba1",
+              "name": "file_type",
+              "value": "={{ $json.body.conversation.messages[0].attachments[0].file_type }}",
+              "type": "string"
+            },
+            {
+              "id": "ebfe4b36-c7df-4b56-b8bb-ae7e52539897",
+              "name": "data_url",
+              "value": "={{ $json.body.conversation.messages[0].attachments[0].data_url }}",
+              "type": "string"
+            },
+            {
+              "id": "ff1c9c43-35d6-4002-8aee-4fadfde95591",
+              "name": "moneda",
+              "value": "={{ $json.moneda || '€' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        1024
+      ],
+      "id": "3d4bae68-6dc6-476c-bca2-ed407407c046",
+      "name": "Variables"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "273f7462-4480-40be-ba2d-799176ea44c6",
+              "name": "input",
+              "value": "={{ $json.content }}{{ $json.input }}{{ $json.text }}{{ $json.ubicacion }}",
+              "type": "string"
+            },
+            {
+              "id": "9bf7b58e-333d-4657-b776-5038f2de67de",
+              "name": "telefono",
+              "value": "={{ $('Variables').item.json.telefono }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1616,
+        992
+      ],
+      "id": "53a701ad-c08b-405c-9801-6b1f23da2245",
+      "name": "Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f74eb0c1-fb69-4891-a199-091ffb8be36a",
+              "name": "input",
+              "value": "={{ $json.message.join(\"\\n\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2640,
+        992
+      ],
+      "id": "d4cb2af8-3b55-41d9-8917-bf26837ddcf7",
+      "name": "Input Agente"
+    },
+    {
+      "parameters": {
+        "content": "## Validaciones",
+        "height": 240,
+        "width": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        352,
+        960
+      ],
+      "typeVersion": 1,
+      "id": "deadc9be-90eb-478a-a40a-dee81f8c241b",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Multi-modal",
+        "height": 672,
+        "width": 976,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        816,
+        768
+      ],
+      "typeVersion": 1,
+      "id": "f6bb4bc2-afba-4df9-b30f-e0b5a9dd7f47",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Buffer de mensajes",
+        "height": 640,
+        "width": 944,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1824,
+        784
+      ],
+      "typeVersion": 1,
+      "id": "93c9ee9e-0ecb-4bc3-9f27-03ca3a390224",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Validación Usuario",
+        "height": 640,
+        "width": 1200,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2832,
+        752
+      ],
+      "typeVersion": 1,
+      "id": "eca45d0d-936e-4497-99a8-3235f9d474a5",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT telefono, contexto, timestamp, session_id, session_started_at, restaurante_id\nFROM public.contexto\nWHERE telefono = '{{ $('Variables').item.json.telefono }}'\nORDER BY timestamp DESC\nLIMIT 1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        2880,
+        992
+      ],
+      "id": "d24958d9-9637-4799-9d25-bb56cb074b71",
+      "name": "Obtener registros",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "tud2wJu4FrMUtnqd",
+          "name": "postgres restaurante_mvp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "message",
+        "key": "={{ $('Variables').item.json.telefono }}_buffer",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2048,
+        992
+      ],
+      "id": "73d4019c-234a-4323-b667-3540c5c00cee",
+      "name": "Redis1",
+      "credentials": {
+        "redis": {
+          "id": "KHlGLPxHsn0uxbtL",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "={{ $('Variables').item.json.telefono }}_buffer",
+        "messageData": "={{ $json.input }}",
+        "tail": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        992
+      ],
+      "id": "7e9c0371-b926-41ad-8960-b06fb4fb4306",
+      "name": "Redis",
+      "credentials": {
+        "redis": {
+          "id": "KHlGLPxHsn0uxbtL",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1e834664-7315-4ae4-a273-502be792e250",
+              "leftValue": "={{ $json.telefono }}",
+              "rightValue": "null",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3056,
+        992
+      ],
+      "id": "d6f3a8a7-8a90-4ff1-a330-0a6d8fad3a65",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "contexto",
+          "mode": "list",
+          "cachedResultName": "contexto"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $('Variables').item.json.telefono }}",
+            "timestamp": "={{ $now }}",
+            "contexto": "El usuario es un cliente nuevo, no tengo más contexto para entregarte.",
+            "restaurante_id": 1
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contexto",
+              "displayName": "contexto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3264,
+        1120
+      ],
+      "id": "9e9b467f-b8bc-46c6-a80c-08255852398d",
+      "name": "Nuevo usuario",
+      "credentials": {
+        "postgres": {
+          "id": "tud2wJu4FrMUtnqd",
+          "name": "postgres restaurante_mvp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        880
+      ],
+      "id": "9e8b0899-114d-4130-83e4-2e23d5571753",
+      "name": "Preparar contexto"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0ab7f8d6-81a7-4b39-85a2-8ecdca2e5a47",
+              "name": "contexto",
+              "value": "El usuario es un cliente nuevo, no tengo más contexto para entregarte.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3424,
+        1120
+      ],
+      "id": "3790b58f-1825-44a9-9bf1-a3da58fe66bc",
+      "name": "Sin contexto"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "87390451-f8dc-4c4c-a789-05ce8ede6002",
+              "name": "input",
+              "value": "={{ $('Input Agente').item.json.input }}",
+              "type": "string"
+            },
+            {
+              "id": "994c6774-06a0-4a07-90b7-00fe3045bb59",
+              "name": "contexto",
+              "value": "={{ $json.contexto }}",
+              "type": "string"
+            },
+            {
+              "id": "6373f76d-d3ef-4a24-8b33-3ff27d843e2c",
+              "name": "conversation_id",
+              "value": "={{ $('Variables').item.json.conversation_id }}",
+              "type": "number"
+            },
+            {
+              "id": "2b696db1-c6d4-42d4-8e08-57e3a931eff6",
+              "name": "usuario_id",
+              "value": "={{ $('Asegurar Usuario Maestro').first().json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "ec8e815b-a7f9-4c13-a6b5-0a4b5058fea0",
+              "name": "cliente_nombre",
+              "value": "={{ $('Asegurar Usuario Maestro').first().json.nombre || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "6bc29fe1-001f-4d2d-99ec-a160889ec23c",
+              "name": "direccion_frecuente",
+              "value": "={{ $('Asegurar Usuario Maestro').first().json.direccion_frecuente || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3824,
+        944
+      ],
+      "id": "54e5a77a-010d-42f8-9c20-1d16f9624ff6",
+      "name": "Input Agente1"
+    },
+    {
+      "parameters": {
+        "content": "## Validación Disponibilidad",
+        "height": 512,
+        "width": 756,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4096,
+        752
+      ],
+      "typeVersion": 1,
+      "id": "0ded3f0e-62c0-4f84-9e6f-c3a46f4022ab",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "5XwGS8YQg9E10VtW",
+          "mode": "list",
+          "cachedResultName": "Horarios",
+          "cachedResultUrl": "/projects/WCBcyC9o6oA4Df8e/datatables/5XwGS8YQg9E10VtW"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        4160,
+        944
+      ],
+      "id": "ad899f90-5efa-448b-98ee-af6969cb736d",
+      "name": "Horarios"
+    },
+    {
+      "parameters": {
+        "jsCode": "const TZ = 'Atlantic/Canary';\n\n// ================================\n// 1) Normalización de entrada\n// ================================\nconst horarios = items.map(i => {\n  const j = i.json || {};\n  return {\n    dia: j.dia ?? j.Dia ?? j.day_name ?? j.dayName ?? null,\n    disponible: j.disponible ?? j.Disponible ?? j.is_open ?? j.isOpen ?? null,\n    apertura1: j.apertura_1 ?? j.Apertura1 ?? j.open_time_1 ?? j.openTime1 ?? null,\n    cierre1: j.cierre_1 ?? j.Cierre1 ?? j.close_time_1 ?? j.closeTime1 ?? null,\n    apertura2: j.apertura_2 ?? j.Apertura2 ?? j.open_time_2 ?? j.openTime2 ?? null,\n    cierre2: j.cierre_2 ?? j.Cierre2 ?? j.close_time_2 ?? j.closeTime2 ?? null,\n  };\n});\n\nconst diasSemana = [\n  'domingo',\n  'lunes',\n  'martes',\n  'miercoles',\n  'jueves',\n  'viernes',\n  'sabado',\n];\n\n// ================================\n// 2) Helpers\n// ================================\nfunction normalizar(texto) {\n  if (texto === null || texto === undefined) return '';\n  return texto\n    .toString()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .trim()\n    .toLowerCase();\n}\n\nfunction capitalizar(texto) {\n  if (!texto) return '';\n  return texto.charAt(0).toUpperCase() + texto.slice(1);\n}\n\nfunction formatearHora(hora) {\n  if (!hora) return null;\n  const partes = hora.toString().split(':');\n  if (partes.length < 2) return hora.toString();\n  return `${partes[0].padStart(2, '0')}:${partes[1].padStart(2, '0')}`;\n}\n\nfunction toMinutes(hora) {\n  if (!hora) return null;\n  const partes = hora.toString().split(':');\n  if (partes.length < 2) return null;\n\n  const h = Number(partes[0]);\n  const m = Number(partes[1]);\n\n  if (Number.isNaN(h) || Number.isNaN(m)) return null;\n  return h * 60 + m;\n}\n\nfunction valorBooleano(v) {\n  if (typeof v === 'boolean') return v;\n  const t = normalizar(v);\n  return ['si', 'sí', 'true', '1', 'abierto', 'open'].includes(t);\n}\n\nfunction buscarDia(dia) {\n  return horarios.find(h => normalizar(h.dia) === normalizar(dia));\n}\n\nfunction estaDisponible(config) {\n  return !!config && valorBooleano(config.disponible);\n}\n\nfunction intervaloCruzaMedianoche(aperturaMin, cierreMin) {\n  return aperturaMin !== null && cierreMin !== null && aperturaMin > cierreMin;\n}\n\nfunction estaDentroDelIntervalo(horaActualMin, aperturaMin, cierreMin) {\n  if (aperturaMin === null || cierreMin === null) return false;\n\n  // Caso normal: 12:00 - 15:30\n  if (aperturaMin <= cierreMin) {\n    return horaActualMin >= aperturaMin && horaActualMin < cierreMin;\n  }\n\n  // Caso cruza medianoche: 19:00 - 02:00\n  return horaActualMin >= aperturaMin || horaActualMin < cierreMin;\n}\n\nfunction obtenerAhoraCanarias() {\n  const now = new Date();\n\n  const weekdayEs = new Intl.DateTimeFormat('es-ES', {\n    timeZone: TZ,\n    weekday: 'long',\n  }).format(now);\n\n  const timeParts = new Intl.DateTimeFormat('en-GB', {\n    timeZone: TZ,\n    hour: '2-digit',\n    minute: '2-digit',\n    second: '2-digit',\n    hour12: false,\n  }).formatToParts(now);\n\n  const mapa = {};\n  for (const p of timeParts) {\n    mapa[p.type] = p.value;\n  }\n\n  const hora = Number(mapa.hour);\n  const minuto = Number(mapa.minute);\n\n  return {\n    diaNombre: capitalizar(weekdayEs),\n    diaNormalizado: normalizar(weekdayEs),\n    horaActualMin: hora * 60 + minuto,\n  };\n}\n\nfunction proximaApertura(diaActualIndex, horaActualMin) {\n  for (let offset = 0; offset <= 7; offset++) {\n    const idx = (diaActualIndex + offset) % 7;\n    const diaBuscado = diasSemana[idx];\n    const config = buscarDia(diaBuscado);\n\n    if (!estaDisponible(config)) continue;\n\n    const ventanas = [\n      { hora: config.apertura1, min: toMinutes(config.apertura1) },\n      { hora: config.apertura2, min: toMinutes(config.apertura2) },\n    ]\n      .filter(v => v.min !== null)\n      .sort((a, b) => a.min - b.min);\n\n    if (offset === 0) {\n      const siguienteHoy = ventanas.find(v => v.min > horaActualMin);\n      if (siguienteHoy) {\n        return {\n          dia: config.dia || capitalizar(diaBuscado),\n          hora: formatearHora(siguienteHoy.hora),\n          esHoy: true,\n        };\n      }\n    } else {\n      if (ventanas.length > 0) {\n        return {\n          dia: config.dia || capitalizar(diaBuscado),\n          hora: formatearHora(ventanas[0].hora),\n          esHoy: false,\n        };\n      }\n    }\n  }\n\n  return null;\n}\n\nfunction mensajeProximaApertura(prox) {\n  if (!prox) return 'No estaremos disponibles en los próximos días.';\n  if (prox.esHoy) return `Abrimos hoy a las ${prox.hora}.`;\n  return `La próxima apertura es el ${prox.dia} a las ${prox.hora}.`;\n}\n\nfunction getNodeValue(nodeName, key, fallback = null) {\n  try {\n    const data = $(nodeName).first().json;\n    return data?.[key] ?? fallback;\n  } catch {\n    return fallback;\n  }\n}\n\n// ================================\n// 3) Datos actuales en Canarias\n// ================================\nconst ahora = obtenerAhoraCanarias();\nconst diaActual = ahora.diaNombre;\nconst diaActualNorm = ahora.diaNormalizado;\nconst horaActualMin = ahora.horaActualMin;\nconst diaActualIndex = diasSemana.indexOf(diaActualNorm);\nconst diaAyerIndex = (diaActualIndex + 6) % 7;\n\n// ================================\n// 4) Campos que necesita el agente\n// ================================\nconst conversation_id = getNodeValue('Input Agente1', 'conversation_id');\nconst input = getNodeValue('Input Agente1', 'input');\nconst contexto = getNodeValue('Input Agente1', 'contexto');\nconst telefono = getNodeValue('Variables', 'telefono');\n\n// ================================\n// 5) Buscar configuraciones\n// ================================\nconst configHoy = buscarDia(diaActualNorm);\nconst configAyer = buscarDia(diasSemana[diaAyerIndex]);\n\n// ================================\n// 6) Evaluar abierto/cerrado\n// ================================\nlet abierto = false;\n\n// 6.1 Revisar horario de hoy\nif (estaDisponible(configHoy)) {\n  const apertura1 = toMinutes(configHoy.apertura1);\n  const cierre1 = toMinutes(configHoy.cierre1);\n  const apertura2 = toMinutes(configHoy.apertura2);\n  const cierre2 = toMinutes(configHoy.cierre2);\n\n  if (estaDentroDelIntervalo(horaActualMin, apertura1, cierre1)) {\n    abierto = true;\n  }\n\n  if (!abierto && estaDentroDelIntervalo(horaActualMin, apertura2, cierre2)) {\n    abierto = true;\n  }\n}\n\n// 6.2 Revisar si ayer tenía un turno que cruza medianoche\nif (!abierto && estaDisponible(configAyer)) {\n  const apertura1Ayer = toMinutes(configAyer.apertura1);\n  const cierre1Ayer = toMinutes(configAyer.cierre1);\n  const apertura2Ayer = toMinutes(configAyer.apertura2);\n  const cierre2Ayer = toMinutes(configAyer.cierre2);\n\n  if (\n    intervaloCruzaMedianoche(apertura1Ayer, cierre1Ayer) &&\n    horaActualMin < cierre1Ayer\n  ) {\n    abierto = true;\n  }\n\n  if (\n    !abierto &&\n    intervaloCruzaMedianoche(apertura2Ayer, cierre2Ayer) &&\n    horaActualMin < cierre2Ayer\n  ) {\n    abierto = true;\n  }\n}\n\n// ================================\n// 7) Respuesta si está abierto\n// ================================\nif (abierto) {\n  return [{\n    json: {\n      estado: 'Abierto',\n      tipo: null,\n      mensaje: 'Estamos abiertos y listos para atenderte.',\n      conversation_id,\n      input,\n      contexto,\n      telefono,\n      cliente_nombre: getNodeValue('Input Agente1','cliente_nombre',''),\n      direccion_frecuente: getNodeValue('Input Agente1','direccion_frecuente',''),\n      usuario_id: getNodeValue('Input Agente1','usuario_id',null),\n    }\n  }];\n}\n\n// ================================\n// 8) Si no existe horario para hoy\n// ================================\nif (!configHoy) {\n  const prox = proximaApertura(diaActualIndex, horaActualMin);\n\n  return [{\n    json: {\n      estado: 'Cerrado',\n      tipo: 'Dia',\n      mensaje: `Hoy ${diaActual} el local está cerrado. ${mensajeProximaApertura(prox)}`,\n      conversation_id,\n      input,\n      contexto,\n      telefono,\n      cliente_nombre: getNodeValue('Input Agente1','cliente_nombre',''),\n      direccion_frecuente: getNodeValue('Input Agente1','direccion_frecuente',''),\n      usuario_id: getNodeValue('Input Agente1','usuario_id',null),\n    }\n  }];\n}\n\n// ================================\n// 9) Si hoy no está disponible\n// ================================\nif (!estaDisponible(configHoy)) {\n  const prox = proximaApertura(diaActualIndex, horaActualMin);\n\n  return [{\n    json: {\n      estado: 'Cerrado',\n      tipo: 'Dia',\n      mensaje: `Hoy ${diaActual} no atendemos. ${mensajeProximaApertura(prox)}`,\n      conversation_id,\n      input,\n      contexto,\n      telefono,\n      cliente_nombre: getNodeValue('Input Agente1','cliente_nombre',''),\n      direccion_frecuente: getNodeValue('Input Agente1','direccion_frecuente',''),\n      usuario_id: getNodeValue('Input Agente1','usuario_id',null),\n    }\n  }];\n}\n\n// ================================\n// 10) Cerrado por horario\n// ================================\nconst prox = proximaApertura(diaActualIndex, horaActualMin);\n\nconst bloquesHorario = [];\nif (configHoy.apertura1 && configHoy.cierre1) {\n  bloquesHorario.push(`${formatearHora(configHoy.apertura1)} - ${formatearHora(configHoy.cierre1)}`);\n}\nif (configHoy.apertura2 && configHoy.cierre2) {\n  bloquesHorario.push(`${formatearHora(configHoy.apertura2)} - ${formatearHora(configHoy.cierre2)}`);\n}\nconst textoHorario = bloquesHorario.length > 0\n  ? bloquesHorario.join(' y ')\n  : 'sin horario definido';\n\nreturn [{\n  json: {\n    estado: 'Cerrado',\n    tipo: 'Hora',\n    mensaje: `En este momento estamos cerrados. Nuestro horario hoy ${diaActual} es ${textoHorario}. ${mensajeProximaApertura(prox)}`,\n    conversation_id,\n    input,\n    contexto,\n    telefono,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4576,
+        944
+      ],
+      "id": "ff7bf301-9c56-4c99-9f6c-fe6a08d03445",
+      "name": "Validacion"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "810613fc-c8d3-4e81-b186-28599d0f5290",
+              "leftValue": "={{ $json.estado }}",
+              "rightValue": "Abierto",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4736,
+        944
+      ],
+      "id": "2a444981-1d27-41eb-a49e-4f672a71b857",
+      "name": "Disponible"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $input.first().json.input }}",
+        "options": {
+          "systemMessage": "=Eres el asistente virtual de La Isla Pizzería por WhatsApp.\n\nESTADO DEL LOCAL:\n- Estado: {{ $json.estado }}\n- Motivo: {{ $json.tipo }}\n- Detalle: {{ $json.mensaje }}\n\nCONTEXTO DEL CLIENTE:\n{{ $json.contexto }}\n\nOBJETIVO:\n- informar que el local está cerrado\n- decir cuándo abre usando el detalle disponible\n- responder dudas informativas con Preguntas\n- derivar a humano con Derivar Humano si el cliente lo pide, reclama o hay un problema sensible\n- no tomar pedidos mientras esté cerrado\n\nREGLAS:\n1. Español neutro, tuteo, texto plano.\n2. Máximo 2 frases.\n3. No inventes datos.\n4. Si preguntan menú, precios, horarios, delivery, métodos de pago o promociones, usa Preguntas.\n5. Si el cliente quiere pedir, indica que ahora estamos cerrados y cuándo puede escribir.\n6. Si pide humano o reporta cobro incorrecto, reclamo o urgencia, usa Derivar Humano.\n7. No prometas tiempos exactos.\n8. No digas que no puedes derivar si la tool Derivar Humano está disponible; úsala."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        4528,
+        1392
+      ],
+      "id": "d17de89b-f8ad-4625-aa05-22254bb9f265",
+      "name": "Agente Cerrado"
+    },
+    {
+      "parameters": {
+        "content": "## Cerrado",
+        "height": 400,
+        "width": 656,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4304,
+        1280
+      ],
+      "typeVersion": 1,
+      "id": "bee4c590-0570-4b2f-a1b8-041959c7e224",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        5952,
+        1360
+      ],
+      "id": "8837f104-22b4-4a6f-b695-23eccea8eff9",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "let texto = String(items[0].json.output || '').trim();\nconst outputOriginal = texto; \n\ntexto = texto\n  .replace(/^[\"']|[\"']$/g, '')\n  .replace(/[¿¡]/g, '')\n  .replace(/\\r/g, '')\n  .replace(/\\n{2,}/g, '\\n')\n  .replace(/[ \\t]+/g, ' ')\n  .trim();\n\nreturn [{\n  json: {\n    mensaje: texto,\n    outputOriginal\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5792,
+        1360
+      ],
+      "id": "b69a84d4-2005-417f-8ccc-51dafdd65d1f",
+      "name": "Seteo respuesta"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Input Agente1').item.json.input }}",
+        "options": {
+          "systemMessage": "=Eres el asistente virtual de La Isla Pizzería por WhatsApp.\n\nCONTEXTO DEL CLIENTE:\n{{ $json.contexto }}\n\nDATOS DIRECTOS DEL CLIENTE:\n- Nombre guardado: {{ $json.cliente_nombre || 'no definido' }}\n- Dirección frecuente: {{ $json.direccion_frecuente || 'no definida' }}\n\nESTADO DEL LOCAL:\n{{ $json.estado }}\n\nOBJETIVO:\n- ayudar al cliente con información y pedidos cuando el local está abierto\n- avanzar por fases: Apertura -> Despacho -> Pago\n- usar las tools cuando corresponda\n- responder en un solo mensaje breve, natural y claro\n\nREGLAS CRÍTICAS:\n1. Español neutro, tuteo, texto plano.\n2. Máximo 2 frases o 1 párrafo corto.\n3. No inventes productos, precios, horarios, direcciones ni coberturas.\n4. Si el cliente pregunta algo del negocio, usa Preguntas.\n5. Usa Apertura SOLO para acciones estándar sobre el pedido: agregar | quitar | modificar | consultar.\n6. NUNCA uses Apertura con acciones como pedido_cliente, listar_modificables, resolver, referencia_pedido ni variantes parecidas.\n7. Solo usa Despacho cuando ya haya al menos un producto en el pedido.\n8. Solo usa Pago cuando ya esté definido delivery o retiro.\n9. Si el cliente pide humano, reclama, está molesto o hay un caso sensible, usa Derivar Humano.\n10. Usa literalmente la información devuelta por las tools para totales, moneda y montos.\n11. Si el pedido ya está armado, ayúdale a continuarlo sin reiniciar la conversación.\n12. Si el cliente pregunta por su pedido actual sin código, usa Apertura con acción \"consultar\".\n13. Si hay nombre guardado, saluda por nombre en próximas conversaciones.\n14. Al confirmar tipo de entrega (retiro, delivery, domicilio), si NO hay nombre guardado, pide a nombre de quién será el pedido.\n15. Si ya existe nombre guardado, NO vuelvas a pedirlo salvo que el cliente lo cambie explícitamente.\n16. Si el cliente entrega su nombre y estaba pendiente, usa Perfil Cliente para guardarlo.\n17. Si el pedido es delivery/domicilio y el cliente envía dirección nueva, usa Perfil Cliente para guardar direccion_frecuente.\n18. Para retiro/local/para llevar: NUNCA pidas dirección de retiro. Usa Despacho con tipo='retiro'.\n19. Para delivery/domicilio: si hay dirección frecuente guardada, pregunta si envías a esa o a otra. Si el cliente da otra, guárdala con Perfil Cliente y luego usa Despacho.\n20. Si el cliente acaba de confirmar un pedido y luego dice \"agrega\", \"también\", \"suma\", \"quita\" o \"cambia\", usa Apertura directamente sobre el pedido vigente. No pidas qué pedido quiere modificar salvo que realmente haya ambigüedad.\n21. Usa Pedidos Cliente cuando el cliente mencione un pedido por código, use referencias como 1001 / 260418-1001 o cuando realmente necesites desambiguar entre varios pedidos.\n22. Si el cliente quiere CAMBIAR un pedido por código, usa Pedidos Cliente con acción \"resolver\".\n23. Si el cliente quiere CONSULTAR un pedido por código, usa Pedidos Cliente con acción \"consultar\".\n24. Después de que Pedidos Cliente devuelva un pedido, reutiliza ese mismo pedido_id en las siguientes llamadas a Apertura, Despacho o Pago. No lo omitas ni lo inventes.\n25. Si Pedidos Cliente devuelve varios pedidos, pregunta cuál quiere modificar usando el pedido_codigo.\n26. Para cualquier parámetro opcional de tipo string en una tool, si no tienes valor usa cadena vacía. Nunca envíes null.\n27. Si no hay pedidos modificables vigentes o la ventana expiró, informa que ese pedido ya no puede modificarse y solo entonces inicia uno nuevo.\n28. Solo crea un pedido separado cuando el cliente lo diga de forma explícita con frases como \"pedido nuevo\", \"otro pedido\" o \"separado\". En ese caso usa Apertura con forzar_pedido_nuevo=true.\n29. No cambies tipo de despacho, dirección ni costo de envío salvo confirmación explícita del cliente.\n29. Cuando el cliente exprese intención de pedir o modificar productos con frases como \"quiero\", \"agrega\", \"añade\", \"suma\", \"quita\" o \"cambia\" + productos, usa Apertura; no uses Preguntas para eso.\n30. Cuando uses Apertura, envía un objeto por producto. Nunca combines dos productos distintos en un mismo item. Conserva tamaño o variante dentro del nombre de cada producto.\n31. Si Apertura confirma algunos productos y deja otros pendientes, responde indicando qué se agregó y pregunta solo por lo faltante; no digas que todo falló.\n32. Si el pedido ya tiene tipo_despacho definido, no vuelvas a preguntar delivery o retiro salvo que el cliente pida cambiarlo.\n33. Si el pedido ya tiene tipo_despacho='retiro', nunca pidas dirección.\n34. Si el pedido ya tiene tipo_despacho='delivery' y dirección definida, no vuelvas a pedir dirección salvo cambio explícito.\n35. Si el cliente dice \"confirmar y pagar\" y el pedido ya tiene delivery/retiro definido, usa Pago directamente.\n36. Si el cliente consulta un pedido, no lo reinicies ni cambies su estado solo por consultarlo.\n\nGUÍA OPERATIVA:\n- Productos, cantidades, quitar, modificar: Apertura.\n- Si el cliente terminó de elegir productos y aún no hay despacho definido: pregunta si prefiere delivery o retiro.\n- Si el pedido ya está en delivery y cambian los productos, vuelve a usar Despacho con el mismo pedido para recalcular mínimo, envío, total y tiempo antes de pasar a pago.\n- Si el cliente dice retiro: si falta nombre pídelo; si ya hay nombre, usa Despacho.\n- Si el cliente dice delivery o domicilio: si falta nombre pídelo; luego confirma o solicita dirección y usa Perfil Cliente si la dirección cambia; después usa Despacho.\n- Si el cliente dice efectivo, tarjeta, transferencia, bizum u online: Pago.\n- Si el cliente quiere cambiar el nombre del pedido o actualizar dirección, usa Perfil Cliente.\n- Después de usar una tool, responde apoyándote en su salida y avanza solo el siguiente paso lógico.\n\nNo expliques las tools. No uses listas salvo que Preguntas o Pedidos Cliente devuelvan varias opciones.\n37. Nunca confirmes un pedido final ni digas que quedó confirmado si no acabas de usar Pago en este turno.\n38. Si el cliente dice solo \"confirmar\" o \"sí\" y todavía no indicó el método de pago, NO asumas efectivo ni ningún otro método: pregunta cómo quiere pagar.\n39. Si el pedido venía como delivery y estaba pendiente por mínimo, y luego el cliente agrega/quita/modifica productos, conserva delivery y revalida con Despacho antes de hablar de pago.\n40. Si un pedido ya está en delivery, nunca lo cambies a retiro salvo instrucción explícita del cliente.\n41. Si Despacho responde mínimo no alcanzado, no cierres el pedido ni pases a Pago; solo ayuda a agregar más productos o a cambiar a retiro si el cliente lo pide."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        5232,
+        832
+      ],
+      "id": "36874c56-2a1d-4dce-943c-c27026fb6b3e",
+      "name": "Director"
+    },
+    {
+      "parameters": {
+        "content": "## Envia mensajes",
+        "height": 480,
+        "width": 788,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5744,
+        1200
+      ],
+      "typeVersion": 1,
+      "id": "0667b486-cf25-431f-bce4-95af5e537bd6",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        6336,
+        1456
+      ],
+      "id": "059eac20-84d6-43e2-a581-a2272c2f5682",
+      "name": "Wait",
+      "webhookId": "81cba418-1963-454e-a027-d04432df3a15"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/conversations/{{ $('Variables').first().json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.mensaje }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6192,
+        1456
+      ],
+      "id": "c0650ab1-4690-483e-bc82-c3eaf438af63",
+      "name": "Mensaje Chatwoot",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        5120,
+        1504
+      ],
+      "id": "fb008e17-6783-4cbf-9d9c-08b1db858d87",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "iQIEdjfflw5sGyn1",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $input.first().json.conversation_id }}",
+        "contextWindowLength": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        5248,
+        1504
+      ],
+      "id": "2359e553-07f5-4a91-8baa-a9d88a37d101",
+      "name": "Memory",
+      "credentials": {
+        "postgres": {
+          "id": "tud2wJu4FrMUtnqd",
+          "name": "postgres restaurante_mvp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Agente director",
+        "height": 560,
+        "width": 688,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5008,
+        752
+      ],
+      "typeVersion": 1,
+      "id": "67c8a5b9-a77f-41df-be3f-a37f8aa19a8f",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "keep": "lastItems"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        6192,
+        1296
+      ],
+      "id": "09751b8d-bf2c-4bae-bf5b-f216995d2498",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "content": "## Próximos pasos:\n\n#### Tool Despacho\n#### Tool Método de Pago\n\n\n#### Según cliente modificar el tono y detalles de la conversación\n\n\n#### Onboarding y Escalabilidad\n\n\n#### Visualizar la información (a criterio)",
+        "height": 512,
+        "width": 464,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "e4d31710-902c-461c-b975-7a5c77af92bf",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "description": "Tool para responder consultas del cliente (FAQs y menú). Úsala cuando el cliente pregunte por productos, precios, ingredientes, promociones, horarios, ubicación, retiro/despacho o cualquier duda operativa. La respuesta debe basarse solo en la información disponible del negocio. Si la pregunta es ambigua, devuelve una sola pregunta aclaratoria. Si no hay información suficiente para responder con certeza, indícalo y sugiere derivación a humano.A",
+        "workflowId": {
+          "__rl": true,
+          "value": "pZNufuNN7dzq46Os",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/pZNufuNN7dzq46Os",
+          "cachedResultName": "[MVP] Preguntas"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pregunta": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pregunta', `Texto exacto de la consulta del cliente. Incluye el mensaje completo (sin resumir) para que el subworkflow responda FAQs/menú o haga una única pregunta aclaratoria si falta información.`, 'string') }}"
+          },
+          "matchingColumns": [
+            "pregunta"
+          ],
+          "schema": [
+            {
+              "id": "pregunta",
+              "displayName": "pregunta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5376,
+        1504
+      ],
+      "id": "05786ecc-62c4-40a9-82b1-e46a12c6d3a1",
+      "name": "Preguntas"
+    },
+    {
+      "parameters": {
+        "description": "Deriva la conversación a un humano cuando el cliente lo pide, está confundido/molesto, o la consulta/pedido es riesgoso de resolver automático (posible mala experiencia).\nUsar esta tool para pausar la automatización y dejar contexto claro al operador.\nInputs: problema = motivo + resumen + último mensaje del cliente; telefono/conversation_id/contact_id para ubicar el chat.",
+        "workflowId": {
+          "__rl": true,
+          "value": "pySGUs18QoDJf4Ie",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/pySGUs18QoDJf4Ie",
+          "cachedResultName": "[MVP] Derivar Humano"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "problema": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('problema', `Motivo de derivación + resumen breve del contexto + último mensaje del cliente (copiado tal cual).`, 'string') }}",
+            "telefono": "={{ $('Variables').first().json.telefono }}",
+            "conversation_id": "={{ $('Variables').first().json.conversation_id }}",
+            "account_id": "={{ $('Variables').first().json.account_id }}",
+            "contact_id": "={{ $('Variables').first().json.contact_id }}",
+            "contexto_actual": "={{ $('Obtener registros').first().json.contexto }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "problema",
+              "displayName": "problema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "contexto_actual",
+              "displayName": "contexto_actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5504,
+        1504
+      ],
+      "id": "96683ea0-a640-4288-b2db-82def3a759b6",
+      "name": "Derivar Humano"
+    },
+    {
+      "parameters": {
+        "content": "## Tools generales",
+        "height": 336,
+        "width": 688,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5008,
+        1344
+      ],
+      "typeVersion": 1,
+      "id": "74ab3eaf-10a4-471e-8c8e-32fb0ac3f02e",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "iYQLJpXpfzSHYlZK",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/iYQLJpXpfzSHYlZK",
+          "cachedResultName": "[MVP] Despacho"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Contexto Actual": "={{ $('Obtener registros').first().json.contexto || 'sin datos' }}",
+            "Mensaje del Cliente": "={{ $('Input Agente1').first().json.input }}",
+            "Respuesta del Agente": "={{ $('Seteo respuesta').first().json.outputOriginal }}",
+            "Telefono": "={{ $('Validacion').first().json.telefono }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Contexto Actual",
+              "displayName": "Contexto Actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Mensaje del Cliente",
+              "displayName": "Mensaje del Cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Respuesta del Agente",
+              "displayName": "Respuesta del Agente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "Telefono",
+              "displayName": "Telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6336,
+        1296
+      ],
+      "id": "4512a587-494e-4b46-b180-d9033fefb5af",
+      "name": "Crear Contexto",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "iYQLJpXpfzSHYlZK",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/iYQLJpXpfzSHYlZK",
+          "cachedResultName": "[MVP] Despacho"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "direccion_texto": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('direccion_texto', `Dirección de entrega en texto. Para retiro envía cadena vacía.`, 'string') }}",
+            "codigo_postal": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('codigo_postal', `Código postal de la dirección de entrega. Si no lo tienes, envía cadena vacía.`, 'string') }}",
+            "telefono": "={{ $('Variables').item.json.telefono }}",
+            "session_id": "={{ $('Session Manager').item.json.session_id }}",
+            "pedido_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pedido_id', `Usa el pedido_id exacto del pedido que se está despachando si ya lo conoces por una tool previa. Si no lo tienes todavía, envía cadena vacía. Nunca envíes null. No inventes este valor.`, 'string') }}",
+            "tipo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo', `Tipo de despacho: delivery o retiro. Usa exactamente uno de esos dos valores.`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tipo",
+              "displayName": "tipo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "direccion_texto",
+              "displayName": "direccion_texto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "codigo_postal",
+              "displayName": "codigo_postal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "lat",
+              "displayName": "lat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lng",
+              "displayName": "lng",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "pedido_id",
+              "displayName": "pedido_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5776,
+        928
+      ],
+      "id": "06c19693-1fe9-44f5-a927-f37795b7aaaa",
+      "name": "Despacho"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "jLxdQv7jxYY7ooly",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/jLxdQv7jxYY7ooly",
+          "cachedResultName": "[MVP] Apertura"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('accion', `\"accion\" siempre debe ser: \"agregar\" | \"quitar\" | \"modificar\" | \"consultar\"`, 'string') }}",
+            "items": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('items', `Array de productos. REGLAS: 1) envía UN objeto por producto; 2) no combines dos productos en un mismo nombre; 3) conserva tamaño/variante dentro del nombre cuando el cliente lo diga; 4) para agregar/quitar/modificar usa objetos con {\"nombre\": string, \"cantidad\": number}; 5) para consultar envía SIEMPRE [{\"nombre\":\"consulta\",\"cantidad\":0}]. Ejemplo correcto: [{\"nombre\":\"Pizza Lanzarote familiar\",\"cantidad\":1},{\"nombre\":\"Pizza Barbacoa familiar\",\"cantidad\":1}]`, 'json') }}",
+            "pedido_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pedido_id', `Usa el pedido_id exacto devuelto por Pedidos Cliente o por una tool previa si ya existe un pedido en curso. Si todavía no existe pedido_id o es un pedido nuevo, envía cadena vacía. Nunca envíes null. No inventes este valor.`, 'string') }}",
+            "telefono": "={{ $('Variables').item.json.telefono }}",
+            "session_id": "={{ $('Session Manager').item.json.session_id }}",
+            "usuario_id": "={{ $('Asegurar Usuario Maestro').first().json.id }}",
+            "forzar_pedido_nuevo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('forzar_pedido_nuevo', `Usa \"true\" solo si el cliente pidió explícitamente un pedido separado, otro pedido o un pedido nuevo. En cualquier otro caso usa \"false\".`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "items",
+              "displayName": "items",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "pedido_id",
+              "displayName": "pedido_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "usuario_id",
+              "displayName": "usuario_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "forzar_pedido_nuevo",
+              "displayName": "forzar_pedido_nuevo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5104,
+        1104
+      ],
+      "id": "8658dd45-e781-4348-9970-2dead5f5e6f5",
+      "name": "Apertura"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "jFW1YsNrvXG92BDG",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/jFW1YsNrvXG92BDG",
+          "cachedResultName": "[MVP] Pago"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefono": "={{ $('Variables').item.json.telefono }}",
+            "session_id": "={{ $('Session Manager').item.json.session_id }}",
+            "metodo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('metodo', `Método de pago elegido por el cliente: efectivo, transferencia, tarjeta, bizum u online.`, 'string') }}",
+            "pedido_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pedido_id_pago', `Usa el pedido_id exacto del pedido al que corresponde el pago si ya fue devuelto por una tool previa. Si no lo tienes, envía cadena vacía. No inventes este valor.`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "metodo",
+              "displayName": "metodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "pedido_id",
+              "displayName": "pedido_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5264,
+        1120
+      ],
+      "id": "a841eb0f-22a2-410a-8bb2-4545588eef31",
+      "name": "Pago"
+    },
+    {
+      "parameters": {
+        "jsCode": "const contextoActual = $json.contexto || '';\nconst sessionIdDb = $json.session_id || null;\nconst sessionStartedDb = $json.session_started_at || null;\nconst SESSION_TIMEOUT_MINUTES = 30;\n\nfunction generarUUID() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nlet sessionId = sessionIdDb;\nlet sessionStarted = sessionStartedDb ? new Date(sessionStartedDb) : null;\n\nif (!sessionId) {\n  const match = contextoActual.match(/SESSION_ID:\\s*([a-f0-9-]+)/i);\n  if (match) sessionId = match[1];\n}\nif (!sessionStarted) {\n  const match = contextoActual.match(/SESSION_STARTED:\\s*([0-9T:\\-\\.Z]+)/i);\n  if (match) {\n    const parsed = new Date(match[1].trim());\n    if (!isNaN(parsed.getTime())) sessionStarted = parsed;\n  }\n}\n\nconst ahora = new Date();\nlet nuevaSesion = false;\nlet razonNuevaSesion = 'activa';\n\nif (!sessionId || !sessionStarted || isNaN(sessionStarted.getTime())) {\n  nuevaSesion = true;\n  razonNuevaSesion = !sessionId ? 'primera_vez' : 'sin_timestamp';\n} else {\n  const minutosPasados = (ahora - sessionStarted) / 1000 / 60;\n  if (minutosPasados > SESSION_TIMEOUT_MINUTES) {\n    nuevaSesion = true;\n    razonNuevaSesion = 'timeout';\n  }\n}\n\nif (nuevaSesion) {\n  sessionId = generarUUID();\n  sessionStarted = ahora;\n}\n\nreturn [{\n  json: {\n    ...$json,\n    session_id: sessionId,\n    session_started_at: sessionStarted.toISOString(),\n    session_is_new: nuevaSesion,\n    session_razon: razonNuevaSesion,\n    session_timeout_minutes: SESSION_TIMEOUT_MINUTES,\n    session_timestamp_now: ahora.toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3648,
+        944
+      ],
+      "id": "8a50ae97-c6e7-4ace-bc5e-6db5a5b68c0e",
+      "name": "Session Manager"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "restaurante",
+          "mode": "list",
+          "cachedResultName": "restaurante"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "id",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -32,
+        1232
+      ],
+      "id": "b2cad427-bf7e-418c-b8a8-299a12975886",
+      "name": "Obtener Config Restaurante",
+      "credentials": {
+        "postgres": {
+          "id": "tud2wJu4FrMUtnqd",
+          "name": "postgres restaurante_mvp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.usuarios(restaurante_id, telefono, created_at, updated_at)\nVALUES (1, '{{ $('Variables').first().json.telefono }}', NOW(), NOW())\nON CONFLICT (telefono) DO UPDATE SET updated_at = NOW()\nRETURNING id, telefono, nombre, direccion_frecuente, lat_frecuente, long_frecuente",
+        "options": {}
+      },
+      "id": "dbaf728c-3b23-4fe3-bf4c-a4d403579d42",
+      "name": "Asegurar Usuario Maestro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        3760,
+        1072
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "tud2wJu4FrMUtnqd",
+          "name": "postgres restaurante_mvp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Actualiza o confirma datos del cliente. Úsala para guardar el nombre del pedido y la dirección frecuente cuando el cliente la confirme o la cambie. También puedes usarla si el cliente actualiza su nombre.",
+        "workflowId": {
+          "__rl": true,
+          "value": "WgxXy1ciOAaKd0X7",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/WgxXy1ciOAaKd0X7",
+          "cachedResultName": "[MVP] Perfil Cliente"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('accion_perfil', `Usa \"actualizar\" cuando debas guardar nombre o dirección del cliente.`, 'string') }}",
+            "telefono": "={{ $('Variables').first().json.telefono }}",
+            "nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('nombre_cliente', `Nombre del cliente para dejar el pedido. Si no aplica, cadena vacía.`, 'string') }}",
+            "direccion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('direccion_cliente', `Dirección completa del cliente para delivery. Si no aplica, cadena vacía.`, 'string') }}",
+            "tipo_despacho": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo_despacho_perfil', `Tipo de despacho asociado a la actualización: retiro, delivery o domicilio.`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "direccion",
+              "displayName": "direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "tipo_despacho",
+              "displayName": "tipo_despacho",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5488,
+        1120
+      ],
+      "id": "2ab0d53e-be97-411d-a342-9a98675a2903",
+      "name": "Perfil Cliente"
+    },
+    {
+      "parameters": {
+        "description": "Resuelve pedidos del cliente por código o referencia y también permite listar los pedidos aún modificables. Úsala cuando el cliente mencione un pedido por código completo o corto (por ejemplo 260418-1001 o 1001), cuando quiera consultar un pedido específico, o cuando necesites elegir entre varios pedidos vigentes.",
+        "workflowId": {
+          "__rl": true,
+          "value": "TeJyG2pvWSMkQbAw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/TeJyG2pvWSMkQbAw",
+          "cachedResultName": "[MVP] Pedidos Cliente"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "accion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('accion_pedido_cliente', `Usa \"listar_modificables\" para listar pedidos vigentes, \"resolver\" para identificar un pedido que el cliente quiere CAMBIAR, y \"consultar\" para identificar o resumir un pedido por código cuando el cliente lo quiere CONSULTAR.`, 'string') }}",
+            "telefono": "={{ $('Variables').first().json.telefono }}",
+            "referencia": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('referencia_pedido', `Código o referencia del pedido que el cliente quiere consultar o modificar. Acepta formatos como 260418-1001 o 1001. Si no aplica, cadena vacía.`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "referencia",
+              "displayName": "referencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        5568,
+        848
+      ],
+      "id": "b00676e7-46a8-47dd-a203-58dc53c37a9c",
+      "name": "Pedidos Cliente"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8nlearning-n8n.avtsif.easypanel.host",
+            "user-agent": "rest-client/2.1.0 (linux-musl x86_64) ruby/3.4.4p34",
+            "content-length": "2478",
+            "accept": "application/json",
+            "accept-encoding": "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+            "content-type": "application/json",
+            "x-forwarded-for": "172.18.0.1",
+            "x-forwarded-host": "n8nlearning-n8n.avtsif.easypanel.host",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "55fc4cd42709",
+            "x-real-ip": "172.18.0.1"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "account": {
+              "id": 1,
+              "name": "ai2nomous"
+            },
+            "additional_attributes": {},
+            "content_attributes": {},
+            "content_type": "text",
+            "content": "Hola",
+            "conversation": {
+              "additional_attributes": {},
+              "can_reply": true,
+              "channel": "Channel::Whatsapp",
+              "contact_inbox": {
+                "id": 1,
+                "contact_id": 1,
+                "inbox_id": 2,
+                "source_id": "15162849708",
+                "created_at": "2026-02-28T03:07:38.632Z",
+                "updated_at": "2026-02-28T03:07:38.632Z",
+                "hmac_verified": false,
+                "pubsub_token": "sR5ESdThsSr7zWW1WConKP6a"
+              },
+              "id": 1,
+              "inbox_id": 2,
+              "messages": [
+                {
+                  "id": 10808,
+                  "content": "Hola",
+                  "account_id": 1,
+                  "inbox_id": 2,
+                  "conversation_id": 1,
+                  "message_type": 0,
+                  "created_at": 1776197461,
+                  "updated_at": "2026-04-14T20:11:01.577Z",
+                  "private": false,
+                  "status": "sent",
+                  "source_id": "wamid.HBgLMTUxNjI4NDk3MDgVAgASGBQzQTk5OEU0RDc3Nzg5MjBCQzA4NgA=",
+                  "content_type": "text",
+                  "content_attributes": {},
+                  "sender_type": "Contact",
+                  "sender_id": 1,
+                  "external_source_ids": {},
+                  "additional_attributes": {},
+                  "processed_message_content": "Hola",
+                  "sentiment": {},
+                  "conversation": {
+                    "assignee_id": 1,
+                    "unread_count": 1,
+                    "last_activity_at": 1776197461,
+                    "contact_inbox": {
+                      "source_id": "15162849708"
+                    }
+                  },
+                  "sender": {
+                    "additional_attributes": {},
+                    "custom_attributes": {
+                      "bot": "on"
+                    },
+                    "email": null,
+                    "id": 1,
+                    "identifier": null,
+                    "name": "Cesar",
+                    "phone_number": "+15162849708",
+                    "thumbnail": "",
+                    "blocked": false,
+                    "type": "contact"
+                  }
+                }
+              ],
+              "labels": [],
+              "meta": {
+                "sender": {
+                  "additional_attributes": {},
+                  "custom_attributes": {
+                    "bot": "on"
+                  },
+                  "email": null,
+                  "id": 1,
+                  "identifier": null,
+                  "name": "Cesar",
+                  "phone_number": "+15162849708",
+                  "thumbnail": "",
+                  "blocked": false,
+                  "type": "contact"
+                },
+                "assignee": {
+                  "id": 1,
+                  "name": "Cesar Sanchez",
+                  "available_name": "Cesar Sanchez",
+                  "avatar_url": "",
+                  "type": "user",
+                  "availability_status": "offline",
+                  "thumbnail": ""
+                },
+                "assignee_type": "User",
+                "team": null,
+                "hmac_verified": false
+              },
+              "status": "open",
+              "custom_attributes": {},
+              "snoozed_until": null,
+              "unread_count": 1,
+              "first_reply_created_at": null,
+              "priority": null,
+              "waiting_since": 1772248058,
+              "agent_last_seen_at": 1776170057,
+              "contact_last_seen_at": 0,
+              "last_activity_at": 1776197461,
+              "timestamp": 1776197461,
+              "created_at": 1772248058,
+              "updated_at": 1776197461.6347468
+            },
+            "created_at": "2026-04-14T20:11:01.577Z",
+            "id": 10808,
+            "inbox": {
+              "id": 2,
+              "name": "AI2nomous Agent"
+            },
+            "message_type": "incoming",
+            "private": false,
+            "sender": {
+              "account": {
+                "id": 1,
+                "name": "ai2nomous"
+              },
+              "additional_attributes": {},
+              "avatar": "",
+              "custom_attributes": {
+                "bot": "on"
+              },
+              "email": null,
+              "id": 1,
+              "identifier": null,
+              "name": "Cesar",
+              "phone_number": "+15162849708",
+              "thumbnail": "",
+              "blocked": false
+            },
+            "source_id": "wamid.HBgLMTUxNjI4NDk3MDgVAgASGBQzQTk5OEU0RDc3Nzg5MjBCQzA4NgA=",
+            "event": "message_created"
+          },
+          "webhookUrl": "https://n8nlearning-n8n.avtsif.easypanel.host/webhook/chatwootnew",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Ubicación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descargar Audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descargar Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI1": {
+      "main": [
+        [
+          {
+            "node": "Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ubicación": {
+      "main": [
+        [
+          {
+            "node": "Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis2": {
+      "main": [
+        [
+          {
+            "node": "Input Agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Redis2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait7": {
+      "main": [
+        [
+          {
+            "node": "Redis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Imagen": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Audio": {
+      "main": [
+        [
+          {
+            "node": "OpenAI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bot": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Texto": {
+      "main": [
+        [
+          {
+            "node": "Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Variables": {
+      "main": [
+        [
+          {
+            "node": "Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input": {
+      "main": [
+        [
+          {
+            "node": "Redis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Agente": {
+      "main": [
+        [
+          {
+            "node": "Obtener registros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis1": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis": {
+      "main": [
+        [
+          {
+            "node": "Redis1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener registros": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Preparar contexto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nuevo usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nuevo usuario": {
+      "main": [
+        [
+          {
+            "node": "Sin contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sin contexto": {
+      "main": [
+        [
+          {
+            "node": "Session Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar contexto": {
+      "main": [
+        [
+          {
+            "node": "Session Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Agente1": {
+      "main": [
+        [
+          {
+            "node": "Horarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Horarios": {
+      "main": [
+        [
+          {
+            "node": "Validacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacion": {
+      "main": [
+        [
+          {
+            "node": "Disponible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Disponible": {
+      "main": [
+        [
+          {
+            "node": "Director",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente Cerrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Cerrado": {
+      "main": [
+        [
+          {
+            "node": "Seteo respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seteo respuesta": {
+      "main": [
+        [
+          {
+            "node": "Mensaje Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Director": {
+      "main": [
+        [
+          {
+            "node": "Seteo respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Crear Contexto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente Cerrado",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Director",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente Cerrado",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Director",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preguntas": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Cerrado",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Director",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Derivar Humano": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Cerrado",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Director",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Despacho": {
+      "ai_tool": [
+        [
+          {
+            "node": "Director",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apertura": {
+      "ai_tool": [
+        [
+          {
+            "node": "Director",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pago": {
+      "ai_tool": [
+        [
+          {
+            "node": "Director",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session Manager": {
+      "main": [
+        [
+          {
+            "node": "Asegurar Usuario Maestro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Config Restaurante": {
+      "main": [
+        [
+          {
+            "node": "Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asegurar Usuario Maestro": {
+      "main": [
+        [
+          {
+            "node": "Input Agente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perfil Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Director",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pedidos Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "Director",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "aa2b64fb-8dee-4114-9e95-c33259735aa7",
+  "meta": {
+    "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
+  },
+  "id": "5ivZTQAggS8fe0h5",
+  "tags": []
+}
