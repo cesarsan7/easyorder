@@ -152,18 +152,17 @@ hoursRoutes.put('/:slug/hours', async (c) => {
         hora_apertura: v.hora_apertura,
         hora_cierre:   v.hora_cierre,
         is_open:       v.is_open,
-        updated_at:    sql`NOW()`,
       }));
 
       await sql`
         INSERT INTO horario_atencion
-          ${sql(insertRows, 'restaurante_id', 'dia_semana', 'hora_apertura', 'hora_cierre', 'is_open', 'updated_at')}
+          ${sql(insertRows, 'restaurante_id', 'dia_semana', 'hora_apertura', 'hora_cierre', 'is_open')}
         ON CONFLICT (restaurante_id, dia_semana)
         DO UPDATE SET
           hora_apertura = EXCLUDED.hora_apertura,
           hora_cierre   = EXCLUDED.hora_cierre,
           is_open       = EXCLUDED.is_open,
-          updated_at    = EXCLUDED.updated_at
+          updated_at    = NOW()
       `;
     }
 
