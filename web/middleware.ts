@@ -40,8 +40,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Solo rutas protegidas — las páginas públicas (/[slug]/...) no necesitan auth.
   matcher: [
     '/dashboard/:path*',
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/login',
   ],
 }
