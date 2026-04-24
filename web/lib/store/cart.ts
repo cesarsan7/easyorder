@@ -161,10 +161,17 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'easyorder-cart',
       // Guard SSR: sessionStorage no existe en Node.js.
-      // persist lo ignora si el storage devuelve undefined.
-      storage: createJSONStorage(() =>
-        typeof window !== 'undefined' ? sessionStorage : undefined as unknown as Storage,
-      ),
+      // Se usa un noop storage en servidor para que persist no lance ReferenceError.
+      storage: createJSONStorage(() => {
+        if (typeof window === 'undefined') {
+          return {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+          } as unknown as Storage
+        }
+        return sessionStorage
+      }),
     },
   ),
 )

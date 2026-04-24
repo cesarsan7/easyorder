@@ -7,12 +7,17 @@ interface Props {
 }
 
 async function getRestaurant(slug: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL
-  const res = await fetch(`${base}/public/${slug}/restaurant`, {
-    next: { revalidate: 60 },
-  })
-  if (!res.ok) return null
-  return res.json() as Promise<RestaurantPublicResponse>
+  const base = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? ''
+  if (!base) return null
+  try {
+    const res = await fetch(`${base}/public/${slug}/restaurant`, {
+      next: { revalidate: 60 },
+    })
+    if (!res.ok) return null
+    return res.json() as Promise<RestaurantPublicResponse>
+  } catch {
+    return null
+  }
 }
 
 export default async function LocalLandingPage({ params }: Props) {
