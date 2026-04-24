@@ -7,15 +7,12 @@ import { requireAuth, validateBearerToken } from '../middleware/auth.js';
 
 const dashboardRoutes = new Hono<{ Variables: Variables }>();
 
-// All dashboard routes: slug resolution first, then JWT auth.
-dashboardRoutes.use('/:slug/*', resolveTenant, requireAuth);
-
 // ----------------------------------------------------------------------------
-// GET /dashboard/me
+// GET /dashboard/me  ← debe estar ANTES del middleware /:slug/*
 //
-// Returns the list of restaurants the authenticated user belongs to.
-// Does NOT require a slug — used by the dashboard index page to find where
-// to redirect the user after login.
+// Retorna los restaurantes a los que pertenece el usuario autenticado.
+// No requiere slug — el dashboard index lo llama después del login para
+// resolver a dónde redirigir.
 // ----------------------------------------------------------------------------
 dashboardRoutes.get('/me', async (c) => {
   const user = await validateBearerToken(c.req.header('Authorization'));
@@ -32,6 +29,10 @@ dashboardRoutes.get('/me', async (c) => {
 
   return c.json({ restaurants: rows });
 });
+
+// All dashboard routes: slug resolution first, then JWT auth.
+// IMPORTANTE: este middleware va DESPUÉS de /me para que /:slug/* no lo capture.
+dashboardRoutes.use('/:slug/*', resolveTenant, requireAuth);
 
 // ----------------------------------------------------------------------------
 // GET /dashboard/:slug/orders
