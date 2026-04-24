@@ -160,7 +160,11 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: 'easyorder-cart',
-      storage: createJSONStorage(() => sessionStorage),
+      // Guard SSR: sessionStorage no existe en Node.js.
+      // persist lo ignora si el storage devuelve undefined.
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined' ? sessionStorage : undefined as unknown as Storage,
+      ),
     },
   ),
 )
