@@ -1,13 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const ACCENT = '#E63946'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -38,24 +36,15 @@ export default function LoginPage() {
       return
     }
 
-    // Get the first restaurant this user belongs to
-    const base = process.env.NEXT_PUBLIC_API_URL
-    const session = await supabase.auth.getSession()
-    const token = session.data.session?.access_token
-
+    // Usar window.location para un reload completo — garantiza que las cookies
+    // de sesión de Supabase se envían con la siguiente request al servidor.
+    // router.replace hace navegación RSC client-side y puede llegar antes de
+    // que el SDK escriba las cookies, causando que el middleware rechace la sesión.
     try {
-      // Try the first slug the user has access to via their membership.
-      // Since we don't have a /me endpoint yet, we redirect to a known slug
-      // stored in localStorage or fall back to a default.
       const savedSlug = localStorage.getItem('easyorder-last-slug')
-      if (savedSlug) {
-        router.replace(`/dashboard/${savedSlug}`)
-      } else {
-        // Fallback: redirect to /dashboard and let user navigate
-        router.replace('/dashboard')
-      }
+      window.location.href = savedSlug ? `/dashboard/${savedSlug}` : '/dashboard'
     } catch {
-      router.replace('/dashboard')
+      window.location.href = '/dashboard'
     }
   }
 
