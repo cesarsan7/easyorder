@@ -219,7 +219,7 @@ export default function ProductoPage() {
                         )}
                       </div>
                       <span className="flex-1 text-sm text-gray-900">{extra.name}</span>
-                      <span className="text-sm text-gray-600">+{fmt(extra.price)}</span>
+                      <span className="text-sm text-gray-600">+{fmt(extra.price ?? 0)}</span>
                     </label>
                   )
                 })}
