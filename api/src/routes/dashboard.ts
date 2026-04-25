@@ -106,11 +106,19 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
     const fecha  = fechaParam ?? getLocalIsoDate(zonaHoraria);
     const offset = (page - 1) * limit;
 
-    // Q2 + Q3 run in parallel — count for pagination, rows for the response.
-    // Both share identical WHERE clauses so pagination metadata stays coherent.
+    // When no estado filter is given (the "Activos" tab), show ALL non-terminal
+    // orders regardless of date — an operator must see every pending order even
+    // if it was created before midnight. When a specific estado is requested,
+    // scope to the requested day so the history tabs stay manageable.
+    const isActiveTab = !estadoParam;
+
     const estadoFilter = estadoParam
       ? sql`AND p.estado = ${estadoParam}`
       : sql`AND p.estado NOT IN ('entregado', 'cancelado')`;
+
+    const dateFilter = isActiveTab
+      ? sql``   // no date restriction for active orders
+      : sql`AND DATE(p.created_at AT TIME ZONE ${zonaHoraria}) = ${fecha}::date`;
 
     const [countRows, orderRows] = await Promise.all([
 
@@ -119,7 +127,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         SELECT COUNT(*)::int AS total
         FROM   pedidos p
         WHERE  p.restaurante_id = ${restaurante_id}
-          AND  DATE(p.created_at AT TIME ZONE ${zonaHoraria}) = ${fecha}::date
+          ${dateFilter}
           ${estadoFilter}
       `,
 
@@ -148,7 +156,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         FROM   pedidos  p
         LEFT JOIN usuarios u ON u.id = p.usuario_id
         WHERE  p.restaurante_id = ${restaurante_id}
-          AND  DATE(p.created_at AT TIME ZONE ${zonaHoraria}) = ${fecha}::date
+          ${dateFilter}
           ${estadoFilter}
         ORDER BY p.created_at DESC
         LIMIT  ${limit}
