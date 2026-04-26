@@ -1491,6 +1491,7 @@ interface OrderListRow {
 
 interface TodayMetricsRow {
   pedidos_total:          number;
+  pedidos_recibidos:      number;
   pedidos_confirmados:    number;
   pedidos_en_preparacion: number;
   pedidos_en_camino:      number;

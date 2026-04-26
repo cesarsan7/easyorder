@@ -84,7 +84,7 @@ export default function EscalacionesPage() {
       })
       if (!res.ok) throw new Error()
       setEscalaciones((prev) =>
-        prev.map((e) => e.id === id ? { ...e, estado: 'resuelto' } : e)
+        prev.map((e) => e.id === id ? { ...e, estado: 'resuelto' as const } : e)
           .filter((e) => filter !== 'pendiente' || e.estado === 'pendiente')
       )
     } catch {
