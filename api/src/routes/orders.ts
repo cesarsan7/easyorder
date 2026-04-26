@@ -23,8 +23,6 @@ ordersRoutes.use('/:slug/*', resolveTenant);
 // ---------------------------------------------------------------------------
 
 const MAX_ORDER_ITEMS = 50;
-// Métodos de pago asíncronos: el cliente no paga en el momento → estado_pago='pendiente'
-const ASYNC_PAYMENT_METHODS = new Set(['transferencia', 'transfer', 'online', 'pago online', 'bizum']);
 
 ordersRoutes.post('/:slug/orders', async (c) => {
   const restaurante_id = c.get('restaurante_id');
@@ -353,13 +351,9 @@ ordersRoutes.post('/:slug/orders', async (c) => {
     }
 
     // ── Step 7: initial estado + estado_pago ─────────────────────────────────
-    // Todos los pedidos web arrancan en 'recibido' — el operador los confirma
-    // desde el dashboard. El estado de pago es ortogonal al estado operativo:
-    //   estado_pago='pendiente'  → transfer/bizum/online (verificar comprobante)
-    //   estado_pago='no_aplica'  → efectivo/tarjeta (se cobra en el momento)
-    const isAsyncPayment = ASYNC_PAYMENT_METHODS.has(metodo_pago.toLowerCase().trim());
-    const estado_pago    = isAsyncPayment ? 'pendiente' : 'no_aplica';
-    const total          = round2(subtotal + costo_envio);
+    // Todos los pedidos arrancan en 'recibido'. El operador confirma el pago
+    // manualmente desde el dashboard → estado_pago siempre 'pendiente' al crear.
+    const total = round2(subtotal + costo_envio);
 
     // ── Step 8: upsert cliente, then insert pedido ────────────────────────────
     //
@@ -426,7 +420,7 @@ ordersRoutes.post('/:slug/orders', async (c) => {
         ${tiempo_estimado},
         ${metodo_pago},
         'recibido',
-        ${estado_pago},
+        'pendiente',
         ${notas},
         'web'
       )
