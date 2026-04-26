@@ -61,7 +61,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
   const limitParam  = c.req.query('limit');
 
   const VALID_ESTADOS = [
-    'en_curso', 'confirmado', 'en_preparacion', 'listo',
+    'recibido', 'en_curso', 'confirmado', 'en_preparacion', 'listo',
     'en_camino', 'pendiente_pago', 'entregado', 'cancelado',
   ];
   if (estadoParam && !VALID_ESTADOS.includes(estadoParam)) {
@@ -401,6 +401,7 @@ dashboardRoutes.get('/:slug/home/metrics', async (c) => {
       sql<TodayMetricsRow[]>`
         SELECT
           COUNT(*)::int                                                                          AS pedidos_total,
+          COUNT(*) FILTER (WHERE estado = 'recibido')::int                                      AS pedidos_recibidos,
           COUNT(*) FILTER (WHERE estado = 'confirmado')::int                                    AS pedidos_confirmados,
           COUNT(*) FILTER (WHERE estado = 'en_preparacion')::int                                AS pedidos_en_preparacion,
           COUNT(*) FILTER (WHERE estado = 'en_camino')::int                                     AS pedidos_en_camino,
@@ -459,6 +460,7 @@ dashboardRoutes.get('/:slug/home/metrics', async (c) => {
       zona_horaria: zonaHoraria,
       today: {
         pedidos_total:         Number(t.pedidos_total),
+        pedidos_recibidos:     Number(t.pedidos_recibidos),
         pedidos_confirmados:   Number(t.pedidos_confirmados),
         pedidos_en_preparacion: Number(t.pedidos_en_preparacion),
         pedidos_en_camino:     Number(t.pedidos_en_camino),
@@ -502,6 +504,7 @@ dashboardRoutes.get('/:slug/home/metrics', async (c) => {
 // ----------------------------------------------------------------------------
 
 const TRANSITIONS: Record<string, readonly string[]> = {
+  recibido:       ['confirmado', 'cancelado'],
   en_curso:       ['confirmado', 'cancelado'],
   pendiente_pago: ['pagado', 'confirmado', 'cancelado'],
   confirmado:     ['en_preparacion', 'cancelado'],
@@ -1557,6 +1560,139 @@ interface HorarioWithId {
   cierre_1:   string | null;
   apertura_2: string | null;
   cierre_2:   string | null;
+}
+
+// ----------------------------------------------------------------------------
+// GET /dashboard/:slug/escalaciones
+//
+// Retorna las conversaciones derivadas a humano por el agente n8n.
+// Parámetros opcionales:
+//   estado  — 'pendiente' | 'resuelto' | (omitir = todos)
+//   limit   — máx 100, default 50
+//   page    — default 1
+// ----------------------------------------------------------------------------
+dashboardRoutes.get('/:slug/escalaciones', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const estadoParam    = c.req.query('estado');
+  const page           = Math.max(1, parseInt(c.req.query('page') ?? '1', 10));
+  const limit          = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '50', 10)));
+  const offset         = (page - 1) * limit;
+
+  const VALID = ['pendiente', 'resuelto'];
+  if (estadoParam && !VALID.includes(estadoParam)) {
+    return c.json({ error: 'invalid_estado', valid_values: VALID }, 400);
+  }
+
+  try {
+    const estadoFilter = estadoParam
+      ? sql`AND e.estado = ${estadoParam}`
+      : sql``;
+
+    const [countRows, rows] = await Promise.all([
+      sql<{ total: number }[]>`
+        SELECT COUNT(*)::int AS total
+        FROM   escalaciones e
+        WHERE  e.restaurante_id = ${restaurante_id}
+          ${estadoFilter}
+      `,
+      sql<EscalacionRow[]>`
+        SELECT
+          e.id, e.telefono, e.problema, e.contexto,
+          e.conversation_id, e.account_id, e.contact_id,
+          e.estado, e.created_at, e.resolved_at, e.resolved_by
+        FROM   escalaciones e
+        WHERE  e.restaurante_id = ${restaurante_id}
+          ${estadoFilter}
+        ORDER BY e.created_at DESC
+        LIMIT  ${limit}
+        OFFSET ${offset}
+      `,
+    ]);
+
+    return c.json({
+      total:       Number(countRows[0]?.total ?? 0),
+      page,
+      limit,
+      escalaciones: rows.map((e) => ({
+        id:              Number(e.id),
+        telefono:        e.telefono,
+        problema:        e.problema ?? null,
+        contexto:        e.contexto ?? null,
+        conversation_id: e.conversation_id ?? null,
+        account_id:      e.account_id ?? null,
+        contact_id:      e.contact_id ?? null,
+        estado:          e.estado,
+        created_at:      e.created_at,
+        resolved_at:     e.resolved_at ?? null,
+        resolved_by:     e.resolved_by ?? null,
+      })),
+    });
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/escalaciones] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ----------------------------------------------------------------------------
+// PATCH /dashboard/:slug/escalaciones/:id
+//
+// Marca una escalación como resuelta. Solo owner / admin / manager.
+// ----------------------------------------------------------------------------
+dashboardRoutes.patch('/:slug/escalaciones/:id', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const idParam        = c.req.param('id');
+  const id             = parseInt(idParam, 10);
+
+  if (!Number.isInteger(id) || id < 1) {
+    return c.json({ error: 'invalid_id' }, 400);
+  }
+
+  try {
+    const user = await validateBearerToken(c.req.header('Authorization'));
+    const resolvedBy = user?.email ?? 'unknown';
+
+    const updated = await sql<{ id: number; estado: string; resolved_at: string }[]>`
+      UPDATE escalaciones
+      SET
+        estado      = 'resuelto',
+        resolved_at = NOW(),
+        resolved_by = ${resolvedBy}
+      WHERE id             = ${id}
+        AND restaurante_id = ${restaurante_id}
+        AND estado         = 'pendiente'
+      RETURNING id, estado, resolved_at
+    `;
+
+    if (updated.length === 0) {
+      return c.json({ error: 'not_found_or_already_resolved' }, 404);
+    }
+
+    return c.json({
+      id:          Number(updated[0].id),
+      estado:      updated[0].estado,
+      resolved_at: updated[0].resolved_at,
+    });
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/escalaciones/:id] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Row type — escalaciones
+// ---------------------------------------------------------------------------
+interface EscalacionRow {
+  id:              number | string;
+  telefono:        string;
+  problema:        string | null;
+  contexto:        Record<string, unknown> | null;
+  conversation_id: string | null;
+  account_id:      string | null;
+  contact_id:      string | null;
+  estado:          string;
+  created_at:      string;
+  resolved_at:     string | null;
+  resolved_by:     string | null;
 }
 
 export default dashboardRoutes;
