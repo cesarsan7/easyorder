@@ -7,6 +7,34 @@ import { requireAuth, validateBearerToken } from '../middleware/auth.js';
 
 const dashboardRoutes = new Hono<{ Variables: Variables }>();
 
+// ---------------------------------------------------------------------------
+// Notification helper — fire-and-forget POST to n8n webhook.
+// URL is read from N8N_WEBHOOK_NOTIFICACION env var.
+// If the var is empty or unset, all notifications are silently skipped.
+// Never throws — errors are caught and logged so API responses are never blocked.
+// ---------------------------------------------------------------------------
+const N8N_NOTIFICACION_URL = process.env['N8N_WEBHOOK_NOTIFICACION'] ?? '';
+
+interface NotificationPayload {
+  event_type:      string;
+  pedido_id:       number;
+  pedido_codigo:   string | null;
+  telefono:        string;
+  tipo_despacho:   string;
+  tiempo_estimado: string | null;
+}
+
+function fireNotification(payload: NotificationPayload): void {
+  if (!N8N_NOTIFICACION_URL) return;
+  fetch(N8N_NOTIFICACION_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  }).catch((err: unknown) =>
+    console.warn('[fireNotification] webhook call failed:', err instanceof Error ? err.message : err),
+  );
+}
+
 // ----------------------------------------------------------------------------
 // GET /dashboard/me  ← debe estar ANTES del middleware /:slug/*
 //
@@ -552,8 +580,9 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
 
   try {
     // Step 1 — read the order, verify tenant ownership in the same query.
+    // telefono + tiempo_estimado are needed for WhatsApp notifications fired later.
     const rows = await sql<PedidoStatusRow[]>`
-      SELECT id, pedido_codigo, estado, tipo_despacho
+      SELECT id, pedido_codigo, estado, tipo_despacho, telefono, tiempo_estimado
       FROM   pedidos
       WHERE  id             = ${id}
         AND  restaurante_id = ${restaurante_id}
@@ -598,7 +627,23 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
 
     const u = updated[0];
 
-    // Step 4 — respond 200 with the diff the frontend needs to re-render.
+    // Step 4 — fire-and-forget WhatsApp notification for key state transitions.
+    // confirmado → cliente sabe que su pedido fue aceptado.
+    // en_camino  → cliente sabe que su pedido salió.
+    // cancelado  → cliente es notificado de la cancelación.
+    const NOTIFY_ESTADOS = new Set(['confirmado', 'en_camino', 'cancelado']);
+    if (NOTIFY_ESTADOS.has(estadoNuevo)) {
+      fireNotification({
+        event_type:      estadoNuevo,
+        pedido_id:       u.id,
+        pedido_codigo:   pedido.pedido_codigo,
+        telefono:        pedido.telefono,
+        tipo_despacho:   pedido.tipo_despacho,
+        tiempo_estimado: pedido.tiempo_estimado,
+      });
+    }
+
+    // Step 5 — respond 200 with the diff the frontend needs to re-render.
     return c.json({
       id:              u.id,
       pedido_codigo:   u.pedido_codigo,
@@ -638,16 +683,41 @@ dashboardRoutes.patch('/:slug/orders/:id/payment', requireAuth, async (c) => {
   }
 
   try {
-    const updated = await sql<{ id: number; estado_pago: string; updated_at: string }[]>`
+    // Include telefono + pedido_codigo + tipo_despacho + tiempo_estimado in RETURNING
+    // so the WhatsApp notification can be fired without a second DB round-trip.
+    const updated = await sql<{
+      id:              number;
+      estado_pago:     string;
+      updated_at:      string;
+      pedido_codigo:   string | null;
+      telefono:        string;
+      tipo_despacho:   string;
+      tiempo_estimado: string | null;
+    }[]>`
       UPDATE pedidos
       SET    estado_pago = ${estadoPago},
              updated_at  = NOW()
       WHERE  id             = ${id}
         AND  restaurante_id = ${restaurante_id}
-      RETURNING id, estado_pago, updated_at
+      RETURNING id, estado_pago, updated_at, pedido_codigo, telefono, tipo_despacho, tiempo_estimado
     `;
     if (updated.length === 0) return c.json({ error: 'order_not_found' }, 404);
-    return c.json({ id: updated[0].id, estado_pago: updated[0].estado_pago, updated_at: updated[0].updated_at });
+
+    const u = updated[0];
+
+    // Fire WhatsApp notification when the operator confirms the payment.
+    if (estadoPago === 'pagado') {
+      fireNotification({
+        event_type:      'pago_confirmado',
+        pedido_id:       u.id,
+        pedido_codigo:   u.pedido_codigo,
+        telefono:        u.telefono,
+        tipo_despacho:   u.tipo_despacho,
+        tiempo_estimado: u.tiempo_estimado,
+      });
+    }
+
+    return c.json({ id: u.id, estado_pago: u.estado_pago, updated_at: u.updated_at });
   } catch (err) {
     console.error('[PATCH /dashboard/:slug/orders/:id/payment] Unhandled error:', err);
     return c.json({ error: 'service_unavailable' }, 503);
@@ -1446,13 +1516,6 @@ dashboardRoutes.patch('/:slug/delivery-zones/:id', async (c) => {
     }
   }
 
-  if ('is_active' in raw) {
-    if (typeof raw['is_active'] !== 'boolean') {
-      return c.json({ error: 'invalid_field', field: 'is_active', detail: 'must be a boolean' }, 400);
-    }
-    updates['is_active'] = raw['is_active'];
-  }
-
   if (Object.keys(updates).length === 0) {
     return c.json({ error: 'no_valid_fields', detail: 'body must include at least one updatable field' }, 400);
   }
@@ -1565,10 +1628,12 @@ interface RestauranteStatusRow {
 }
 
 interface PedidoStatusRow {
-  id:            number;
-  pedido_codigo: string | null;
-  estado:        string;
-  tipo_despacho: string;
+  id:              number;
+  pedido_codigo:   string | null;
+  estado:          string;
+  tipo_despacho:   string;
+  telefono:        string;
+  tiempo_estimado: string | null;
 }
 
 interface RestauranteSettingsRow {
@@ -1738,6 +1803,614 @@ interface EscalacionRow {
   created_at:      string;
   resolved_at:     string | null;
   resolved_by:     string | null;
+}
+
+export default dashboardRoutes;
+      if (!Number.isInteger(n) || n < 0) {
+        return c.json({ error: 'invalid_field', field: 'estimated_minutes_max', detail: 'must be a non-negative integer or null' }, 400);
+      }
+      updates['estimated_minutes_max'] = n;
+    }
+  }
+
+  if ('is_active' in raw) {
+    if (typeof raw['is_active'] !== 'boolean') {
+      return c.json({ error: 'invalid_field', field: 'is_active', detail: 'must be a boolean' }, 400);
+    }
+    updates['is_active'] = raw['is_active'];
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return c.json({ error: 'no_valid_fields', detail: 'body must include at least one updatable field' }, 400);
+  }
+
+  try {
+    const rows = await sql<DeliveryZoneRow[]>`
+      UPDATE delivery_zone
+      SET    ${sql(updates)}
+      WHERE  delivery_zone_id = ${zoneId}
+        AND  restaurante_id   = ${restaurante_id}
+      RETURNING
+        delivery_zone_id,
+        zone_name,
+        postal_code,
+        fee,
+        is_active,
+        description,
+        min_order_amount,
+        estimated_minutes_min,
+        estimated_minutes_max
+    `;
+
+    if (rows.length === 0) {
+      return c.json({ error: 'zone_not_found' }, 404);
+    }
+
+    const z = rows[0];
+    return c.json({
+      delivery_zone_id:      Number(z.delivery_zone_id),
+      zone_name:             z.zone_name,
+      postal_code:           z.postal_code,
+      fee:                   Number(z.fee),
+      is_active:             z.is_active,
+      description:           z.description ?? null,
+      min_order_amount:      z.min_order_amount !== null ? Number(z.min_order_amount) : null,
+      estimated_minutes_min: z.estimated_minutes_min ?? null,
+      estimated_minutes_max: z.estimated_minutes_max ?? null,
+    });
+
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/delivery-zones/:id] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// Returns the local calendar date (YYYY-MM-DD) for a given IANA timezone.
+// Uses en-CA locale because it formats as YYYY-MM-DD without extra logic.
+function getLocalIsoDate(zona_horaria: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: zona_horaria,
+    year:  'numeric',
+    month: '2-digit',
+    day:   '2-digit',
+  }).format(new Date());
+}
+
+// ---------------------------------------------------------------------------
+// Row types
+// ---------------------------------------------------------------------------
+
+interface OrderListRow {
+  id:              number;
+  pedido_codigo:   string | null;
+  estado:          string;
+  estado_pago:     string | null;
+  tipo_despacho:   string;
+  total:           number;
+  subtotal:        number;
+  costo_envio:     number;
+  metodo_pago:     string | null;
+  notas:           string | null;
+  telefono:        string;
+  nombre_cliente:  string | null;
+  direccion:       string | null;
+  tiempo_estimado: string | null;
+  items_count:     number | null;
+  created_at:      string;
+  updated_at:      string | null;
+}
+
+interface TodayMetricsRow {
+  pedidos_total:          number;
+  pedidos_recibidos:      number;
+  pedidos_confirmados:    number;
+  pedidos_en_preparacion: number;
+  pedidos_en_camino:      number;
+  pedidos_entregados:     number;
+  pedidos_cancelados:     number;
+  pedidos_pendiente_pago: number;
+  revenue_total:          number;
+  revenue_delivery:       number;
+  revenue_retiro:         number;
+  costo_envio_total:      number;
+}
+
+interface ActiveOrdersRow {
+  count:             number;
+  oldest_created_at: string | null;
+}
+
+interface Last7DaysRow {
+  pedidos_total: number;
+  revenue_total: number;
+}
+
+interface RestauranteStatusRow {
+  id: number;
+  nombre: string;
+  zona_horaria: string;
+}
+
+interface PedidoStatusRow {
+  id:              number;
+  pedido_codigo:   string | null;
+  estado:          string;
+  tipo_despacho:   string;
+  telefono:        string;
+  tiempo_estimado: string | null;
+}
+
+interface RestauranteSettingsRow {
+  nombre:             string;
+  telefono:           string | null;
+  direccion:          string | null;
+  mensaje_bienvenida: string | null;
+  mensaje_cerrado:    string | null;
+}
+
+interface RestauranteFullRow extends RestauranteSettingsRow {
+  datos_bancarios: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null;
+  moneda:          string | null;
+  payment_methods: string[] | null;
+}
+
+interface DeliveryZoneRow {
+  delivery_zone_id:      number | string;
+  zone_name:             string;
+  postal_code:           string;
+  fee:                   number | string;
+  is_active:             boolean;
+  description:           string | null;
+  min_order_amount:      number | string | null;
+  estimated_minutes_min: number | null;
+  estimated_minutes_max: number | null;
+}
+
+interface HorarioWithId {
+  id: number;
+  dia: string;
+  disponible: boolean;
+  apertura_1: string | null;
+  cierre_1:   string | null;
+  apertura_2: string | null;
+  cierre_2:   string | null;
+}
+
+// ----------------------------------------------------------------------------
+// GET /dashboard/:slug/escalaciones
+//
+// Retorna las conversaciones derivadas a humano por el agente n8n.
+// Parámetros opcionales:
+//   estado  — 'pendiente' | 'resuelto' | (omitir = todos)
+//   limit   — máx 100, default 50
+//   page    — default 1
+// ----------------------------------------------------------------------------
+dashboardRoutes.get('/:slug/escalaciones', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const estadoParam    = c.req.query('estado');
+  const page           = Math.max(1, parseInt(c.req.query('page') ?? '1', 10));
+  const limit          = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '50', 10)));
+  const offset         = (page - 1) * limit;
+
+  const VALID = ['pendiente', 'resuelto'];
+  if (estadoParam && !VALID.includes(estadoParam)) {
+    return c.json({ error: 'invalid_estado', valid_values: VALID }, 400);
+  }
+
+  try {
+    const estadoFilter = estadoParam
+      ? sql`AND e.estado = ${estadoParam}`
+      : sql``;
+
+    const [countRows, rows] = await Promise.all([
+      sql<{ total: number }[]>`
+        SELECT COUNT(*)::int AS total
+        FROM   escalaciones e
+        WHERE  e.restaurante_id = ${restaurante_id}
+          ${estadoFilter}
+      `,
+      sql<EscalacionRow[]>`
+        SELECT
+          e.id, e.telefono, e.problema, e.contexto,
+          e.conversation_id, e.account_id, e.contact_id,
+          e.estado, e.created_at, e.resolved_at, e.resolved_by
+        FROM   escalaciones e
+        WHERE  e.restaurante_id = ${restaurante_id}
+          ${estadoFilter}
+        ORDER BY e.created_at DESC
+        LIMIT  ${limit}
+        OFFSET ${offset}
+      `,
+    ]);
+
+    return c.json({
+      total:       Number(countRows[0]?.total ?? 0),
+      page,
+      limit,
+      escalaciones: rows.map((e) => ({
+        id:              Number(e.id),
+        telefono:        e.telefono,
+        problema:        e.problema ?? null,
+        contexto:        e.contexto ?? null,
+        conversation_id: e.conversation_id ?? null,
+        account_id:      e.account_id ?? null,
+        contact_id:      e.contact_id ?? null,
+        estado:          e.estado,
+        created_at:      e.created_at,
+        resolved_at:     e.resolved_at ?? null,
+        resolved_by:     e.resolved_by ?? null,
+      })),
+    });
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/escalaciones] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ----------------------------------------------------------------------------
+// PATCH /dashboard/:slug/escalaciones/:id
+//
+// Marca una escalación como resuelta. Solo owner / admin / manager.
+// ----------------------------------------------------------------------------
+dashboardRoutes.patch('/:slug/escalaciones/:id', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const idParam        = c.req.param('id');
+  const id             = parseInt(idParam, 10);
+
+  if (!Number.isInteger(id) || id < 1) {
+    return c.json({ error: 'invalid_id' }, 400);
+  }
+
+  try {
+    const user = await validateBearerToken(c.req.header('Authorization'));
+    const resolvedBy = user?.email ?? 'unknown';
+
+    const updated = await sql<{ id: number; estado: string; resolved_at: string }[]>`
+      UPDATE escalaciones
+      SET
+        estado      = 'resuelto',
+        resolved_at = NOW(),
+        resolved_by = ${resolvedBy}
+      WHERE id             = ${id}
+        AND restaurante_id = ${restaurante_id}
+        AND estado         = 'pendiente'
+      RETURNING id, estado, resolved_at
+    `;
+
+    if (updated.length === 0) {
+      return c.json({ error: 'not_found_or_already_resolved' }, 404);
+    }
+
+    return c.json({
+      id:          Number(updated[0].id),
+      estado:      updated[0].estado,
+      resolved_at: updated[0].resolved_at,
+    });
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/escalaciones/:id] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Row type — escalaciones
+// ---------------------------------------------------------------------------
+interface EscalacionRow {
+  id:              number | string;
+  telefono:        string;
+  problema:        string | null;
+  contexto:        Record<string, unknown> | null;
+  conversation_id: string | null;
+  account_id:      string | null;
+  contact_id:      string | null;
+  estado:          string;
+  created_at:      string;
+  resolved_at:     string | null;
+  resolved_by:     string | null;
+}
+
+export default dashboardRoutes;
+      if (!Number.isInteger(n) || n < 0) {
+        return c.json({ error: 'invalid_field', field: 'estimated_minutes_max', detail: 'must be a non-negative integer or null' }, 400);
+      }
+      updates['estimated_minutes_max'] = n;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return c.json({ error: 'no_valid_fields', detail: 'body must include at least one updatable field' }, 400);
+  }
+
+  try {
+    const rows = await sql<DeliveryZoneRow[]>`
+      UPDATE delivery_zone
+      SET    ${sql(updates)}
+      WHERE  delivery_zone_id = ${zoneId}
+        AND  restaurante_id   = ${restaurante_id}
+      RETURNING
+        delivery_zone_id,
+        zone_name,
+        postal_code,
+        fee,
+        is_active,
+        description,
+        min_order_amount,
+        estimated_minutes_min,
+        estimated_minutes_max
+    `;
+
+    if (rows.length === 0) {
+      return c.json({ error: 'zone_not_found' }, 404);
+    }
+
+    const z = rows[0];
+    return c.json({
+      delivery_zone_id:      Number(z.delivery_zone_id),
+      zone_name:             z.zone_name,
+      postal_code:           z.postal_code,
+      fee:                   Number(z.fee),
+      is_active:             z.is_active,
+      description:           z.description ?? null,
+      min_order_amount:      z.min_order_amount !== null ? Number(z.min_order_amount) : null,
+      estimated_minutes_min: z.estimated_minutes_min ?? null,
+      estimated_minutes_max: z.estimated_minutes_max ?? null,
+    });
+
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/delivery-zones/:id] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// Returns the local calendar date (YYYY-MM-DD) for a given IANA timezone.
+// Uses en-CA locale because it formats as YYYY-MM-DD without extra logic.
+function getLocalIsoDate(zona_horaria: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: zona_horaria,
+    year:  'numeric',
+    month: '2-digit',
+    day:   '2-digit',
+  }).format(new Date());
+}
+
+// ---------------------------------------------------------------------------
+// Row types
+// ---------------------------------------------------------------------------
+
+interface OrderListRow {
+  id:              number;
+  pedido_codigo:   string | null;
+  estado:          string;
+  estado_pago:     string | null;
+  tipo_despacho:   string;
+  total:           number;
+  subtotal:        number;
+  costo_envio:     number;
+  metodo_pago:     string | null;
+  notas:           string | null;
+  telefono:        string;
+  nombre_cliente:  string | null;
+  direccion:       string | null;
+  tiempo_estimado: string | null;
+  items_count:     number | null;
+  created_at:      string;
+  updated_at:      string | null;
+}
+
+interface TodayMetricsRow {
+  pedidos_total:          number;
+  pedidos_recibidos:      number;
+  pedidos_confirmados:    number;
+  pedidos_en_preparacion: number;
+  pedidos_en_camino:      number;
+  pedidos_entregados:     number;
+  pedidos_cancelados:     number;
+  pedidos_pendiente_pago: number;
+  revenue_total:          number;
+  revenue_delivery:       number;
+  revenue_retiro:         number;
+  costo_envio_total:      number;
+}
+
+interface ActiveOrdersRow {
+  count:             number;
+  oldest_created_at: string | null;
+}
+
+interface Last7DaysRow {
+  pedidos_total: number;
+  revenue_total: number;
+}
+
+interface RestauranteStatusRow {
+  id: number;
+  nombre: string;
+  zona_horaria: string;
+}
+
+interface PedidoStatusRow {
+  id:              number;
+  pedido_codigo:   string | null;
+  estado:          string;
+  tipo_despacho:   string;
+  telefono:        string;
+  tiempo_estimado: string | null;
+}
+
+interface RestauranteSettingsRow {
+  nombre:             string;
+  telefono:           string | null;
+  direccion:          string | null;
+  mensaje_bienvenida: string | null;
+  mensaje_cerrado:    string | null;
+}
+
+interface RestauranteFullRow extends RestauranteSettingsRow {
+  datos_bancarios: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null;
+  moneda:          string | null;
+  payment_methods: string[] | null;
+}
+
+interface DeliveryZoneRow {
+  delivery_zone_id:      number | string;
+  zone_name:             string;
+  postal_code:           string;
+  fee:                   number | string;
+  is_active:             boolean;
+  description:           string | null;
+  min_order_amount:      number | string | null;
+  estimated_minutes_min: number | null;
+  estimated_minutes_max: number | null;
+}
+
+interface HorarioWithId {
+  id: number;
+  dia: string;
+  disponible: boolean;
+  apertura_1: string | null;
+  cierre_1:   string | null;
+  apertura_2: string | null;
+  cierre_2:   string | null;
+}
+
+// ----------------------------------------------------------------------------
+// GET /dashboard/:slug/escalaciones
+// ----------------------------------------------------------------------------
+dashboardRoutes.get('/:slug/escalaciones', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const estadoParam    = c.req.query('estado');
+  const page           = Math.max(1, parseInt(c.req.query('page') ?? '1', 10));
+  const limit          = Math.min(100, Math.max(1, parseInt(c.req.query('limit') ?? '50', 10)));
+  const offset         = (page - 1) * limit;
+
+  const VALID = ['pendiente', 'resuelto'];
+  if (estadoParam && !VALID.includes(estadoParam)) {
+    return c.json({ error: 'invalid_estado', valid_values: VALID }, 400);
+  }
+
+  try {
+    const estadoFilter = estadoParam
+      ? sql`AND e.estado = ${estadoParam}`
+      : sql``;
+
+    const [countRows, rows] = await Promise.all([
+      sql<{ total: number }[]>`
+        SELECT COUNT(*)::int AS total
+        FROM   escalaciones e
+        WHERE  e.restaurante_id = ${restaurante_id}
+          ${estadoFilter}
+      `,
+      sql<EscalacionRow[]>`
+        SELECT
+          e.id, e.telefono, e.problema, e.contexto,
+          e.conversation_id, e.account_id, e.contact_id,
+          e.estado, e.created_at, e.resolved_at, e.resolved_by
+        FROM   escalaciones e
+        WHERE  e.restaurante_id = ${restaurante_id}
+          ${estadoFilter}
+        ORDER BY e.created_at DESC
+        LIMIT  ${limit}
+        OFFSET ${offset}
+      `,
+    ]);
+
+    return c.json({
+      total:       Number(countRows[0]?.total ?? 0),
+      page,
+      limit,
+      escalaciones: rows.map((e) => ({
+        id:              Number(e.id),
+        telefono:        e.telefono,
+        problema:        e.problema ?? null,
+        contexto:        e.contexto ?? null,
+        conversation_id: e.conversation_id ?? null,
+        account_id:      e.account_id ?? null,
+        contact_id:      e.contact_id ?? null,
+        estado:          e.estado,
+        created_at:      e.created_at,
+        resolved_at:     e.resolved_at ?? null,
+        resolved_by:     e.resolved_by ?? null,
+      })),
+    });
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/escalaciones] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ----------------------------------------------------------------------------
+// PATCH /dashboard/:slug/escalaciones/:id
+// ----------------------------------------------------------------------------
+dashboardRoutes.patch('/:slug/escalaciones/:id', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const idParam        = c.req.param('id');
+  const id             = parseInt(idParam, 10);
+
+  if (!Number.isInteger(id) || id < 1) {
+    return c.json({ error: 'invalid_id' }, 400);
+  }
+
+  try {
+    const user = await validateBearerToken(c.req.header('Authorization'));
+    const resolvedBy = user?.email ?? 'unknown';
+
+    const updated = await sql<{ id: number; estado: string; resolved_at: string }[]>`
+      UPDATE escalaciones
+      SET
+        estado      = 'resuelto',
+        resolved_at = NOW(),
+        resolved_by = ${resolvedBy}
+      WHERE id             = ${id}
+        AND restaurante_id = ${restaurante_id}
+        AND estado         = 'pendiente'
+      RETURNING id, estado, resolved_at
+    `;
+
+    if (updated.length === 0) {
+      return c.json({ error: 'not_found_or_already_resolved' }, 404);
+    }
+
+    return c.json({
+      id:          Number(updated[0].id),
+      estado:      updated[0].estado,
+      resolved_at: updated[0].resolved_at,
+    });
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/escalaciones/:id] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Row type — escalaciones
+// ---------------------------------------------------------------------------
+interface EscalacionRow {
+  id:              number | string;
+  telefono:        string;
+  problema:        string | null;
+  contexto:        Record<string, unknown> | null;
+  conversation_id: string | null;
+  account_id:      string | null;
+  contact_id:      string | null;
+  estado:          string;
+  created_at:      string;
+  resolved_at:     string | null;
+  resolved_by:     string | null;
+}
+
+export default dashboardRoutes;
+
+  conversation_id: string | null;
+  account_id:      string | null;
+  contact_id:      string | null;
+  estado:          string;
+  created_at:      string;
+  resolved_at:     string | null;
+  resolved_by:     string | null;
+}
+
+export default dashboardRoutes;
+
 }
 
 export default dashboardRoutes;
