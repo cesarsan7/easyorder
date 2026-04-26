@@ -617,6 +617,18 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
       }
     }
 
+    // Step 2c — entregado requiere que el pago esté resuelto.
+    // estado_pago='pendiente' ocurre cuando el método es transferencia/bizum/online
+    // y el operador aún no confirmó el comprobante.
+    if (estadoNuevo === 'entregado' && pedido.estado_pago === 'pendiente') {
+      return c.json({
+        error:  'payment_pending',
+        from:   estadoActual,
+        to:     estadoNuevo,
+        detail: 'Confirm or reject the payment before marking the order as entregado.',
+      }, 422);
+    }
+
     // Step 3 — update with tenant guard repeated in WHERE to prevent TOCTOU.
     const updated = await sql<{ id: number; pedido_codigo: string | null; estado: string; updated_at: string }[]>`
       UPDATE pedidos
