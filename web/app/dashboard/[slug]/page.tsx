@@ -57,6 +57,33 @@ const POLL_INTERVAL_MS = 30_000
 // Color primario EasyOrder
 const PRIMARY = '#F3274C'
 
+// ─── Normaliza items de BD: soporta formato web y formato n8n/WhatsApp ────────
+// Web:      { item_name, variant_name, quantity, unit_price, extras }
+// WhatsApp: { nombre, cantidad, precio_unitario, subtotal, notas }
+function normalizeItem(raw: unknown): OrderItem {
+  const r = raw as Record<string, unknown>
+  if (typeof r.item_name === 'string') {
+    // Formato web — ya está en el shape correcto
+    return {
+      menu_item_id: Number(r.menu_item_id ?? 0),
+      item_name:    r.item_name,
+      variant_name: (r.variant_name as string | null) ?? null,
+      quantity:     Number(r.quantity ?? 1),
+      unit_price:   Number(r.unit_price ?? 0),
+      extras:       Array.isArray(r.extras) ? (r.extras as OrderItem['extras']) : undefined,
+    }
+  }
+  // Formato WhatsApp/n8n — mapear campos
+  const nombre = String(r.nombre ?? r.name ?? 'Producto')
+  return {
+    menu_item_id: 0,
+    item_name:    nombre,
+    variant_name: null,
+    quantity:     Number(r.cantidad ?? r.quantity ?? 1),
+    unit_price:   Number(r.precio_unitario ?? r.unit_price ?? 0),
+  }
+}
+
 const ESTADO_META: Record<string, { label: string; color: string; bg: string }> = {
   recibido:       { label: 'Por confirmar',    color: '#92400E', bg: '#FEF3C7' },
   en_curso:       { label: 'En curso',         color: '#6B7280', bg: '#F3F4F6' },
@@ -331,7 +358,16 @@ function OrderDetailPanel({
     const base = process.env.NEXT_PUBLIC_API_URL
     fetch(`${base}/public/${slug}/orders/${order.pedido_codigo}`)
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setDetail(d) })
+      .then((d) => {
+        if (d) {
+          // Normalizar items para soportar tanto pedidos web como pedidos
+          // de WhatsApp (n8n) que usan schema diferente en BD.
+          setDetail({
+            ...d,
+            items: Array.isArray(d.items) ? d.items.map(normalizeItem) : [],
+          })
+        }
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [slug, order.pedido_codigo])

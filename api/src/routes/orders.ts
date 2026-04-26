@@ -352,9 +352,10 @@ ordersRoutes.post('/:slug/orders', async (c) => {
     }
 
     // ── Step 7: initial estado ────────────────────────────────────────────────
-    // transferencia and online are async payment methods — order is not
-    // confirmed until the operator verifies receipt.
-    const estado = DELIVERY_ESTADOS.has(metodo_pago) ? 'pendiente_pago' : 'confirmado';
+    // Todos los pedidos web arrancan en 'recibido' (el operador los confirma
+    // desde el dashboard). Excepción: transferencia/online quedan en
+    // 'pendiente_pago' hasta que el operador verifique el comprobante.
+    const estado = DELIVERY_ESTADOS.has(metodo_pago) ? 'pendiente_pago' : 'recibido';
     const total  = round2(subtotal + costo_envio);
 
     // ── Step 8: upsert cliente, then insert pedido ────────────────────────────
