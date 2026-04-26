@@ -98,28 +98,29 @@ const ESTADO_META: Record<string, { label: string; color: string; bg: string }> 
   cancelado:      { label: 'Cancelado',         color: '#DC2626', bg: '#FEE2E2' },
 }
 
-// Transiciones permitidas (espejo del backend — solo para UX optimista)
+// Transiciones relajadas — espejo del backend. Permite saltos hacia adelante.
 const TRANSITIONS: Record<string, string[]> = {
-  recibido:       ['confirmado', 'cancelado'],
-  en_curso:       ['confirmado', 'cancelado'],
-  pendiente_pago: ['confirmado', 'cancelado'],
-  confirmado:     ['en_preparacion', 'cancelado'],
-  pagado:         ['en_preparacion', 'cancelado'],
-  en_preparacion: ['listo', 'cancelado'],
+  recibido:       ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
+  en_curso:       ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
+  pendiente_pago: ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
+  confirmado:     ['en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
+  pagado:         ['en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
+  en_preparacion: ['listo', 'en_camino', 'entregado', 'cancelado'],
   listo:          ['en_camino', 'entregado', 'cancelado'],
   en_camino:      ['entregado', 'cancelado'],
   entregado:      [],
   cancelado:      [],
 }
 
-const NEXT_LABEL: Record<string, string> = {
-  confirmado:     '✓ Confirmar',
-  en_preparacion: '👨‍🍳 Preparando',
-  listo:          '🎉 Listo',
-  en_camino:      '🛵 En camino',
-  entregado:      '✅ Entregado',
-  cancelado:      '✕ Cancelar',
-}
+// Orden canónico del flujo operativo (sin cancelado — se trata aparte)
+const STATE_FLOW: { key: string; emoji: string; label: string }[] = [
+  { key: 'recibido',       emoji: '⏳', label: 'Por confirmar'  },
+  { key: 'confirmado',     emoji: '✅', label: 'Confirmado'     },
+  { key: 'en_preparacion', emoji: '👨‍🍳', label: 'En preparación' },
+  { key: 'listo',          emoji: '🔔', label: 'Listo'          },
+  { key: 'en_camino',      emoji: '🛵', label: 'En despacho'    },
+  { key: 'entregado',      emoji: '📦', label: 'Entregado'      },
+]
 
 const DESPACHO_ICON: Record<string, string> = {
   delivery: '🛵',
@@ -332,7 +333,7 @@ function OrderCard({
             className="flex-1 rounded-xl py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             style={{ backgroundColor: PRIMARY }}
           >
-            {updating ? '…' : (NEXT_LABEL[primaryNext] ?? primaryNext)}
+            {updating ? '…' : (STATE_FLOW.find(s => s.key === primaryNext)?.label ?? primaryNext)}
           </button>
         )}
         {canCancel && (
@@ -405,9 +406,13 @@ function OrderDetailPanel({
 
   const meta        = ESTADO_META[order.estado] ?? { label: order.estado, color: '#6B7280', bg: '#F3F4F6' }
   const transitions = TRANSITIONS[order.estado] ?? []
-  const primaryNext = transitions.filter((t) => t !== 'cancelado')[0]
   const canCancel   = transitions.includes('cancelado')
   const updating    = updatingId === order.id
+  const isDelivery  = order.tipo_despacho === 'delivery'
+
+  // Índice del estado actual en el flujo canónico (para saber qué es "pasado")
+  const flowKeys    = STATE_FLOW.map((s) => s.key)
+  const currentIdx  = flowKeys.indexOf(order.estado)
 
   return (
     <>
@@ -595,53 +600,94 @@ function OrderDetailPanel({
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 px-5 pb-8 pt-2 border-t border-gray-100">
-          {/* Imprimir comanda */}
+        {/* ── Estado selector ─────────────────────────────────────────── */}
+        <div className="px-5 pt-4 pb-2 border-t border-gray-100">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
+            Estado del pedido
+          </p>
+
+          {/* Chips de estado operativo */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {STATE_FLOW
+              // Para retiro ocultamos "En despacho" — no aplica
+              .filter((s) => s.key !== 'en_camino' || isDelivery)
+              .map((s) => {
+                const stepIdx   = flowKeys.indexOf(s.key)
+                const isCurrent = s.key === order.estado
+                const isPast    = stepIdx >= 0 && currentIdx >= 0 && stepIdx < currentIdx
+                const isNext    = transitions.includes(s.key)
+
+                let bg    = '#F3F4F6'
+                let color = '#9CA3AF'
+                let cursor = 'default'
+                let opacity = '1'
+
+                if (isCurrent) {
+                  bg     = PRIMARY
+                  color  = '#FFFFFF'
+                } else if (isPast) {
+                  bg     = '#F3F4F6'
+                  color  = '#6B7280'
+                  opacity = '0.5'
+                } else if (isNext) {
+                  bg     = '#F9FAFB'
+                  color  = '#374151'
+                  cursor = 'pointer'
+                }
+
+                return (
+                  <button
+                    key={s.key}
+                    disabled={!isNext || isCurrent || updating}
+                    onClick={() => {
+                      if (isNext && !isCurrent) { onStatusChange(order.id, s.key); onClose() }
+                    }}
+                    style={{ backgroundColor: bg, color, opacity, cursor }}
+                    className="flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-semibold transition-all border border-transparent hover:border-gray-200 disabled:cursor-default"
+                  >
+                    <span>{s.emoji}</span>
+                    <span>{isCurrent ? '✓ ' : ''}{s.label}</span>
+                  </button>
+                )
+              })}
+          </div>
+
+          {/* Cancelar — separado visualmente */}
+          {canCancel && (
+            <button
+              onClick={() => { onStatusChange(order.id, 'cancelado'); onClose() }}
+              disabled={updating}
+              className="w-full rounded-2xl py-2.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50 border border-red-100"
+            >
+              ✕ Cancelar pedido
+            </button>
+          )}
+        </div>
+
+        {/* ── Acciones secundarias ─────────────────────────────────────────────────────────────────────────────── */}
+        <div className="flex gap-2 px-5 pb-8 pt-3">
           <button
             onClick={() => printComanda(order, detail)}
-            className="rounded-2xl px-4 py-3.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+            className="rounded-2xl px-4 py-3 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
             title="Imprimir comanda"
           >
             🖨
           </button>
-
-          {/* WhatsApp */}
           <button
             onClick={() => openWhatsApp(order.telefono)}
-            className="rounded-2xl px-4 py-3.5 text-sm font-medium transition-colors"
+            className="rounded-2xl px-4 py-3 text-sm font-medium transition-colors"
             style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}
             title="Abrir WhatsApp"
           >
             💬
           </button>
-
-          {primaryNext && (
-            <button
-              onClick={() => { onStatusChange(order.id, primaryNext); onClose() }}
-              disabled={updating}
-              className="flex-1 rounded-2xl py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: PRIMARY }}
-            >
-              {updating ? '…' : (NEXT_LABEL[primaryNext] ?? primaryNext)}
-            </button>
-          )}
-          {canCancel && (
-            <button
-              onClick={() => { onStatusChange(order.id, 'cancelado'); onClose() }}
-              disabled={updating}
-              className="rounded-2xl px-5 py-3.5 text-sm font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
-            >
-              Cancelar
-            </button>
-          )}
         </div>
       </div>
     </>
   )
 }
 
-// ─── Status toggle ────────────────────────────────────────────────────────────
+// ─── Status toggle ─────────────────────────────────────────────────────────────────────────────────
 
 function StatusToggle({ slug, authFetch }: { slug: string; authFetch: ReturnType<typeof useAuthFetch> }) {
   const [isOpen, setIsOpen]     = useState<boolean | null>(null)
@@ -694,14 +740,13 @@ function StatusToggle({ slug, authFetch }: { slug: string; authFetch: ReturnType
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const { slug }  = useParams<{ slug: string }>()
   const router    = useRouter()
   const authFetch = useAuthFetch()
 
-  // Persist slug so /dashboard knows where to redirect after login
   useEffect(() => {
     localStorage.setItem('easyorder-last-slug', slug)
   }, [slug])
@@ -714,7 +759,7 @@ export default function DashboardPage() {
 
   const [orders,        setOrders]        = useState<Order[]>([])
   const [total,         setTotal]         = useState(0)
-  const [newCount,      setNewCount]      = useState(0)   // conteo de recibido para badge
+  const [newCount,      setNewCount]      = useState(0)
   const [loading,       setLoading]       = useState(true)
   const [error,         setError]         = useState<string | null>(null)
   const [filter,        setFilter]        = useState('')
@@ -736,12 +781,9 @@ export default function DashboardPage() {
       const data: { orders: Order[]; total: number } = await res.json()
       setOrders(data.orders)
       setTotal(data.total)
-
-      // Contar pedidos recibidos para badge del tab (solo cuando no hay filtro activo)
       if (!filter) {
         setNewCount(data.orders.filter((o) => o.estado === 'recibido').length)
       }
-
       setLastUpdated(new Date())
     } catch {
       setError('No se pudieron cargar los pedidos.')
@@ -750,12 +792,10 @@ export default function DashboardPage() {
     }
   }, [slug, filter, authFetch])
 
-  // Initial load + re-fetch on filter change
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
 
-  // Polling every 30s
   useEffect(() => {
     timerRef.current = setTimeout(function poll() {
       fetchOrders(true)
@@ -777,27 +817,23 @@ export default function DashboardPage() {
       setOrders((prev) =>
         prev
           .map((o) => o.id === updated.id ? { ...o, estado: updated.estado, updated_at: updated.updated_at } : o)
-          // Quitar de vista activa si pasó a terminal y no hay filtro específico
           .filter((o) => {
             if (filter !== '') return true
             return !['entregado', 'cancelado'].includes(o.estado)
           })
       )
-      // Actualizar badge de nuevos
       setNewCount((prev) => {
         if (estado !== 'recibido' && updated.estado !== 'recibido') {
-          // Si el pedido salió de recibido, restar 1
           const wasRecibido = orders.find((o) => o.id === id)?.estado === 'recibido'
           return wasRecibido ? Math.max(0, prev - 1) : prev
         }
         return prev
       })
-      // Mantener panel en sync
       setSelectedOrder((prev) =>
         prev?.id === updated.id ? { ...prev, estado: updated.estado, updated_at: updated.updated_at } : prev
       )
     } catch {
-      // Silent fail — próximo poll corrige el estado
+      // Silent fail
     } finally {
       setUpdatingId(null)
     }
@@ -807,11 +843,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top bar */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Logo / nombre */}
             <div
               className="h-8 w-8 rounded-xl flex items-center justify-center text-white font-bold text-sm"
               style={{ backgroundColor: PRIMARY }}
@@ -867,7 +901,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Filter tabs */}
         <div className="max-w-4xl mx-auto px-4 pb-0 flex gap-1 overflow-x-auto scrollbar-none">
           {FILTER_TABS.map((tab) => (
             <button
@@ -880,7 +913,6 @@ export default function DashboardPage() {
               }`}
             >
               {tab.label}
-              {/* Badge de nuevos solo en tab "Por confirmar" y tab "Activos" */}
               {tab.key === 'recibido' && newCount > 0 && (
                 <span
                   className="rounded-full px-1.5 py-0.5 text-xs font-bold text-white leading-none"
@@ -900,7 +932,6 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Content */}
       <main className="max-w-4xl mx-auto px-4 py-5">
         {loading ? (
           <div className="flex justify-center py-20">
@@ -948,7 +979,6 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {/* Order detail panel */}
       {selectedOrder && (
         <OrderDetailPanel
           slug={slug}
