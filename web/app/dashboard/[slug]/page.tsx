@@ -35,6 +35,7 @@ interface Order {
   id: number
   pedido_codigo: string
   estado: string
+  estado_pago: string
   tipo_despacho: string
   total: number
   subtotal: number
@@ -287,6 +288,18 @@ function OrderCard({
               <span>⏱ {order.tiempo_estimado} min</span>
             </>
           )}
+          {order.estado_pago === 'pendiente' && (
+            <>
+              <span className="text-gray-300">·</span>
+              <span className="font-semibold" style={{ color: '#D97706' }}>⚠ Pago pendiente</span>
+            </>
+          )}
+          {order.estado_pago === 'pagado' && (
+            <>
+              <span className="text-gray-300">·</span>
+              <span className="font-semibold" style={{ color: '#059669' }}>✓ Pagado</span>
+            </>
+          )}
         </div>
 
         {order.direccion && (
@@ -351,8 +364,26 @@ function OrderDetailPanel({
   onStatusChange: (id: number, estado: string) => void
   updatingId: number | null
 }) {
-  const [detail, setDetail] = useState<OrderDetail | null>(null)
-  const [loading, setLoading] = useState(true)
+  const authFetch        = useAuthFetch()
+  const [detail,         setDetail]         = useState<OrderDetail | null>(null)
+  const [loading,        setLoading]        = useState(true)
+  const [estadoPago,     setEstadoPago]     = useState(order.estado_pago ?? 'pendiente')
+  const [confirmingPago, setConfirmingPago] = useState(false)
+
+  async function handleConfirmPago(nuevoEstado: 'pagado' | 'rechazado') {
+    setConfirmingPago(true)
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL
+      const res  = await authFetch(`${base}/dashboard/${slug}/orders/${order.id}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado_pago: nuevoEstado }),
+      })
+      if (res.ok) setEstadoPago(nuevoEstado)
+    } catch { /* silent */ } finally {
+      setConfirmingPago(false)
+    }
+  }
 
   useEffect(() => {
     const base = process.env.NEXT_PUBLIC_API_URL
@@ -507,6 +538,48 @@ function OrderDetailPanel({
               <p className="text-sm text-amber-700">{order.notas}</p>
             </div>
           )}
+
+          {/* Estado de pago */}
+          <div className="rounded-2xl border px-4 py-3 flex items-center justify-between"
+            style={
+              estadoPago === 'pagado'
+                ? { backgroundColor: '#D1FAE5', borderColor: '#6EE7B7' }
+                : estadoPago === 'rechazado'
+                ? { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }
+                : { backgroundColor: '#FEF3C7', borderColor: '#FCD34D' }
+            }
+          >
+            <div>
+              <p className="text-xs font-semibold mb-0.5"
+                style={{ color: estadoPago === 'pagado' ? '#065F46' : estadoPago === 'rechazado' ? '#991B1B' : '#92400E' }}
+              >
+                {estadoPago === 'pagado' ? '✓ Pago confirmado' : estadoPago === 'rechazado' ? '✕ Pago rechazado' : '⚠ Pago pendiente'}
+              </p>
+              <p className="text-xs" style={{ color: estadoPago === 'pagado' ? '#047857' : estadoPago === 'rechazado' ? '#B91C1C' : '#B45309' }}>
+                {PAGO_LABEL[order.metodo_pago] ?? order.metodo_pago}
+              </p>
+            </div>
+            {estadoPago === 'pendiente' && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleConfirmPago('pagado')}
+                  disabled={confirmingPago}
+                  className="rounded-xl px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: '#059669' }}
+                >
+                  {confirmingPago ? '…' : '✓ Pagado'}
+                </button>
+                <button
+                  onClick={() => handleConfirmPago('rechazado')}
+                  disabled={confirmingPago}
+                  className="rounded-xl px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: '#DC2626' }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Transferencia */}
           {detail?.datos_transferencia && (

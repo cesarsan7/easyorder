@@ -151,6 +151,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.direccion,
           p.tiempo_estimado,
           jsonb_array_length(p.items)     AS items_count,
+          p.estado_pago,
           p.created_at,
           p.updated_at
         FROM   pedidos  p
@@ -183,6 +184,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         direccion:       o.direccion ?? null,
         tiempo_estimado: o.tiempo_estimado ?? null,
         items_count:     Number(o.items_count ?? 0),
+        estado_pago:     o.estado_pago ?? 'pendiente',
         created_at:      o.created_at,
         updated_at:      o.updated_at,
       })),
@@ -607,6 +609,47 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
 
   } catch (err) {
     console.error('[PATCH /dashboard/:slug/orders/:id/status] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ----------------------------------------------------------------------------
+// PATCH /dashboard/:slug/orders/:id/payment
+//
+// Updates estado_pago of an order. Independent of the operational state machine.
+// Valid transitions from the dashboard: pendiente → pagado | rechazado
+// ----------------------------------------------------------------------------
+
+const VALID_ESTADO_PAGO = ['pendiente', 'pagado', 'rechazado', 'no_aplica'] as const;
+
+dashboardRoutes.patch('/:slug/orders/:id/payment', requireAuth, async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id < 1) {
+    return c.json({ error: 'invalid_id' }, 400);
+  }
+
+  let body: unknown;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_body' }, 400); }
+
+  const estadoPago = (body as Record<string, unknown>).estado_pago;
+  if (typeof estadoPago !== 'string' || !(VALID_ESTADO_PAGO as readonly string[]).includes(estadoPago)) {
+    return c.json({ error: 'invalid_estado_pago', valid_values: VALID_ESTADO_PAGO }, 400);
+  }
+
+  try {
+    const updated = await sql<{ id: number; estado_pago: string; updated_at: string }[]>`
+      UPDATE pedidos
+      SET    estado_pago = ${estadoPago},
+             updated_at  = NOW()
+      WHERE  id             = ${id}
+        AND  restaurante_id = ${restaurante_id}
+      RETURNING id, estado_pago, updated_at
+    `;
+    if (updated.length === 0) return c.json({ error: 'order_not_found' }, 404);
+    return c.json({ id: updated[0].id, estado_pago: updated[0].estado_pago, updated_at: updated[0].updated_at });
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/orders/:id/payment] Unhandled error:', err);
     return c.json({ error: 'service_unavailable' }, 503);
   }
 });
@@ -1474,6 +1517,7 @@ interface OrderListRow {
   id:              number;
   pedido_codigo:   string | null;
   estado:          string;
+  estado_pago:     string | null;
   tipo_despacho:   string;
   total:           number;
   subtotal:        number;
