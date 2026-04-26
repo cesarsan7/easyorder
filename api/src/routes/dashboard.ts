@@ -22,6 +22,8 @@ interface NotificationPayload {
   telefono:        string;
   tipo_despacho:   string;
   tiempo_estimado: string | null;
+  // Solo presente cuando event_type='confirmado' y metodo_pago='transferencia'
+  datos_bancarios?: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null;
 }
 
 function fireNotification(payload: NotificationPayload): void {
@@ -582,7 +584,7 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
     // Step 1 — read the order, verify tenant ownership in the same query.
     // telefono + tiempo_estimado are needed for WhatsApp notifications fired later.
     const rows = await sql<PedidoStatusRow[]>`
-      SELECT id, pedido_codigo, estado, tipo_despacho, telefono, tiempo_estimado
+      SELECT id, pedido_codigo, estado, tipo_despacho, telefono, tiempo_estimado, metodo_pago
       FROM   pedidos
       WHERE  id             = ${id}
         AND  restaurante_id = ${restaurante_id}
@@ -629,10 +631,20 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
 
     // Step 4 — fire-and-forget WhatsApp notification for key state transitions.
     // confirmado → cliente sabe que su pedido fue aceptado.
+    //              Si metodo_pago=transferencia, incluye datos bancarios del restaurante.
     // en_camino  → cliente sabe que su pedido salió.
     // cancelado  → cliente es notificado de la cancelación.
     const NOTIFY_ESTADOS = new Set(['confirmado', 'en_camino', 'cancelado']);
     if (NOTIFY_ESTADOS.has(estadoNuevo)) {
+      let datosBancarios: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null = null;
+
+      if (estadoNuevo === 'confirmado' && pedido.metodo_pago === 'transferencia') {
+        const restRows = await sql<{ datos_bancarios: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null }[]>`
+          SELECT datos_bancarios FROM restaurante WHERE id = ${restaurante_id} LIMIT 1
+        `;
+        datosBancarios = restRows[0]?.datos_bancarios ?? null;
+      }
+
       fireNotification({
         event_type:      estadoNuevo,
         pedido_id:       u.id,
@@ -640,6 +652,7 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
         telefono:        pedido.telefono,
         tipo_despacho:   pedido.tipo_despacho,
         tiempo_estimado: pedido.tiempo_estimado,
+        datos_bancarios: datosBancarios,
       });
     }
 
@@ -1634,6 +1647,7 @@ interface PedidoStatusRow {
   tipo_despacho:   string;
   telefono:        string;
   tiempo_estimado: string | null;
+  metodo_pago:     string | null;
 }
 
 interface RestauranteSettingsRow {
