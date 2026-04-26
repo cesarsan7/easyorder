@@ -125,7 +125,8 @@ AS $function$
     c.subtotal, c.tipo_despacho, c.direccion, c.lat, c.lng,
     c.distancia_km, c.tiempo_estimado, c.costo_envio, c.total,
     c.metodo_pago, c.estado, c.notas, c.created_at, c.updated_at,
-    c.session_id, c.session_started_at, c.pedido_numero, c.pedido_codigo
+    c.session_id, c.session_started_at, c.pedido_numero, c.pedido_codigo,
+    c.canal, c.postal_code, c.chatwoot_conversation_id
   FROM cand c
   WHERE c.es_reutilizable
   ORDER BY
