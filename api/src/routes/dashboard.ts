@@ -642,12 +642,16 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
     const u = updated[0];
 
     // Step 4 — fire-and-forget WhatsApp notification for key state transitions.
-    // confirmado → cliente sabe que su pedido fue aceptado.
-    //              Si metodo_pago=transferencia, incluye datos bancarios del restaurante.
-    // en_camino  → cliente sabe que su pedido salió.
-    // cancelado  → cliente es notificado de la cancelación.
-    const NOTIFY_ESTADOS = new Set(['confirmado', 'en_camino', 'cancelado']);
-    if (NOTIFY_ESTADOS.has(estadoNuevo)) {
+    // Matriz de notificaciones:
+    //   Retiro  : confirmado (+ datos bancarios si transferencia) | listo | entregado | cancelado
+    //   Delivery: confirmado (+ datos bancarios si transferencia) | en_camino | entregado | cancelado
+    //   Ambos   : pago_confirmado (gestionado en el endpoint /payment)
+    //
+    // 'listo' solo se notifica en retiro — en delivery es un estado interno del local.
+    const NOTIFY_ESTADOS = new Set(['confirmado', 'en_camino', 'listo', 'entregado', 'cancelado']);
+    const skipNotify = estadoNuevo === 'listo' && pedido.tipo_despacho === 'delivery';
+
+    if (NOTIFY_ESTADOS.has(estadoNuevo) && !skipNotify) {
       let datosBancarios: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null = null;
 
       if (estadoNuevo === 'confirmado' && pedido.metodo_pago === 'transferencia') {
