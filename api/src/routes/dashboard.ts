@@ -60,6 +60,124 @@ dashboardRoutes.get('/me', async (c) => {
   return c.json({ restaurants: rows });
 });
 
+// ----------------------------------------------------------------------------
+// POST /dashboard/admin/restaurants
+//
+// Crea un nuevo restaurante y asigna al usuario autenticado como owner.
+// No requiere slug en URL — opera a nivel de usuario, no de tenant.
+//
+// Body: {
+//   nombre:       string (requerido)
+//   slug:         string (requerido, solo [a-z0-9-], max 100)
+//   zona_horaria?: string  (default: 'Atlantic/Canary')
+//   moneda?:      string  (default: '€')
+//   telefono?:    string
+//   direccion?:   string
+//   descripcion?: string
+//   brand_color?: string  (hex #RRGGBB, default: '#E63946')
+// }
+//
+// Returns: { id, nombre, slug, rol: 'owner' }
+// ----------------------------------------------------------------------------
+const SLUG_FORMAT_RE = /^[a-z0-9][a-z0-9-]{0,98}[a-z0-9]$|^[a-z0-9]$/;
+const VALID_TZ_RE    = /^[A-Za-z_/]{3,50}$/;
+const HEX_COLOR_RE   = /^#[0-9A-Fa-f]{6}$/;
+
+dashboardRoutes.post('/admin/restaurants', async (c) => {
+  const user = await validateBearerToken(c.req.header('Authorization'));
+  if (!user) return c.json({ error: 'unauthorized' }, 401);
+
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_body' }, 400);
+  }
+
+  const b = body as Record<string, unknown>;
+
+  // --- nombre ----------------------------------------------------------------
+  if (typeof b['nombre'] !== 'string' || b['nombre'].trim() === '') {
+    return c.json({ error: 'nombre_required', detail: 'nombre must be a non-empty string' }, 400);
+  }
+  const nombre = b['nombre'].trim();
+  if (nombre.length > 200) {
+    return c.json({ error: 'nombre_too_long', detail: 'nombre must be 200 characters or fewer' }, 400);
+  }
+
+  // --- slug ------------------------------------------------------------------
+  if (typeof b['slug'] !== 'string' || b['slug'].trim() === '') {
+    return c.json({ error: 'slug_required', detail: 'slug must be a non-empty string (lowercase letters, numbers, hyphens)' }, 400);
+  }
+  const slug = b['slug'].trim().toLowerCase();
+  if (!SLUG_FORMAT_RE.test(slug)) {
+    return c.json({ error: 'slug_invalid', detail: 'slug must contain only lowercase letters, numbers, and hyphens; cannot start or end with a hyphen' }, 400);
+  }
+
+  // --- zona_horaria (optional) -----------------------------------------------
+  let zona_horaria = 'Atlantic/Canary';
+  if (b['zona_horaria'] !== undefined && b['zona_horaria'] !== null) {
+    if (typeof b['zona_horaria'] !== 'string' || !VALID_TZ_RE.test(b['zona_horaria'])) {
+      return c.json({ error: 'zona_horaria_invalid', detail: 'zona_horaria must be a valid IANA timezone string' }, 400);
+    }
+    zona_horaria = b['zona_horaria'] as string;
+  }
+
+  // --- moneda (optional) -----------------------------------------------------
+  let moneda = '€';
+  if (b['moneda'] !== undefined && b['moneda'] !== null) {
+    if (typeof b['moneda'] !== 'string' || b['moneda'].trim().length > 5) {
+      return c.json({ error: 'moneda_invalid', detail: 'moneda must be a string of 5 characters or fewer' }, 400);
+    }
+    moneda = b['moneda'].trim();
+  }
+
+  // --- brand_color (optional) ------------------------------------------------
+  let brand_color = '#E63946';
+  if (b['brand_color'] !== undefined && b['brand_color'] !== null) {
+    if (typeof b['brand_color'] !== 'string' || !HEX_COLOR_RE.test(b['brand_color'])) {
+      return c.json({ error: 'brand_color_invalid', detail: 'brand_color must be a hex color string (#RRGGBB)' }, 400);
+    }
+    brand_color = b['brand_color'] as string;
+  }
+
+  // --- optional text fields --------------------------------------------------
+  const telefono    = typeof b['telefono']    === 'string' ? b['telefono'].trim()    || null : null;
+  const direccion   = typeof b['direccion']   === 'string' ? b['direccion'].trim()   || null : null;
+  const descripcion = typeof b['descripcion'] === 'string' ? b['descripcion'].trim() || null : null;
+
+  try {
+    const result = await sql.begin(async (tx) => {
+      const [newRest] = await tx<{ id: number; nombre: string; slug: string }[]>`
+        INSERT INTO restaurante
+          (nombre, slug, zona_horaria, moneda, brand_color, telefono, direccion, descripcion)
+        VALUES
+          (${nombre}, ${slug}, ${zona_horaria}, ${moneda}, ${brand_color},
+           ${telefono}, ${direccion}, ${descripcion})
+        RETURNING id, nombre, slug
+      `;
+
+      await tx`
+        INSERT INTO local_memberships (user_id, restaurante_id, rol)
+        VALUES (${user.id}, ${newRest.id}, 'owner')
+        ON CONFLICT (user_id, restaurante_id) DO NOTHING
+      `;
+
+      return newRest;
+    });
+
+    return c.json({ id: result.id, nombre: result.nombre, slug: result.slug, rol: 'owner' }, 201);
+
+  } catch (err: unknown) {
+    const pgErr = err as { code?: string; message?: string };
+    if (pgErr.code === '23505') {
+      return c.json({ error: 'slug_conflict', detail: `A restaurant with slug '${slug}' already exists` }, 409);
+    }
+    console.error('[POST /dashboard/admin/restaurants]', pgErr.message ?? err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
 // All dashboard routes: slug resolution first, then JWT auth.
 // IMPORTANTE: este middleware va DESPUÉS de /me para que /:slug/* no lo capture.
 dashboardRoutes.use('/:slug/*', resolveTenant, requireAuth);
@@ -1660,6 +1778,7 @@ interface PedidoStatusRow {
   id:              number;
   pedido_codigo:   string | null;
   estado:          string;
+  estado_pago:     string | null;
   tipo_despacho:   string;
   telefono:        string;
   tiempo_estimado: string | null;
