@@ -58,6 +58,7 @@ deliveryZonesRoutes.get('/:slug/delivery/zones', async (c) => {
              estimated_minutes_min, estimated_minutes_max, is_active, restaurante_id
       FROM delivery_zone
       WHERE restaurante_id = ${restaurante_id}
+        AND is_active = true
       ORDER BY zone_name ASC
     `;
 
