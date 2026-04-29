@@ -8,7 +8,7 @@ const menuCategoriesRoutes = new Hono<{ Variables: Variables }>();
 
 // '*' covers all nested segments (e.g. /:slug/menu/categories/:id) without
 // ambiguity around how Hono resolves multi-segment wildcards in sub-routers.
-menuCategoriesRoutes.use('*', resolveTenant, requireAuth);
+menuCategoriesRoutes.use('/:slug/*', resolveTenant, requireAuth);
 
 // ----------------------------------------------------------------------------
 // GET /dashboard/:slug/menu/categories
