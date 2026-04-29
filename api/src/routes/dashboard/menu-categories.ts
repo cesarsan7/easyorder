@@ -103,7 +103,7 @@ menuCategoriesRoutes.post('/:slug/menu/categories', async (c) => {
 
     const rows = await sql<CategoryRow[]>`
       INSERT INTO menu_category (restaurante_id, name, sort_order, is_active)
-      VALUES (${restaurante_id}, ${name}, ${sort_order}, ${is_active})
+      VALUES (${restaurante_id}, ${name}, ${sort_order ?? 0}, ${is_active})
       RETURNING menu_category_id, name, sort_order, is_active
     `;
 

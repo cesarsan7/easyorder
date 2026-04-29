@@ -330,7 +330,7 @@ export default function ConfiguracionPage() {
       const [settingsRes, statusRes, zonesRes] = await Promise.all([
         authFetch(`${base}/dashboard/${slug}/settings`),
         authFetch(`${base}/dashboard/${slug}/restaurant/status`),
-        authFetch(`${base}/dashboard/${slug}/delivery-zones`),
+        authFetch(`${base}/dashboard/${slug}/delivery/zones`),
       ])
       if (!settingsRes.ok) throw new Error(`settings HTTP ${settingsRes.status}`)
       if (!statusRes.ok)   throw new Error(`status HTTP ${statusRes.status}`)
@@ -433,12 +433,13 @@ export default function ConfiguracionPage() {
     setZoneSaving((prev) => ({ ...prev, [id]: 'saving' }))
     try {
       const base = process.env.NEXT_PUBLIC_API_URL
-      const res = await authFetch(`${base}/dashboard/${slug}/delivery-zones/${id}`, {
+      const res = await authFetch(`${base}/dashboard/${slug}/delivery/zones/${id}`, {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          zone_name:             zone.zone_name,
+          name:                  zone.zone_name,
           postal_code:           zone.postal_code,
-          fee:                   zone.fee,
+          delivery_fee:          zone.fee,
           min_order_amount:      zone.min_order_amount,
           estimated_minutes_min: zone.estimated_minutes_min,
           estimated_minutes_max: zone.estimated_minutes_max,
@@ -466,14 +467,15 @@ export default function ConfiguracionPage() {
       const base = process.env.NEXT_PUBLIC_API_URL
       const res = await authFetch(`${base}/dashboard/${slug}/delivery/zones`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          zone_name:   'Nueva zona',
-          postal_code: '',
-          fee:         0,
-          min_order_amount: null,
+          name:                  'Nueva zona',
+          postal_code:           '00000',
+          delivery_fee:          0,
+          min_order_amount:      0,
           estimated_minutes_min: null,
           estimated_minutes_max: null,
-          is_active: false,
+          is_active:             false,
         }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -750,56 +752,4 @@ export default function ConfiguracionPage() {
                         active ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-lg">{icon}</span>
-                      <span className={`flex-1 text-sm font-medium ${active ? 'text-red-700' : 'text-gray-700'}`}>
-                        {label}
-                      </span>
-                      <span className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                        active ? 'border-red-500 bg-red-500' : 'border-gray-300'
-                      }`}>
-                        {active && <span className="text-white text-xs leading-none">✓</span>}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-              {paymentMethods.length === 0 && (
-                <p className="text-xs text-red-600 mt-3 text-center">
-                  Debes seleccionar al menos un método de pago.
-                </p>
-              )}
-              <div className="flex justify-end pt-4">
-                <SaveButton state={pagoState} onClick={savePago} />
-              </div>
-            </div>
-
-            {/* ── Datos bancarios ─────────────────────────────────────── */}
-            <SectionTitle>Datos bancarios</SectionTitle>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
-              <p className="text-xs text-gray-400">
-                Se mostrarán al cliente cuando el método de pago es transferencia.
-              </p>
-              <Field label="Banco" value={banco}
-                onChange={(v) => { setBanco(v); setBancosState('idle') }}
-                placeholder="Banco de Chile" maxLength={200} />
-              <Field label="Titular de la cuenta" value={titular}
-                onChange={(v) => { setTitular(v); setBancosState('idle') }}
-                placeholder="Nombre completo o razón social" maxLength={200} />
-              <Field label="Número de cuenta" value={cuenta}
-                onChange={(v) => { setCuenta(v); setBancosState('idle') }}
-                placeholder="0123456789" maxLength={200} />
-              <Field label="Alias / RUT" value={alias}
-                onChange={(v) => { setAlias(v); setBancosState('idle') }}
-                placeholder="12.345.678-9" maxLength={200} />
-              <div className="flex justify-end pt-1">
-                <SaveButton state={bancosState} onClick={saveBancarios} />
-              </div>
-            </div>
-
-            <div className="h-10" />
-          </>
-        )}
-      </main>
-    </div>
-  )
-}
+                      <span className="t
