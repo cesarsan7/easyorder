@@ -470,7 +470,7 @@ export default function ConfiguracionPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name:                  'Nueva zona',
-          postal_code:           '00000',
+          postal_code:           String(Date.now()).slice(-8),
           delivery_fee:          0,
           min_order_amount:      0,
           estimated_minutes_min: null,
