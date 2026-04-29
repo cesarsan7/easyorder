@@ -752,4 +752,50 @@ export default function ConfiguracionPage() {
                         active ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white hover:bg-gray-50'
                       }`}
                     >
-                      <span className="t
+                      <span className="text-xl">{icon}</span>
+                      <span className="flex-1 text-sm font-medium text-gray-900">{label}</span>
+                      {active && (
+                        <span className="text-red-500 text-sm font-semibold">✓</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex justify-end pt-3 border-t border-gray-100 mt-3">
+                <SaveButton
+                  state={pagoState}
+                  onClick={savePago}
+                  disabled={paymentMethods.length === 0}
+                />
+              </div>
+            </div>
+
+            {/* ── Datos bancarios ─────────────────────────────────────── */}
+            <SectionTitle>Datos bancarios (Transferencia)</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
+              <p className="text-xs text-gray-400">
+                Se muestran al cliente cuando elige pago por transferencia.
+              </p>
+              <Field label="Banco" value={banco}
+                onChange={(v) => { setBanco(v); setBancosState('idle') }}
+                placeholder="CaixaBank" maxLength={100} />
+              <Field label="Titular" value={titular}
+                onChange={(v) => { setTitular(v); setBancosState('idle') }}
+                placeholder="La Isla Pizzería S.L." maxLength={200} />
+              <Field label="Cuenta / IBAN" value={cuenta}
+                onChange={(v) => { setCuenta(v); setBancosState('idle') }}
+                placeholder="ES12 3456 7890 1234 5678 9012" maxLength={50} />
+              <Field label="Alias (Bizum, etc.)" value={alias}
+                onChange={(v) => { setAlias(v); setBancosState('idle') }}
+                placeholder="620123456" maxLength={50} />
+              <div className="flex justify-end pt-1">
+                <SaveButton state={bancosState} onClick={saveBancarios} />
+              </div>
+            </div>
+
+          </>
+        )}
+      </main>
+    </div>
+  )
+}
