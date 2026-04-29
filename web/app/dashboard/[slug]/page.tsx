@@ -870,6 +870,20 @@ export default function DashboardPage() {
                 </button>
                 <span className="text-gray-200">|</span>
                 <button
+                  onClick={() => router.push(`/dashboard/${slug}/clientes`)}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  👥 clientes
+                </button>
+                <span className="text-gray-200">|</span>
+                <button
+                  onClick={() => router.push(`/dashboard/${slug}/menu`)}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  🍽 menú
+                </button>
+                <span className="text-gray-200">|</span>
+                <button
                   onClick={() => router.push(`/dashboard/${slug}/escalaciones`)}
                   className="text-xs text-gray-400 hover:text-red-500 transition-colors"
                 >

@@ -27,9 +27,9 @@ interface DeliveryZoneRow {
 function mapZone(row: DeliveryZoneRow) {
   return {
     delivery_zone_id:      Number(row.delivery_zone_id),
-    name:                  row.zone_name,
+    zone_name:             row.zone_name,
     postal_code:           row.postal_code,
-    delivery_fee:          Number(row.fee),
+    fee:                   Number(row.fee),
     min_order_amount:      Number(row.min_order_amount),
     estimated_minutes_min: row.estimated_minutes_min,
     estimated_minutes_max: row.estimated_minutes_max,

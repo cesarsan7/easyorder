@@ -316,8 +316,10 @@ export default function ConfiguracionPage() {
   const [horariosState, setHorariosState] = useState<SaveState>('idle')
 
   // ── Sección: Delivery zones
-  const [zones,      setZones]      = useState<DeliveryZone[]>([])
-  const [zoneSaving, setZoneSaving] = useState<Record<number, SaveState>>({})
+  const [zones,         setZones]         = useState<DeliveryZone[]>([])
+  const [zoneSaving,    setZoneSaving]    = useState<Record<number, SaveState>>({})
+  const [zoneAdding,    setZoneAdding]    = useState(false)
+  const [zoneDeleting,  setZoneDeleting]  = useState<Record<number, boolean>>({})
 
   // ── Load settings + horarios in parallel
   const fetchAll = useCallback(async () => {
@@ -458,6 +460,46 @@ export default function ConfiguracionPage() {
     setZones((prev) => prev.map((z) => z.delivery_zone_id === id ? { ...z, ...fields } : z))
   }
 
+  async function addZone() {
+    setZoneAdding(true)
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL
+      const res = await authFetch(`${base}/dashboard/${slug}/delivery/zones`, {
+        method: 'POST',
+        body: JSON.stringify({
+          zone_name:   'Nueva zona',
+          postal_code: '',
+          fee:         0,
+          min_order_amount: null,
+          estimated_minutes_min: null,
+          estimated_minutes_max: null,
+          is_active: false,
+        }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const newZone: DeliveryZone = await res.json()
+      setZones((prev) => [...prev, newZone])
+    } catch {
+      alert('Error al crear la zona. Revisa que todos los campos estén completos.')
+    } finally {
+      setZoneAdding(false)
+    }
+  }
+
+  async function deleteZone(id: number, zoneName: string) {
+    if (!confirm(`¿Eliminar la zona "${zoneName}"? Esta acción no se puede deshacer.`)) return
+    setZoneDeleting((prev) => ({ ...prev, [id]: true }))
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL
+      await authFetch(`${base}/dashboard/${slug}/delivery/zones/${id}`, { method: 'DELETE' })
+      setZones((prev) => prev.filter((z) => z.delivery_zone_id !== id))
+    } catch {
+      alert('Error al eliminar la zona.')
+    } finally {
+      setZoneDeleting((prev) => ({ ...prev, [id]: false }))
+    }
+  }
+
   async function saveHorarios() {
     // Validate: available days need shift 1 times
     for (const h of horarios) {
@@ -583,7 +625,17 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* ── Zonas de delivery ───────────────────────────────────── */}
-            <SectionTitle>Zonas de delivery</SectionTitle>
+            <div className="flex items-center justify-between mt-6 mb-3 px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Zonas de delivery</h2>
+              <button
+                onClick={addZone}
+                disabled={zoneAdding}
+                className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white disabled:opacity-60"
+                style={{ backgroundColor: '#F3274C' }}
+              >
+                {zoneAdding ? '…' : '+ Nueva zona'}
+              </button>
+            </div>
             {zones.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5">
                 <p className="text-sm text-gray-400 text-center">No hay zonas configuradas.</p>
@@ -663,7 +715,15 @@ export default function ConfiguracionPage() {
                         />
                       </div>
 
-                      <div className="flex justify-end mt-3">
+                      <div className="flex items-center justify-between mt-3">
+                        <button
+                          onClick={() => deleteZone(zone.delivery_zone_id, zone.zone_name)}
+                          disabled={zoneDeleting[zone.delivery_zone_id]}
+                          className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                          type="button"
+                        >
+                          {zoneDeleting[zone.delivery_zone_id] ? 'Eliminando…' : '🗑 Eliminar zona'}
+                        </button>
                         <SaveButton
                           state={state}
                           onClick={() => saveZone(zone)}
