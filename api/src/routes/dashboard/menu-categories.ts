@@ -258,7 +258,7 @@ interface CategoryRow {
 
 function mapCategory(row: CategoryRow) {
   return {
-    menu_category_id: row.menu_category_id,
+    menu_category_id: Number(row.menu_category_id),
     name:             row.name,
     sort_order:       row.sort_order ?? null,
     is_active:        row.is_active,

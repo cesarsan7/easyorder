@@ -264,7 +264,7 @@ interface ExtraRow {
 
 function mapExtra(row: ExtraRow) {
   return {
-    extra_id:  row.extra_id,
+    extra_id:  Number(row.extra_id),
     name:      row.name,
     price:     parseFloat(row.price),
     allergens: row.allergens ?? null,

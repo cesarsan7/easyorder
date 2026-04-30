@@ -472,7 +472,7 @@ interface ExtraRow {
 
 function mapExtra(row: ExtraRow) {
   return {
-    extra_id:  row.extra_id,
+    extra_id:  Number(row.extra_id),
     name:      row.name,
     price:     parseFloat(row.price),
     is_active: row.is_active,
@@ -482,8 +482,8 @@ function mapExtra(row: ExtraRow) {
 
 function mapItem(row: ItemRow) {
   return {
-    menu_item_id:     row.menu_item_id,
-    menu_category_id: row.menu_category_id,
+    menu_item_id:     Number(row.menu_item_id),
+    menu_category_id: Number(row.menu_category_id),
     name:             row.name,
     description:      row.description ?? null,
     is_pizza:         row.is_pizza,

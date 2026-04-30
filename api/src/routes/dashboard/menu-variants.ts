@@ -338,8 +338,8 @@ interface VariantRow {
 
 function mapVariant(row: VariantRow) {
   return {
-    menu_variant_id: row.menu_variant_id,
-    menu_item_id:    row.menu_item_id,
+    menu_variant_id: Number(row.menu_variant_id),
+    menu_item_id:    Number(row.menu_item_id),
     variant_name:    row.variant_name,
     price:           parseFloat(row.price),
     sku:             row.sku ?? null,
