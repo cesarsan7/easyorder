@@ -29,13 +29,13 @@
           ]
         }
       },
-      "id": "04d9c2a2-ec33-4758-803b-17817a355704",
+      "id": "81410df5-14a4-4287-b871-cfa07c290703",
       "typeVersion": 1.1,
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "position": [
-        0,
-        0
+        -672,
+        80
       ],
       "alwaysOutputData": false,
       "executeOnce": false,
@@ -47,13 +47,13 @@
         "query": "SELECT *\nFROM public.fn_select_pedido_reutilizable(\n  '{{ $('When Executed by Another Workflow').first().json.telefono }}',\n  '{{ $('When Executed by Another Workflow').first().json.session_id }}',\n  '{{ String($('When Executed by Another Workflow').first().json.pedido_id || '').replace(/'/g, \"''\") }}',\n  {{ ['true', true, '1', 1].includes($('When Executed by Another Workflow').first().json.forzar_pedido_nuevo) ? 'true' : 'false' }}\n)",
         "options": {}
       },
-      "id": "e428cc0b-aec3-4e2e-876e-3f451e1f64ca",
+      "id": "f24c63f7-55fa-4b26-83ef-394cd7288d7c",
       "name": "Buscar Pedido Activo",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        224,
-        0
+        -448,
+        80
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -91,10 +91,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        448,
-        0
+        -224,
+        80
       ],
-      "id": "58a48d5f-57e5-437d-b2d9-091cede5cb9c",
+      "id": "30b57b8b-1a58-4c5d-8448-1c7d8325242e",
       "name": "If"
     },
     {
@@ -103,13 +103,13 @@
         "query": "SELECT public.fn_next_pedido_numero() AS siguiente_numero",
         "options": {}
       },
-      "id": "bdf37dce-a811-4ea3-886b-fba158422168",
+      "id": "143eb5ef-20de-4e00-b393-9597f2adc27a",
       "name": "Obtener Siguiente Número",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        672,
-        80
+        80,
+        160
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -125,13 +125,13 @@
         "query": "INSERT INTO pedidos (\n  restaurante_id, usuario_id, telefono, session_id, session_started_at, pedido_numero, items, subtotal, total, estado, created_at, updated_at\n) VALUES (\n  1,\n  COALESCE(\n    CASE WHEN regexp_replace('{{ $('When Executed by Another Workflow').item.json.usuario_id || '' }}', '[^0-9]', '', 'g') <> '' THEN regexp_replace('{{ $('When Executed by Another Workflow').item.json.usuario_id || '' }}', '[^0-9]', '', 'g')::int ELSE NULL END,\n    (SELECT id FROM usuarios WHERE telefono = '{{ $('When Executed by Another Workflow').item.json.telefono }}' LIMIT 1)\n  ),\n  '{{ $('When Executed by Another Workflow').item.json.telefono }}',\n  '{{ $('When Executed by Another Workflow').item.json.session_id }}',\n  NOW(),\n  {{ $json.siguiente_numero }},\n  '[]'::jsonb, 0, 0, 'en_curso', NOW(), NOW()\n) RETURNING *",
         "options": {}
       },
-      "id": "05f38119-8b40-4e0e-9b00-e128c23e6ff5",
+      "id": "583fe91b-8edb-4bb6-a8bb-44604cf0763b",
       "name": "Crear Pedido Nuevo",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        896,
-        80
+        224,
+        160
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -148,10 +148,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1632,
-        0
+        960,
+        80
       ],
-      "id": "7bf03d8b-e597-4717-a42a-e977020eb23a",
+      "id": "dd93d62a-bba7-4862-99da-2f2160dcce98",
       "name": "Agente Validador"
     },
     {
@@ -163,10 +163,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        1696,
-        224
+        1024,
+        304
       ],
-      "id": "12480f66-0bf0-458e-a3f3-a9672a74db34",
+      "id": "9eeda2a0-da48-42d2-926b-b1eb601969ea",
       "name": "consultar_menu",
       "credentials": {
         "postgres": {
@@ -182,10 +182,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2384,
-        0
+        1712,
+        80
       ],
-      "id": "7c56ed42-23f1-4934-9186-045eca560326",
+      "id": "cd06ee1d-d644-4de8-83bf-8dbddcd3b36d",
       "name": "Ejecutar Acción"
     },
     {
@@ -194,13 +194,13 @@
         "query": "WITH current_row AS (\n  SELECT *\n  FROM pedidos\n  WHERE id = {{ $input.first().json.pedido_id }}\n),\nupdated AS (\n  UPDATE pedidos p\n  SET \n    items = '{{ JSON.stringify($input.first().json.items_actualizados || []).replace(/'/g, \"''\") }}'::jsonb,\n    subtotal = {{ Number($input.first().json.subtotal || 0) }},\n    total = CASE\n      WHEN lower(COALESCE(p.tipo_despacho,'')) = 'delivery' THEN {{ Number($input.first().json.subtotal || 0) }} + COALESCE(p.costo_envio,0)\n      ELSE {{ Number($input.first().json.subtotal || 0) }}\n    END,\n    usuario_id = COALESCE(\n      p.usuario_id,\n      CASE\n        WHEN regexp_replace('{{ $('When Executed by Another Workflow').first().json.usuario_id || '' }}', '[^0-9]', '', 'g') <> ''\n        THEN regexp_replace('{{ $('When Executed by Another Workflow').first().json.usuario_id || '' }}', '[^0-9]', '', 'g')::int\n        ELSE NULL\n      END\n    ),\n    estado = CASE\n      WHEN lower(COALESCE(p.estado,'en_curso')) IN ('confirmado','pendiente_pago','pagado','paid') THEN 'en_curso'\n      ELSE COALESCE(p.estado,'en_curso')\n    END,\n    updated_at = NOW()\n  WHERE p.id = {{ $input.first().json.pedido_id }}\n    AND {{ $input.first().json.mutar_db === true ? 'true' : 'false' }}\n  RETURNING p.*\n)\nSELECT * FROM updated\nUNION ALL\nSELECT * FROM current_row\nWHERE NOT EXISTS (SELECT 1 FROM updated)",
         "options": {}
       },
-      "id": "5f4afb58-205a-4d04-be38-4088a52550d2",
+      "id": "9eaa4aad-524c-41d5-a730-75873fbf022b",
       "name": "Actualizar Pedido en DB",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        2656,
-        0
+        1984,
+        80
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -217,10 +217,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2944,
-        0
+        2272,
+        80
       ],
-      "id": "10041cf9-57fe-4084-a185-f63d11fa2ad1",
+      "id": "dff51ea6-10d4-484b-9139-ab4d33b491f1",
       "name": "Generar Respuesta Final"
     },
     {
@@ -228,10 +228,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        1120,
-        0
+        448,
+        80
       ],
-      "id": "08576f8b-1993-4772-9354-cfc908abc013",
+      "id": "83bfe85d-c706-4eb6-892d-b1da7d8f3b59",
       "name": "Merge Pedido1"
     },
     {
@@ -241,25 +241,25 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1344,
-        0
+        672,
+        80
       ],
-      "id": "caee40c3-aa3f-4e6f-bd03-4a9ba3cdf4d9",
+      "id": "bd1e8b76-3c31-4d3b-a0e5-cb19160bf6a4",
       "name": "Preparar Datos"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT EXISTS(\n  SELECT 1 FROM pedidos p\n  CROSS JOIN LATERAL (\n    SELECT COALESCE(valor::int, 60) AS minutos\n    FROM restaurante_config\n    WHERE clave = 'cart_expiry_minutes' AND restaurante_id = 1\n    LIMIT 1\n  ) cfg\n  WHERE p.telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n    AND p.estado = 'en_curso'\n    AND p.updated_at < NOW() - (cfg.minutos * INTERVAL '1 minute')\n    AND p.updated_at > NOW() - INTERVAL '24 hours'\n) AS tenia_carrito_expirado",
+        "query": " SELECT EXISTS(\n  SELECT 1 FROM pedidos p\n  CROSS JOIN LATERAL (\n    SELECT COALESCE(config_value::int, 60) AS minutos\n    FROM restaurante_config\n    WHERE config_key = 'cart_expiry_minutes'\n      AND restaurante_id = 1\n    LIMIT 1\n  ) cfg\n  WHERE p.telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n    AND p.estado = 'en_curso'\n    AND p.updated_at < NOW() - (cfg.minutos * INTERVAL '1 minute')\n    AND p.updated_at > NOW() - INTERVAL '24 hours' \n) AS tenia_carrito_expirado",
         "options": {}
       },
-      "id": "c8e4f210-3b7a-4d91-a5f2-9d1e0c7a3b56",
+      "id": "1507fe8e-1f73-4c59-bc27-247d801cdc2a",
       "name": "Check Carrito Expirado",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        672,
-        -80
+        -96,
+        304
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -270,7 +270,29 @@
       }
     }
   ],
-  "pinData": {},
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "accion": "agregar",
+          "items": [
+            {
+              "nombre": "Hamburguesa BBQ Bacon",
+              "cantidad": 1
+            }
+          ],
+          "telefono": "+15162849708",
+          "session_id": "ba25b0ef-9dbb-4699-a13b-d6609a12e171",
+          "pedido_id": "",
+          "usuario_id": 3,
+          "forzar_pedido_nuevo": "true"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
   "connections": {
     "When Executed by Another Workflow": {
       "main": [
@@ -417,10 +439,10 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "0aff2c0a-7188-4e97-8fac-f0fd38f3b9f4",
+  "versionId": "86992ff4-3932-4199-a0a3-a170009e13c4",
   "meta": {
     "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
   },
-  "id": "jLxdQv7jxYY7ooly",
+  "id": "1xPEKOIrrHwuu9Cz",
   "tags": []
 }

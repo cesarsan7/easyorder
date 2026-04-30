@@ -13,7 +13,7 @@
         -48,
         1024
       ],
-      "id": "ad45b567-e25f-48e1-9440-86a514134c20",
+      "id": "7aae37da-4db0-473d-9c36-c7ee800b89d1",
       "name": "Webhook",
       "webhookId": "4e670c56-c403-465b-9052-a744af040529"
     },
@@ -108,7 +108,7 @@
         896,
         976
       ],
-      "id": "0f0b6329-dea4-4e63-898a-90c6c0badb1c",
+      "id": "67bfdf01-22f3-489b-99f2-84b8dbf1ed47",
       "name": "Switch"
     },
     {
@@ -125,7 +125,7 @@
         1344,
         928
       ],
-      "id": "7e376798-4793-48d0-9b42-35637b3bfdde",
+      "id": "9bf04df6-04ca-4805-b6d7-6af3bba22e9b",
       "name": "OpenAI1",
       "credentials": {
         "openAiApi": {
@@ -154,7 +154,7 @@
         1264,
         784
       ],
-      "id": "6dd5d36a-0eee-4802-987d-61b1c7a44025",
+      "id": "95451150-bb7b-48c2-96c1-3b4df7af7529",
       "name": "Ubicación"
     },
     {
@@ -165,7 +165,7 @@
         2432,
         816
       ],
-      "id": "a3a69a23-16fb-4521-9f30-4e4b281d91ec",
+      "id": "1982c42c-11da-468c-928f-208a11086d32",
       "name": "No Operation, do nothing"
     },
     {
@@ -179,7 +179,7 @@
         2432,
         992
       ],
-      "id": "ef9f8fac-9bdd-47b5-82aa-4fb4d1ca7c03",
+      "id": "34e961dd-d4b8-4771-bdb0-f0025639db46",
       "name": "Redis2",
       "credentials": {
         "redis": {
@@ -253,7 +253,7 @@
         2240,
         976
       ],
-      "id": "6fcdce77-8b50-42fb-8a5b-3e1299b6b90b",
+      "id": "fa351eb4-2c22-4926-a17c-ce94318184b3",
       "name": "Switch2"
     },
     {
@@ -266,7 +266,7 @@
         2432,
         1152
       ],
-      "id": "4ffa9d4a-d768-4d19-bff0-8016b87ab3c5",
+      "id": "777b9981-8207-4c65-9933-3f0efc42faba",
       "name": "Wait7",
       "webhookId": "8838bbfa-9e88-4516-8ad6-49f10c91d0b0"
     },
@@ -283,7 +283,7 @@
         1168,
         1072
       ],
-      "id": "9cc583ab-d5aa-45e2-900c-95453749f346",
+      "id": "3fc7863c-743b-48c5-8c3d-e1acb9acb3bf",
       "name": "Descargar Imagen",
       "credentials": {
         "httpHeaderAuth": {
@@ -305,7 +305,7 @@
         1168,
         928
       ],
-      "id": "1bc175ff-b489-4367-aef4-0c2cec437bb7",
+      "id": "a48d8899-b653-4344-8bb3-5ddaec9f5407",
       "name": "Descargar Audio",
       "credentials": {
         "httpHeaderAuth": {
@@ -377,7 +377,7 @@
         576,
         1024
       ],
-      "id": "d1515905-34f8-4531-953a-9415d3027dd9",
+      "id": "62347dd9-3b13-45e9-a969-342073940adf",
       "name": "Bot"
     },
     {
@@ -400,7 +400,7 @@
         1344,
         1072
       ],
-      "id": "d4e55e45-a1d2-4e9a-ad7a-1ffb460bab19",
+      "id": "6a31737a-fd39-4e01-a7b2-72d785282100",
       "name": "Analyze an image",
       "disabled": true
     },
@@ -424,7 +424,7 @@
         1264,
         1248
       ],
-      "id": "9d142706-3125-4799-b6a8-af0693bf2b49",
+      "id": "bb38cc6c-691c-4c99-9776-435d54e13ad6",
       "name": "Texto"
     },
     {
@@ -501,7 +501,7 @@
         416,
         1024
       ],
-      "id": "3d4bae68-6dc6-476c-bca2-ed407407c046",
+      "id": "12648f43-5231-4ba4-b78a-ada63aea98e3",
       "name": "Variables"
     },
     {
@@ -530,7 +530,7 @@
         1616,
         992
       ],
-      "id": "53a701ad-c08b-405c-9801-6b1f23da2245",
+      "id": "68426071-a499-4b09-8909-3089dab2747d",
       "name": "Input"
     },
     {
@@ -553,7 +553,7 @@
         2640,
         992
       ],
-      "id": "d4cb2af8-3b55-41d9-8917-bf26837ddcf7",
+      "id": "00e4c07b-cbb7-4c52-bcc1-567e414a6162",
       "name": "Input Agente"
     },
     {
@@ -568,7 +568,7 @@
         960
       ],
       "typeVersion": 1,
-      "id": "deadc9be-90eb-478a-a40a-dee81f8c241b",
+      "id": "a100d663-ccce-4630-a66d-507d2d01e5b3",
       "name": "Sticky Note"
     },
     {
@@ -584,7 +584,7 @@
         768
       ],
       "typeVersion": 1,
-      "id": "f6bb4bc2-afba-4df9-b30f-e0b5a9dd7f47",
+      "id": "f280acf2-0b84-4d89-bcdc-86d4692838d3",
       "name": "Sticky Note1"
     },
     {
@@ -600,7 +600,7 @@
         784
       ],
       "typeVersion": 1,
-      "id": "93c9ee9e-0ecb-4bc3-9f27-03ca3a390224",
+      "id": "201d70c6-df6c-46d8-9de9-44d8c90262c2",
       "name": "Sticky Note2"
     },
     {
@@ -616,7 +616,7 @@
         752
       ],
       "typeVersion": 1,
-      "id": "eca45d0d-936e-4497-99a8-3235f9d474a5",
+      "id": "c8517568-b712-4f14-bf54-6090d9cc727e",
       "name": "Sticky Note3"
     },
     {
@@ -631,7 +631,7 @@
         2880,
         992
       ],
-      "id": "d24958d9-9637-4799-9d25-bb56cb074b71",
+      "id": "7c6979df-ab5e-4559-9e63-781bb88719ff",
       "name": "Obtener registros",
       "alwaysOutputData": true,
       "credentials": {
@@ -654,7 +654,7 @@
         2048,
         992
       ],
-      "id": "73d4019c-234a-4323-b667-3540c5c00cee",
+      "id": "d13ba45a-9b7d-470e-ac97-4eb19a24e8b9",
       "name": "Redis1",
       "credentials": {
         "redis": {
@@ -676,7 +676,7 @@
         1872,
         992
       ],
-      "id": "7e9c0371-b926-41ad-8960-b06fb4fb4306",
+      "id": "76a13119-4cdd-42e6-9adc-7a631511efa3",
       "name": "Redis",
       "credentials": {
         "redis": {
@@ -716,7 +716,7 @@
         3056,
         992
       ],
-      "id": "d6f3a8a7-8a90-4ff1-a330-0a6d8fad3a65",
+      "id": "db0af92f-4d98-4c59-bf8d-81ef0115f87d",
       "name": "If"
     },
     {
@@ -790,7 +790,7 @@
         3264,
         1120
       ],
-      "id": "9e9b467f-b8bc-46c6-a80c-08255852398d",
+      "id": "8a368ac0-f5fb-4657-8896-20538f7ad651",
       "name": "Nuevo usuario",
       "credentials": {
         "postgres": {
@@ -809,7 +809,7 @@
         3344,
         880
       ],
-      "id": "9e8b0899-114d-4130-83e4-2e23d5571753",
+      "id": "b878c08a-7565-4cfb-8be0-9e7a028a363b",
       "name": "Preparar contexto"
     },
     {
@@ -832,7 +832,7 @@
         3424,
         1120
       ],
-      "id": "3790b58f-1825-44a9-9bf1-a3da58fe66bc",
+      "id": "3fa10e5c-85fa-472b-8a20-379a956f0b76",
       "name": "Sin contexto"
     },
     {
@@ -885,7 +885,7 @@
         3824,
         944
       ],
-      "id": "54e5a77a-010d-42f8-9c20-1d16f9624ff6",
+      "id": "5fcd5bd9-56f7-4ff7-9832-c82c77a145c8",
       "name": "Input Agente1"
     },
     {
@@ -901,29 +901,8 @@
         752
       ],
       "typeVersion": 1,
-      "id": "0ded3f0e-62c0-4f84-9e6f-c3a46f4022ab",
+      "id": "d6050638-e0e0-478a-bcc3-71a406a1a4c5",
       "name": "Sticky Note5"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "dataTableId": {
-          "__rl": true,
-          "value": "5XwGS8YQg9E10VtW",
-          "mode": "list",
-          "cachedResultName": "Horarios",
-          "cachedResultUrl": "/projects/WCBcyC9o6oA4Df8e/datatables/5XwGS8YQg9E10VtW"
-        },
-        "returnAll": true
-      },
-      "type": "n8n-nodes-base.dataTable",
-      "typeVersion": 1.1,
-      "position": [
-        4160,
-        944
-      ],
-      "id": "ad899f90-5efa-448b-98ee-af6969cb736d",
-      "name": "Horarios"
     },
     {
       "parameters": {
@@ -935,7 +914,7 @@
         4576,
         944
       ],
-      "id": "ff7bf301-9c56-4c99-9f6c-fe6a08d03445",
+      "id": "eb65c523-1165-444f-9f2a-44078d41239c",
       "name": "Validacion"
     },
     {
@@ -968,7 +947,7 @@
         4736,
         944
       ],
-      "id": "2a444981-1d27-41eb-a49e-4f672a71b857",
+      "id": "c8499a53-bb41-4f75-99ed-820521390c45",
       "name": "Disponible"
     },
     {
@@ -985,7 +964,7 @@
         4528,
         1392
       ],
-      "id": "d17de89b-f8ad-4625-aa05-22254bb9f265",
+      "id": "553d2133-927a-444c-b0a1-c081be3e9374",
       "name": "Agente Cerrado"
     },
     {
@@ -1001,7 +980,7 @@
         1280
       ],
       "typeVersion": 1,
-      "id": "bee4c590-0570-4b2f-a1b8-041959c7e224",
+      "id": "fb05eb4c-1425-4387-98cf-ef303e769e0f",
       "name": "Sticky Note6"
     },
     {
@@ -1014,7 +993,7 @@
         5952,
         1360
       ],
-      "id": "8837f104-22b4-4a6f-b695-23eccea8eff9",
+      "id": "613164f1-b5b5-435b-b8b7-9aa57bf0ae96",
       "name": "Loop Over Items"
     },
     {
@@ -1027,7 +1006,7 @@
         5792,
         1360
       ],
-      "id": "b69a84d4-2005-417f-8ccc-51dafdd65d1f",
+      "id": "1d107fb3-c22f-42d5-a566-79742111d760",
       "name": "Seteo respuesta"
     },
     {
@@ -1044,7 +1023,7 @@
         5232,
         832
       ],
-      "id": "36874c56-2a1d-4dce-943c-c27026fb6b3e",
+      "id": "cc8001d8-bd10-441a-a527-e1e74cfe0960",
       "name": "Director"
     },
     {
@@ -1060,7 +1039,7 @@
         1200
       ],
       "typeVersion": 1,
-      "id": "0667b486-cf25-431f-bce4-95af5e537bd6",
+      "id": "8415bf7f-413d-4411-a205-194c38463af2",
       "name": "Sticky Note7"
     },
     {
@@ -1073,7 +1052,7 @@
         6336,
         1456
       ],
-      "id": "059eac20-84d6-43e2-a581-a2272c2f5682",
+      "id": "a0714f56-22c3-460b-92f1-31bfba8ab411",
       "name": "Wait",
       "webhookId": "81cba418-1963-454e-a027-d04432df3a15"
     },
@@ -1100,7 +1079,7 @@
         6192,
         1456
       ],
-      "id": "c0650ab1-4690-483e-bc82-c3eaf438af63",
+      "id": "7d0427ee-61ae-4fcf-9877-c1eccc2e3541",
       "name": "Mensaje Chatwoot",
       "credentials": {
         "httpHeaderAuth": {
@@ -1126,7 +1105,7 @@
         5120,
         1504
       ],
-      "id": "fb008e17-6783-4cbf-9d9c-08b1db858d87",
+      "id": "0deb3812-d32f-44b5-be78-8e13a22e4e9b",
       "name": "OpenAI",
       "credentials": {
         "openAiApi": {
@@ -1139,7 +1118,7 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $input.first().json.conversation_id }}",
-        "contextWindowLength": 8
+        "contextWindowLength": 12
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
@@ -1147,7 +1126,7 @@
         5248,
         1504
       ],
-      "id": "2359e553-07f5-4a91-8baa-a9d88a37d101",
+      "id": "501bccec-43f0-4584-9f08-49d4cb881016",
       "name": "Memory",
       "credentials": {
         "postgres": {
@@ -1169,7 +1148,7 @@
         752
       ],
       "typeVersion": 1,
-      "id": "67c8a5b9-a77f-41df-be3f-a37f8aa19a8f",
+      "id": "03e64b11-4a92-4384-8c0f-71975aeb2bf7",
       "name": "Sticky Note9"
     },
     {
@@ -1182,7 +1161,7 @@
         6192,
         1296
       ],
-      "id": "09751b8d-bf2c-4bae-bf5b-f216995d2498",
+      "id": "735e3972-85c0-4c46-8e32-dd4adf79b0e9",
       "name": "Limit"
     },
     {
@@ -1198,7 +1177,7 @@
         0
       ],
       "typeVersion": 1,
-      "id": "e4d31710-902c-461c-b975-7a5c77af92bf",
+      "id": "72f251dd-fc37-400d-b1c7-0a34a33ad6e8",
       "name": "Sticky Note4"
     },
     {
@@ -1261,7 +1240,7 @@
         5376,
         1504
       ],
-      "id": "05786ecc-62c4-40a9-82b1-e46a12c6d3a1",
+      "id": "7c480ac0-68ff-46a2-8300-261260289634",
       "name": "Preguntas"
     },
     {
@@ -1269,9 +1248,9 @@
         "description": "Deriva la conversación a un humano cuando el cliente lo pide, está confundido/molesto, o la consulta/pedido es riesgoso de resolver automático (posible mala experiencia).\nUsar esta tool para pausar la automatización y dejar contexto claro al operador.\nInputs: problema = motivo + resumen + último mensaje del cliente; telefono/conversation_id/contact_id para ubicar el chat.",
         "workflowId": {
           "__rl": true,
-          "value": "pySGUs18QoDJf4Ie",
+          "value": "tLi1sJp4ntwDe5Ha",
           "mode": "list",
-          "cachedResultUrl": "/workflow/pySGUs18QoDJf4Ie",
+          "cachedResultUrl": "/workflow/tLi1sJp4ntwDe5Ha",
           "cachedResultName": "[MVP] Derivar Humano"
         },
         "workflowInputs": {
@@ -1357,7 +1336,7 @@
         5504,
         1504
       ],
-      "id": "96683ea0-a640-4288-b2db-82def3a759b6",
+      "id": "8388d50e-62b0-4dc1-92b7-9219d257d1b5",
       "name": "Derivar Humano"
     },
     {
@@ -1373,17 +1352,17 @@
         1344
       ],
       "typeVersion": 1,
-      "id": "74ab3eaf-10a4-471e-8c8e-32fb0ac3f02e",
+      "id": "edb364be-1c68-4aa8-92bd-c6d379f6678a",
       "name": "Sticky Note8"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "iYQLJpXpfzSHYlZK",
+          "value": "MKeEjy4NbORRNCvP",
           "mode": "list",
-          "cachedResultUrl": "/workflow/iYQLJpXpfzSHYlZK",
-          "cachedResultName": "[MVP] Despacho"
+          "cachedResultUrl": "/workflow/MKeEjy4NbORRNCvP",
+          "cachedResultName": "[MVP] Contexto"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -1447,7 +1426,7 @@
         6336,
         1296
       ],
-      "id": "4512a587-494e-4b46-b180-d9033fefb5af",
+      "id": "012dc793-b7ea-49d0-910d-882e4547f63c",
       "name": "Crear Contexto",
       "notesInFlow": true
     },
@@ -1455,9 +1434,9 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "iYQLJpXpfzSHYlZK",
+          "value": "9gKP3AFzWiRmWm2R",
           "mode": "list",
-          "cachedResultUrl": "/workflow/iYQLJpXpfzSHYlZK",
+          "cachedResultUrl": "/workflow/9gKP3AFzWiRmWm2R",
           "cachedResultName": "[MVP] Despacho"
         },
         "workflowInputs": {
@@ -1553,16 +1532,16 @@
         5776,
         928
       ],
-      "id": "06c19693-1fe9-44f5-a927-f37795b7aaaa",
+      "id": "22cc5853-219f-4977-8091-7c3367ab665b",
       "name": "Despacho"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "jLxdQv7jxYY7ooly",
+          "value": "1xPEKOIrrHwuu9Cz",
           "mode": "list",
-          "cachedResultUrl": "/workflow/jLxdQv7jxYY7ooly",
+          "cachedResultUrl": "/workflow/1xPEKOIrrHwuu9Cz",
           "cachedResultName": "[MVP] Apertura"
         },
         "workflowInputs": {
@@ -1659,16 +1638,16 @@
         5104,
         1104
       ],
-      "id": "8658dd45-e781-4348-9970-2dead5f5e6f5",
+      "id": "e98b8aef-7760-491a-b970-6e1cc3af9c1f",
       "name": "Apertura"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "jFW1YsNrvXG92BDG",
+          "value": "TeL7JQMi9eqxaluk",
           "mode": "list",
-          "cachedResultUrl": "/workflow/jFW1YsNrvXG92BDG",
+          "cachedResultUrl": "/workflow/TeL7JQMi9eqxaluk",
           "cachedResultName": "[MVP] Pago"
         },
         "workflowInputs": {
@@ -1717,7 +1696,7 @@
               "defaultMatch": false,
               "display": true,
               "canBeUsedToMatch": true,
-              "type": "string",
+              "type": "number",
               "removed": false
             }
           ],
@@ -1731,7 +1710,7 @@
         5264,
         1120
       ],
-      "id": "a841eb0f-22a2-410a-8bb2-4545588eef31",
+      "id": "f9e76800-0ba6-4b02-af75-ffdb31cccfb6",
       "name": "Pago"
     },
     {
@@ -1744,7 +1723,7 @@
         3648,
         944
       ],
-      "id": "8a50ae97-c6e7-4ace-bc5e-6db5a5b68c0e",
+      "id": "dfcb0c36-a6d1-49a5-9f58-41035838bc49",
       "name": "Session Manager"
     },
     {
@@ -1777,7 +1756,7 @@
         -32,
         1232
       ],
-      "id": "b2cad427-bf7e-418c-b8a8-299a12975886",
+      "id": "f073ef51-d855-4737-85ed-ab4a1afd6ee4",
       "name": "Obtener Config Restaurante",
       "credentials": {
         "postgres": {
@@ -1792,7 +1771,7 @@
         "query": "INSERT INTO public.usuarios(restaurante_id, telefono, created_at, updated_at)\nVALUES (1, '{{ $('Variables').first().json.telefono }}', NOW(), NOW())\nON CONFLICT (telefono) DO UPDATE SET updated_at = NOW()\nRETURNING id, telefono, nombre, direccion_frecuente, lat_frecuente, long_frecuente",
         "options": {}
       },
-      "id": "dbaf728c-3b23-4fe3-bf4c-a4d403579d42",
+      "id": "8ceeda89-c1d8-4a30-947a-aa877eda0897",
       "name": "Asegurar Usuario Maestro",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
@@ -1890,7 +1869,7 @@
         5488,
         1120
       ],
-      "id": "2ab0d53e-be97-411d-a342-9a98675a2903",
+      "id": "5d32378e-6d9f-4e02-868c-26fb7b566bc6",
       "name": "Perfil Cliente"
     },
     {
@@ -1898,9 +1877,9 @@
         "description": "Resuelve pedidos del cliente por código o referencia y también permite listar los pedidos aún modificables. Úsala cuando el cliente mencione un pedido por código completo o corto (por ejemplo 260418-1001 o 1001), cuando quiera consultar un pedido específico, o cuando necesites elegir entre varios pedidos vigentes.",
         "workflowId": {
           "__rl": true,
-          "value": "TeJyG2pvWSMkQbAw",
+          "value": "Q6NlFaSKjCpgsi6h",
           "mode": "list",
-          "cachedResultUrl": "/workflow/TeJyG2pvWSMkQbAw",
+          "cachedResultUrl": "/workflow/Q6NlFaSKjCpgsi6h",
           "cachedResultName": "[MVP] Pedidos Cliente"
         },
         "workflowInputs": {
@@ -1953,8 +1932,61 @@
         5568,
         848
       ],
-      "id": "b00676e7-46a8-47dd-a203-58dc53c37a9c",
+      "id": "d98f84d0-ad23-4d16-ab7f-581c3e73e07d",
       "name": "Pedidos Cliente"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "5XwGS8YQg9E10VtW",
+          "mode": "list",
+          "cachedResultName": "Horarios",
+          "cachedResultUrl": "/projects/WCBcyC9o6oA4Df8e/datatables/5XwGS8YQg9E10VtW"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        4160,
+        944
+      ],
+      "id": "01ef6c00-14f1-42cd-ab03-24ca0abc9131",
+      "name": "Horarios_old",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "horarios",
+          "mode": "list",
+          "cachedResultName": "horarios"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4368,
+        944
+      ],
+      "id": "051ed0d2-3b11-4134-a18e-80fab5ba4514",
+      "name": "Horarios",
+      "credentials": {
+        "postgres": {
+          "id": "tud2wJu4FrMUtnqd",
+          "name": "postgres restaurante_mvp"
+        }
+      }
     }
   ],
   "pinData": {
@@ -2417,18 +2449,7 @@
       "main": [
         [
           {
-            "node": "Horarios",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Horarios": {
-      "main": [
-        [
-          {
-            "node": "Validacion",
+            "node": "Horarios_old",
             "type": "main",
             "index": 0
           }
@@ -2659,6 +2680,28 @@
           }
         ]
       ]
+    },
+    "Horarios_old": {
+      "main": [
+        [
+          {
+            "node": "Horarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Horarios": {
+      "main": [
+        [
+          {
+            "node": "Validacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -2666,10 +2709,10 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "aa2b64fb-8dee-4114-9e95-c33259735aa7",
+  "versionId": "ce207d19-eaba-4467-bb5a-5012385204b4",
   "meta": {
     "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
   },
-  "id": "5ivZTQAggS8fe0h5",
+  "id": "1eqIedTwuUxbqjC8",
   "tags": []
 }

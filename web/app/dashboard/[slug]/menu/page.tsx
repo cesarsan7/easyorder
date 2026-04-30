@@ -552,7 +552,11 @@ function CategorySection({
     const res = await authFetch(`${apiBase}/dashboard/${slug}/menu/items`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
     })
-    if (!res.ok) throw new Error('Error al crear producto')
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`
+      try { const b = await res.json(); detail = b?.detail ?? b?.error ?? detail } catch {}
+      throw new Error(detail)
+    }
     onUpdateItems()
   }
 
