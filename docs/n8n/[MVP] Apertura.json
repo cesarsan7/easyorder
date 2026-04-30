@@ -250,7 +250,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": " SELECT EXISTS(\n  SELECT 1 FROM pedidos p\n  CROSS JOIN LATERAL (\n    SELECT COALESCE(config_value::int, 60) AS minutos\n    FROM restaurante_config\n    WHERE config_key = 'cart_expiry_minutes'\n      AND restaurante_id = 1\n    LIMIT 1\n  ) cfg\n  WHERE p.telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n    AND p.estado = 'en_curso'\n    AND p.updated_at < NOW() - (cfg.minutos * INTERVAL '1 minute')\n    AND p.updated_at > NOW() - INTERVAL '24 hours' \n) AS tenia_carrito_expirado",
+        "query": " SELECT EXISTS(\n  SELECT 1 FROM pedidos p\n  CROSS JOIN LATERAL (\n    SELECT COALESCE(config_value::int, 60) AS minutos\n    FROM restaurante_config\n    WHERE config_key = 'cart_expiry_minutes'\n      AND restaurante_id = 1\n    LIMIT 1\n  ) cfg\n  WHERE p.telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n    AND p.estado IN ('en_curso', 'recibido')\n    AND p.updated_at < NOW() - (cfg.minutos * INTERVAL '1 minute')\n    AND p.updated_at > NOW() - INTERVAL '24 hours' \n) AS tenia_carrito_expirado",
         "options": {}
       },
       "id": "1507fe8e-1f73-4c59-bc27-247d801cdc2a",
