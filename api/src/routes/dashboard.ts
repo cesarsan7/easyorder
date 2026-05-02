@@ -37,6 +37,31 @@ function fireNotification(payload: NotificationPayload): void {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Chatwoot bot-resume helper — reactiva el bot automático en Chatwoot cuando
+// el operador resuelve una escalación.
+// Variables de entorno requeridas:
+//   CHATWOOT_BASE_URL  → ej: https://xxx.easypanel.host
+//   CHATWOOT_API_TOKEN → API access token de Chatwoot
+// ---------------------------------------------------------------------------
+const CHATWOOT_BASE_URL  = process.env['CHATWOOT_BASE_URL']  ?? '';
+const CHATWOOT_API_TOKEN = process.env['CHATWOOT_API_TOKEN'] ?? '';
+
+function resumeBot(accountId: string, contactId: string): void {
+  if (!CHATWOOT_BASE_URL || !CHATWOOT_API_TOKEN) return;
+  const url = `${CHATWOOT_BASE_URL}/api/v1/accounts/${accountId}/contacts/${contactId}`;
+  fetch(url, {
+    method:  'PUT',
+    headers: {
+      'Content-Type':  'application/json',
+      'api_access_token': CHATWOOT_API_TOKEN,
+    },
+    body: JSON.stringify({ custom_attributes: { bot: 'On' } }),
+  }).catch((err: unknown) =>
+    console.warn('[resumeBot] Chatwoot call failed:', err instanceof Error ? err.message : err),
+  );
+}
 // ----------------------------------------------------------------------------
 // GET /dashboard/me  ← debe estar ANTES del middleware /:slug/*
 //
@@ -210,7 +235,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
 
   const VALID_ESTADOS = [
     'recibido', 'en_curso', 'confirmado', 'en_preparacion', 'listo',
-    'en_camino', 'pendiente_pago', 'entregado', 'cancelado',
+    'en_camino', 'pendiente_pago', 'entregado', 'cancelado', 'expirado',
   ];
   if (estadoParam && !VALID_ESTADOS.includes(estadoParam)) {
     return c.json({ error: 'invalid_estado', valid_values: VALID_ESTADOS }, 400);
@@ -654,8 +679,8 @@ dashboardRoutes.get('/:slug/home/metrics', async (c) => {
 // ----------------------------------------------------------------------------
 
 const TRANSITIONS: Record<string, readonly string[]> = {
-  recibido:       ['confirmado', 'cancelado'],
-  en_curso:       ['confirmado', 'cancelado'],
+  recibido:       ['confirmado', 'cancelado', 'expirado'],  // expirado = manual desde dashboard
+  en_curso:       ['confirmado', 'cancelado', 'expirado'],  // expirado = automático por cron o manual
   pendiente_pago: ['pagado', 'confirmado', 'cancelado'],
   confirmado:     ['en_preparacion', 'cancelado'],
   pagado:         ['en_preparacion', 'cancelado'],
@@ -664,11 +689,12 @@ const TRANSITIONS: Record<string, readonly string[]> = {
   en_camino:      ['entregado', 'cancelado'],
   entregado:      [],
   cancelado:      [],
+  expirado:       [],  // estado terminal — sin transiciones salidas
 };
 
 const VALID_ESTADOS_DESTINO = [
   'confirmado', 'pagado', 'en_preparacion', 'listo',
-  'en_camino', 'entregado', 'cancelado',
+  'en_camino', 'entregado', 'cancelado', 'expirado',
 ] as const;
 
 dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
@@ -748,14 +774,22 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
     }
 
     // Step 3 — update with tenant guard repeated in WHERE to prevent TOCTOU.
-    const updated = await sql<{ id: number; pedido_codigo: string | null; estado: string; updated_at: string }[]>`
-      UPDATE pedidos
-      SET    estado     = ${estadoNuevo},
-             updated_at = NOW()
-      WHERE  id             = ${id}
-        AND  restaurante_id = ${restaurante_id}
-      RETURNING id, pedido_codigo, estado, updated_at
-    `;
+    // SET LOCAL instructs the trigger fn_log_estado_pedido to record the real origen/actor.
+    const user = await validateBearerToken(c.req.header('Authorization'));
+    const actorEmail = user?.email ?? 'unknown';
+
+    const updated = await sql.begin(async (tx) => {
+      await tx`SELECT set_config('app.origen', 'dashboard', true)`;
+      await tx`SELECT set_config('app.actor',  ${actorEmail}, true)`;
+      return tx<{ id: number; pedido_codigo: string | null; estado: string; updated_at: string }[]>`
+        UPDATE pedidos
+        SET    estado     = ${estadoNuevo},
+               updated_at = NOW()
+        WHERE  id             = ${id}
+          AND  restaurante_id = ${restaurante_id}
+        RETURNING id, pedido_codigo, estado, updated_at
+      `;
+    });
 
     const u = updated[0];
 
@@ -1821,6 +1855,73 @@ interface HorarioWithId {
   cierre_2:   string | null;
 }
 
+
+// ----------------------------------------------------------------------------
+// GET /dashboard/:slug/notifications
+//
+// Endpoint de polling para notificaciones del dashboard (MVP).
+// Devuelve escalaciones pendientes (derivaciones a humano sin resolver).
+//
+// El frontend llama este endpoint cada `dashboard_polling_seconds` segundos
+// (configurable en restaurante_config). La respuesta sirve para:
+//   - mostrar badge con número de notificaciones no atendidas
+//   - listar las derivaciones pendientes en el panel de notificaciones
+//
+// Parámetros: ninguno (el filtro es siempre estado='pendiente')
+//
+// Post-MVP: migrar a SSE + tabla notificaciones persistentes.
+// ----------------------------------------------------------------------------
+dashboardRoutes.get('/:slug/notifications', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+
+  try {
+    // Escalaciones pendientes (derivaciones a humano no resueltas)
+    const rows = await sql<{
+      id: number;
+      telefono: string;
+      problema: string | null;
+      account_id: string | null;
+      contact_id: string | null;
+      conversation_id: string | null;
+      created_at: string;
+    }[]>`
+      SELECT id, telefono, problema, account_id, contact_id, conversation_id, created_at
+      FROM   escalaciones
+      WHERE  restaurante_id = ${restaurante_id}
+        AND  estado = 'pendiente'
+      ORDER BY created_at DESC
+      LIMIT 50
+    `;
+
+    // Pedidos expirados en las últimas 24h (informativos — solo conteo)
+    const [expiredCount] = await sql<{ total: number }[]>`
+      SELECT COUNT(*)::int AS total
+      FROM   pedidos
+      WHERE  restaurante_id = ${restaurante_id}
+        AND  estado = 'expirado'
+        AND  updated_at > NOW() - INTERVAL '24 hours'
+    `;
+
+    return c.json({
+      badge:       rows.length,                        // total de derivaciones pendientes
+      escalaciones: rows.map((e) => ({
+        id:              Number(e.id),
+        tipo:            'derivacion_humano' as const,
+        telefono:        e.telefono,
+        problema:        e.problema ?? null,
+        account_id:      e.account_id ?? null,
+        contact_id:      e.contact_id ?? null,
+        conversation_id: e.conversation_id ?? null,
+        created_at:      e.created_at,
+      })),
+      pedidos_expirados_24h: Number(expiredCount?.total ?? 0),
+    });
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/notifications] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
 // ----------------------------------------------------------------------------
 // GET /dashboard/:slug/escalaciones
 //
@@ -1910,6 +2011,18 @@ dashboardRoutes.patch('/:slug/escalaciones/:id', async (c) => {
     const user = await validateBearerToken(c.req.header('Authorization'));
     const resolvedBy = user?.email ?? 'unknown';
 
+    // Leer account_id y contact_id ANTES del UPDATE para poder reactivar el bot
+    const escRows = await sql<{ account_id: string | null; contact_id: string | null }[]>`
+      SELECT account_id, contact_id
+      FROM   escalaciones
+      WHERE  id = ${id} AND restaurante_id = ${restaurante_id} AND estado = 'pendiente'
+      LIMIT  1
+    `;
+
+    if (escRows.length === 0) {
+      return c.json({ error: 'not_found_or_already_resolved' }, 404);
+    }
+
     const updated = await sql<{ id: number; estado: string; resolved_at: string }[]>`
       UPDATE escalaciones
       SET
@@ -1924,6 +2037,12 @@ dashboardRoutes.patch('/:slug/escalaciones/:id', async (c) => {
 
     if (updated.length === 0) {
       return c.json({ error: 'not_found_or_already_resolved' }, 404);
+    }
+
+    // Reactivar bot en Chatwoot — fire-and-forget, nunca bloquea la respuesta
+    const { account_id, contact_id } = escRows[0];
+    if (account_id && contact_id) {
+      resumeBot(account_id, contact_id);
     }
 
     return c.json({
