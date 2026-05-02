@@ -85,6 +85,7 @@ function normalizeItem(raw: unknown): OrderItem {
     quantity:     Number(r.cantidad ?? r.quantity ?? 1),
     unit_price:   Number(r.precio_unitario ?? r.unit_price ?? 0),
     notas:        typeof r.notas === 'string' && r.notas.trim() ? r.notas.trim() : null,
+    extras:       Array.isArray(r.extras) ? (r.extras as OrderItem['extras']) : undefined,
   }
 }
 
