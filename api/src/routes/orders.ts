@@ -74,7 +74,10 @@ ordersRoutes.post('/:slug/orders', async (c) => {
     return c.json({ error: 'delivery_requires_zona_id' }, 400);
   }
 
-  const notas = typeof b.notas === 'string' ? b.notas.trim() || null : null;
+  const notasStr = typeof b.notas === 'string' ? b.notas.trim() || null : null;
+  // M-11: notas es JSONB — convertir string a [{item, nota}]
+  const notasJson: { item: string; nota: string }[] | null =
+    notasStr ? [{ item: 'general', nota: notasStr }] : null;
 
   // Items array
   if (!Array.isArray(b.items) || b.items.length === 0) {
@@ -421,7 +424,7 @@ ordersRoutes.post('/:slug/orders', async (c) => {
         ${metodo_pago},
         'recibido',
         'pendiente',
-        ${notas},
+        ${notasJson !== null ? sql.json(notasJson) : null},
         'web'
       )
       RETURNING
@@ -622,7 +625,7 @@ interface TrackingRow {
   postal_code: string | null;
   tiempo_estimado: string;
   metodo_pago: string;
-  notas: string | null;
+  notas: { item: string; nota: string }[] | null;
   created_at: Date;
   updated_at: Date;
   datos_bancarios: unknown | null;

@@ -42,7 +42,7 @@ interface Order {
   subtotal: number
   costo_envio: number
   metodo_pago: string
-  notas: string | null
+  notas: { item: string; nota: string }[] | null
   telefono: string
   nombre_cliente: string
   direccion: string | null
@@ -208,7 +208,7 @@ function printComanda(order: Order, detail: OrderDetail | null) {
     <div class="row bold"><span>TOTAL</span><span>${fmt(order.total)}</span></div>
     <div class="sep"></div>
     <div class="row"><span>Pago</span><span>${PAGO_LABEL[order.metodo_pago] ?? order.metodo_pago}</span></div>
-    ${order.notas ? `<div style="margin-top:6px;padding:4px;border:1px dashed #000">📝 ${order.notas}</div>` : ''}
+    ${Array.isArray(order.notas) && order.notas.length ? order.notas.map(n => `<div style="margin-top:4px;padding:4px;border:1px dashed #000">📝 ${n.item !== 'general' ? `<b>${n.item}</b>: ` : ''}${n.nota}</div>`).join('') : ''}
     </body></html>
   `
   const win = window.open('', '_blank', 'width=350,height=600')
@@ -313,9 +313,9 @@ function OrderCard({
           <p className="text-xs text-gray-500 truncate">📍 {order.direccion}</p>
         )}
 
-        {order.notas && (
+        {Array.isArray(order.notas) && order.notas.length > 0 && (
           <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5">
-            📝 {order.notas}
+            📝 {order.notas.map(n => n.item !== 'general' ? `${n.item}: ${n.nota}` : n.nota).join(' · ')}
           </p>
         )}
       </div>
@@ -548,10 +548,19 @@ function OrderDetailPanel({
             )}
           </div>
 
-          {order.notas && (
+          {Array.isArray(order.notas) && order.notas.length > 0 && (
             <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3">
-              <p className="text-xs font-semibold text-amber-800 mb-1">Nota del cliente</p>
-              <p className="text-sm text-amber-700">{order.notas}</p>
+              <p className="text-xs font-semibold text-amber-800 mb-1">Notas del pedido</p>
+              <ul className="space-y-1">
+                {order.notas.map((n, i) => (
+                  <li key={i} className="text-sm text-amber-700">
+                    {n.item !== 'general' && (
+                      <span className="font-medium">{n.item}: </span>
+                    )}
+                    {n.nota}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
@@ -1146,27 +1155,6 @@ export default function DashboardPage() {
                   key={order.id}
                   order={order}
                   onStatusChange={handleStatusChange}
-                  updating={updatingId === order.id}
-                  onSelect={setSelectedOrder}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </main>
-
-      {selectedOrder && (
-        <OrderDetailPanel
-          slug={slug}
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onStatusChange={handleStatusChange}
-          updatingId={updatingId}
-        />
-      )}
-    </div>
-  )
-}
                   updating={updatingId === order.id}
                   onSelect={setSelectedOrder}
                 />

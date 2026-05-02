@@ -149,6 +149,8 @@ export default function CheckoutConfirmarPage() {
   const total = useCartStore((s) => s.total)
   const setOrderId = useCartStore((s) => s.setOrderId)
   const moneda = useCartStore((s) => s.moneda)
+  const notas = useCartStore((s) => s.notas)
+  const setNotas = useCartStore((s) => s.setNotas)
 
   const [whatsappNumber, setWhatsappNumber] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -199,6 +201,7 @@ export default function CheckoutConfirmarPage() {
             direccion: address,
             zona_id: zoneId ?? undefined,
           }),
+          ...(notas.trim() ? { notas: notas.trim() } : {}),
           items: items.map((i) => ({
             menu_item_id: i.itemId,
             menu_variant_id: i.variantId ?? null,
@@ -330,6 +333,18 @@ export default function CheckoutConfirmarPage() {
             <Row
               label="Método de pago"
               value={PAYMENT_LABELS[paymentMethod ?? ''] ?? paymentMethod ?? '—'}
+            />
+          </div>
+
+          {/* Nota del pedido */}
+          <div className="bg-white rounded-2xl px-5 py-5 shadow-sm">
+            <SectionTitle>¿Alguna nota? (opcional)</SectionTitle>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              rows={3}
+              placeholder="Ej: sin cebolla, alérgico a maní, tocar el timbre..."
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 resize-none focus:outline-none focus:border-gray-400 placeholder-gray-300"
             />
           </div>
 

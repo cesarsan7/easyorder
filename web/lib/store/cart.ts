@@ -33,6 +33,7 @@ interface CartState {
   paymentMethod: string | null
   orderId: string | null
   moneda: string
+  notas: string
 }
 
 export interface ZoneInfo {
@@ -52,6 +53,7 @@ interface CartActions {
   setPaymentMethod: (method: string) => void
   setOrderId: (id: string) => void
   setMoneda: (moneda: string) => void
+  setNotas: (notas: string) => void
   subtotal: () => number
   total: () => number
   itemCount: () => number
@@ -74,6 +76,7 @@ const initialState: CartState = {
   paymentMethod: null,
   orderId: null,
   moneda: 'CLP',
+  notas: '',
 }
 
 function itemKey(itemId: number, variantId: number | null, extras: CartItemExtra[]): string {
@@ -146,6 +149,8 @@ export const useCartStore = create<CartStore>()(
       setPaymentMethod: (method) => set({ paymentMethod: method }),
 
       setMoneda: (moneda) => set({ moneda }),
+
+      setNotas: (notas) => set({ notas }),
 
       setOrderId: (id) => set({ orderId: id }),
 
