@@ -96,12 +96,13 @@ const ESTADO_META: Record<string, { label: string; color: string; bg: string }> 
   en_camino:      { label: 'En camino',         color: '#0284C7', bg: '#E0F2FE' },
   entregado:      { label: 'Entregado',         color: '#6B7280', bg: '#F3F4F6' },
   cancelado:      { label: 'Cancelado',         color: '#DC2626', bg: '#FEE2E2' },
+  expirado:       { label: 'Expirado',          color: '#6B7280', bg: '#F3F4F6' },
 }
 
 // Transiciones relajadas — espejo del backend. Permite saltos hacia adelante.
 const TRANSITIONS: Record<string, string[]> = {
-  recibido:       ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
-  en_curso:       ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
+  recibido:       ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado', 'expirado'],
+  en_curso:       ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado', 'expirado'],
   pendiente_pago: ['confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
   confirmado:     ['en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
   pagado:         ['en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
@@ -110,6 +111,7 @@ const TRANSITIONS: Record<string, string[]> = {
   en_camino:      ['entregado', 'cancelado'],
   entregado:      [],
   cancelado:      [],
+  expirado:       [],
 }
 
 // Orden canónico del flujo operativo (sin cancelado — se trata aparte)
@@ -143,6 +145,7 @@ const FILTER_TABS = [
   { key: 'en_preparacion', label: 'Preparando',     badgeKey: null },
   { key: 'entregado',      label: 'Entregados',     badgeKey: null },
   { key: 'cancelado',      label: 'Cancelados',     badgeKey: null },
+  { key: 'expirado',       label: 'Expirados',      badgeKey: null },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -662,6 +665,17 @@ function OrderDetailPanel({
               ✕ Cancelar pedido
             </button>
           )}
+
+          {/* Expirar — solo para recibido (ventana cerrada manualmente) */}
+          {order.estado === 'recibido' && (
+            <button
+              onClick={() => { onStatusChange(order.id, 'expirado'); onClose() }}
+              disabled={updating}
+              className="w-full rounded-2xl py-2.5 text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 border border-gray-200 mt-2"
+            >
+              ⏱ Expirar pedido
+            </button>
+          )}
         </div>
 
         {/* ── Acciones secundarias ─────────────────────────────────────────────────────────────────────────────── */}
@@ -684,6 +698,143 @@ function OrderDetailPanel({
         </div>
       </div>
     </>
+  )
+}
+
+// ─── Notifications hook ───────────────────────────────────────────────────────
+
+interface EscalacionNotif {
+  id: number
+  pedido_id: number
+  pedido_codigo: string
+  telefono: string
+  nombre_cliente: string
+  problema: string
+  created_at: string
+}
+
+interface NotifData {
+  badge: number
+  escalaciones: EscalacionNotif[]
+  pedidos_expirados_24h: number
+}
+
+function useNotifications(
+  slug: string,
+  authFetch: ReturnType<typeof useAuthFetch>,
+  enabled: boolean,
+) {
+  const [data,    setData]    = useState<NotifData>({ badge: 0, escalaciones: [], pedidos_expirados_24h: 0 })
+  const timerRef              = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const fetch_ = useCallback(async () => {
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL
+      const res  = await authFetch(`${base}/dashboard/${slug}/notifications`)
+      if (res.ok) setData(await res.json())
+    } catch { /* silent */ }
+  }, [slug, authFetch])
+
+  useEffect(() => {
+    if (!enabled) return
+    fetch_()
+    timerRef.current = setTimeout(function poll() {
+      fetch_()
+      timerRef.current = setTimeout(poll, POLL_INTERVAL_MS)
+    }, POLL_INTERVAL_MS)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [fetch_, enabled])
+
+  return { notifData: data, refetchNotifs: fetch_ }
+}
+
+// ─── Notification bell ────────────────────────────────────────────────────────
+
+function NotificationBell({
+  slug,
+  data,
+}: {
+  slug: string
+  data: NotifData
+}) {
+  const router              = useRouter()
+  const [open, setOpen]     = useState(false)
+  const panelRef            = useRef<HTMLDivElement>(null)
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  return (
+    <div className="relative" ref={panelRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="relative rounded-xl px-3 py-2 text-xs font-medium bg-gray-100 hover:bg-gray-200 transition-colors"
+        title="Notificaciones"
+      >
+        🔔
+        {data.badge > 0 && (
+          <span
+            className="absolute -top-1 -right-1 rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center text-white font-bold"
+            style={{ fontSize: '9px', backgroundColor: PRIMARY }}
+          >
+            {data.badge > 9 ? '9+' : data.badge}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <p className="text-xs font-semibold text-gray-700">Notificaciones</p>
+            {data.pedidos_expirados_24h > 0 && (
+              <span className="text-xs text-gray-400">{data.pedidos_expirados_24h} exp. hoy</span>
+            )}
+          </div>
+
+          {data.escalaciones.length === 0 ? (
+            <div className="px-4 py-5 text-center">
+              <p className="text-xs text-gray-400">Sin escalaciones pendientes</p>
+            </div>
+          ) : (
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+              {data.escalaciones.slice(0, 5).map((esc) => (
+                <div key={esc.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-900 truncate">
+                        {esc.nombre_cliente}
+                        <span className="font-normal text-gray-400 ml-1">#{esc.pedido_codigo}</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{esc.problema}</p>
+                    </div>
+                    <span className="text-xs text-gray-400 shrink-0">{timeAgo(esc.created_at)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="px-4 py-2.5 border-t border-gray-100">
+            <button
+              onClick={() => { router.push(`/dashboard/${slug}/escalaciones`); setOpen(false) }}
+              className="w-full text-xs font-medium text-center transition-colors hover:opacity-80"
+              style={{ color: PRIMARY }}
+            >
+              Ver todas las escalaciones →
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -768,6 +919,8 @@ export default function DashboardPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const { notifData } = useNotifications(slug, authFetch, !loading)
+
   const fetchOrders = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     setError(null)
@@ -819,7 +972,7 @@ export default function DashboardPage() {
           .map((o) => o.id === updated.id ? { ...o, estado: updated.estado, updated_at: updated.updated_at } : o)
           .filter((o) => {
             if (filter !== '') return true
-            return !['entregado', 'cancelado'].includes(o.estado)
+            return !['entregado', 'cancelado', 'expirado'].includes(o.estado)
           })
       )
       setNewCount((prev) => {
@@ -900,6 +1053,7 @@ export default function DashboardPage() {
               </span>
             )}
             <StatusToggle slug={slug} authFetch={authFetch} />
+            <NotificationBell slug={slug} data={notifData} />
             <button
               onClick={() => fetchOrders()}
               className="rounded-xl px-3 py-2 text-xs font-medium bg-gray-100 hover:bg-gray-200 transition-colors"
