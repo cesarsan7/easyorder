@@ -35,7 +35,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -125,7 +126,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -146,7 +148,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -159,7 +162,8 @@
       "position": [
         464,
         176
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -184,6 +188,19 @@
       ],
       "id": "c823e2e5-9814-4646-a590-a78199357d70",
       "name": "Merge Respuesta Final"
+    },
+    {
+      "id": "error-sistema-pago-001",
+      "name": "Respuesta Error Sistema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// Catch global de errores para Pago\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Pago',\n    mensaje: `Error técnico en Pago (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false\n  }\n}];"
+      }
     }
   ],
   "pinData": {},
@@ -204,6 +221,13 @@
         [
           {
             "node": "¿Pedido Válido?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
             "type": "main",
             "index": 0
           }
@@ -254,6 +278,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -265,6 +296,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -273,6 +311,13 @@
         [
           {
             "node": "Merge Respuesta Final",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
             "type": "main",
             "index": 0
           }

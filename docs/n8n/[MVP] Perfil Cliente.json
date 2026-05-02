@@ -52,7 +52,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -65,7 +66,21 @@
       "position": [
         1264,
         -240
-      ]
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "error-sistema-perfil-cliente-001",
+      "name": "Respuesta Error Sistema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// Catch global de errores para Perfil Cliente\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Perfil Cliente',\n    mensaje: `Error técnico en Perfil Cliente (${origen}): ${detalle}`,\n    puede_continuar: false\n  }\n}];"
+      }
     }
   ],
   "pinData": {},
@@ -86,6 +101,25 @@
         [
           {
             "node": "Respuesta Perfil",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Perfil": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Respuesta Error Sistema",
             "type": "main",
             "index": 0
           }

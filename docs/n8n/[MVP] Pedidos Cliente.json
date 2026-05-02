@@ -79,7 +79,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -101,7 +102,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -114,7 +116,8 @@
       "position": [
         240,
         0
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -127,7 +130,21 @@
       "position": [
         240,
         192
-      ]
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "error-sistema-pedidos-cliente-001",
+      "name": "Respuesta Error Sistema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// Catch global de errores para Pedidos Cliente\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Pedidos Cliente',\n    mensaje: `Error técnico en Pedidos Cliente (${origen}): ${detalle}`,\n    puede_continuar: false\n  }\n}];"
+      }
     }
   ],
   "pinData": {},
@@ -169,6 +186,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -177,6 +201,37 @@
         [
           {
             "node": "Respuesta Resolver",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Lista": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Resolver": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Respuesta Error Sistema",
             "type": "main",
             "index": 0
           }

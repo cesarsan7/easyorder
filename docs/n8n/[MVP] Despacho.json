@@ -35,7 +35,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -91,7 +92,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -138,7 +140,8 @@
       "position": [
         -624,
         512
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -193,7 +196,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -206,7 +210,8 @@
       "position": [
         -400,
         32
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -227,7 +232,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -299,7 +305,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -320,7 +327,8 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -355,6 +363,20 @@
           "id": "tud2wJu4FrMUtnqd",
           "name": "postgres restaurante_mvp"
         }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "error-sistema-despacho-001",
+      "name": "Respuesta Error Sistema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// Catch global de errores para Despacho\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Despacho',\n    mensaje: `Error técnico en Despacho (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false\n  }\n}];"
       }
     }
   ],
@@ -376,6 +398,13 @@
         [
           {
             "node": "¿Es Retiro?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
             "type": "main",
             "index": 0
           }
@@ -408,6 +437,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -434,6 +470,13 @@
         [
           {
             "node": "¿Puede Continuar?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
             "type": "main",
             "index": 0
           }
@@ -471,6 +514,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -482,6 +532,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -490,6 +547,13 @@
         [
           {
             "node": "Respuesta Retiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
             "type": "main",
             "index": 0
           }
@@ -542,6 +606,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -552,6 +623,30 @@
             "node": "Merge Respuesta Final",
             "type": "main",
             "index": 1
+          }
+        ]
+      ]
+    },
+    "Guardar Direccion Frecuente": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Direccion Frecuente Pendiente": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
