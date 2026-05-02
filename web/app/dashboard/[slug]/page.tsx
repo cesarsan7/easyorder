@@ -13,6 +13,7 @@ interface OrderItem {
   variant_name: string | null
   quantity: number
   unit_price: number
+  notas?: string | null
   extras?: { name: string; unit_price: number; quantity: number }[]
 }
 
@@ -71,6 +72,7 @@ function normalizeItem(raw: unknown): OrderItem {
       variant_name: (r.variant_name as string | null) ?? null,
       quantity:     Number(r.quantity ?? 1),
       unit_price:   Number(r.unit_price ?? 0),
+      notas:        typeof r.notas === 'string' && r.notas.trim() ? r.notas.trim() : null,
       extras:       Array.isArray(r.extras) ? (r.extras as OrderItem['extras']) : undefined,
     }
   }
@@ -82,6 +84,7 @@ function normalizeItem(raw: unknown): OrderItem {
     variant_name: null,
     quantity:     Number(r.cantidad ?? r.quantity ?? 1),
     unit_price:   Number(r.precio_unitario ?? r.unit_price ?? 0),
+    notas:        typeof r.notas === 'string' && r.notas.trim() ? r.notas.trim() : null,
   }
 }
 
@@ -477,6 +480,11 @@ function OrderDetailPanel({
                         </p>
                         {extrasLabel && (
                           <p className="text-xs text-gray-400 mt-0.5">+ {extrasLabel}</p>
+                        )}
+                        {item.notas && (
+                          <p className="text-xs text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-0.5 inline-block">
+                            📝 {item.notas}
+                          </p>
                         )}
                       </div>
                       <span className="text-sm font-semibold text-gray-900 shrink-0 tabular-nums">
@@ -1138,6 +1146,27 @@ export default function DashboardPage() {
                   key={order.id}
                   order={order}
                   onStatusChange={handleStatusChange}
+                  updating={updatingId === order.id}
+                  onSelect={setSelectedOrder}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </main>
+
+      {selectedOrder && (
+        <OrderDetailPanel
+          slug={slug}
+          order={selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          onStatusChange={handleStatusChange}
+          updatingId={updatingId}
+        />
+      )}
+    </div>
+  )
+}
                   updating={updatingId === order.id}
                   onSelect={setSelectedOrder}
                 />
