@@ -79,7 +79,42 @@
         400
       ],
       "parameters": {
-        "jsCode": "// Catch global de errores para Perfil Cliente\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Perfil Cliente',\n    mensaje: `Error técnico en Perfil Cliente (${origen}): ${detalle}`,\n    puede_continuar: false\n  }\n}];"
+        "jsCode": "// Nodo de catch global para Perfil Cliente\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Perfil Cliente',\n    mensaje: `Error técnico en Perfil Cliente (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Perfil Cliente (${origen}): ${detalle}`\n  }\n}];"
+      }
+    },
+    {
+      "id": "registrar-escalacion-perfil-cliente-001",
+      "name": "Registrar Escalacion Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        900,
+        400
+      ],
+      "continueOnFail": true,
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, estado)\nVALUES (\n  1,\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Perfil Cliente\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'pendiente'\n)",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "BqJnEVb3yFVjGaAz",
+          "name": "Postgres La Isla"
+        }
+      }
+    },
+    {
+      "id": "devolver-error-perfil-cliente-001",
+      "name": "Devolver Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        400
+      ],
+      "parameters": {
+        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
       }
     }
   ],
@@ -120,6 +155,28 @@
         [
           {
             "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Error Sistema": {
+      "main": [
+        [
+          {
+            "node": "Registrar Escalacion Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Escalacion Error": {
+      "main": [
+        [
+          {
+            "node": "Devolver Error",
             "type": "main",
             "index": 0
           }
