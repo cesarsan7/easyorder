@@ -254,7 +254,8 @@ CREATE TABLE public.restaurante_config (
 	description text NULL,
 	updated_at timestamptz DEFAULT now() NULL,
 	restaurante_id int4 NULL,
-	CONSTRAINT restaurante_config_pkey PRIMARY KEY (config_key)
+	CONSTRAINT restaurante_config_pkey PRIMARY KEY (config_key, restaurante_id)
+-- NOTA: PK compuesto (config_key, restaurante_id) — corregido desde BD real (multi-tenant)
 );
 
 
