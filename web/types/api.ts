@@ -89,6 +89,10 @@ export interface RestaurantPublicResponse {
   description: string | null
   logo_url: string | null
   brand_color: string | null
+  eslogan: string | null
+  texto_banner: string | null
+  redes_sociales: RedSocial[] | null
+  theme_id: string | null
   address: string | null
   phone: string | null
   moneda: string
@@ -100,10 +104,15 @@ export interface RestaurantPublicResponse {
   datos_bancarios: Record<string, string | null> | null
   is_open: boolean
   is_open_override: boolean | null
-  next_opening?: string | null   // optional, may not be returned yet
+  next_opening?: string | null
   mensaje_bienvenida?: string | null
   mensaje_cerrado?: string | null
   horario_hoy: HorarioHoy | null
+}
+
+export interface RedSocial {
+  red: string   // 'instagram' | 'tiktok' | 'facebook' | 'twitter' | 'youtube' | 'whatsapp' | 'telegram' | 'linkedin' | 'pinterest' | 'web'
+  url: string
 }
 
 export interface HorarioHoy {

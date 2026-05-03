@@ -35,6 +35,10 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
         descripcion,
         logo_url,
         brand_color,
+        eslogan,
+        texto_banner,
+        redes_sociales,
+        theme_id,
         direccion,
         delivery_enabled,
         pickup_enabled,
@@ -114,7 +118,11 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
     name:                r.nombre,
     description:         r.descripcion,
     logo_url:            r.logo_url,
-    brand_color:         r.brand_color ?? '#E63946',
+    brand_color:         r.brand_color ?? '#6366F1',
+    eslogan:             r.eslogan             ?? null,
+    texto_banner:        r.texto_banner        ?? null,
+    redes_sociales:      r.redes_sociales      ?? null,
+    theme_id:            r.theme_id            ?? null,
     address:             r.direccion,
     delivery_enabled:    r.delivery_enabled ?? true,
     pickup_enabled:      r.pickup_enabled ?? true,
@@ -896,6 +904,10 @@ interface RestauranteRow {
   descripcion: string | null;
   logo_url: string | null;
   brand_color: string | null;
+  eslogan: string | null;
+  texto_banner: string | null;
+  redes_sociales: Array<{ red: string; url: string }> | null;
+  theme_id: string | null;
   direccion: string | null;
   telefono: string | null;
   moneda: string;

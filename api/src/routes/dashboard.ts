@@ -1126,7 +1126,8 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
   try {
     const rows = await sql<RestauranteFullRow[]>`
       SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
-             datos_bancarios, moneda, payment_methods
+             datos_bancarios, moneda, payment_methods,
+             brand_color, logo_url, eslogan, texto_banner, redes_sociales, theme_id
       FROM   restaurante
       WHERE  id = ${restaurante_id}
       LIMIT  1
@@ -1146,6 +1147,12 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
       datos_bancarios:    r.datos_bancarios     ?? null,
       moneda:             r.moneda              ?? 'CLP',
       payment_methods:    Array.isArray(r.payment_methods) ? r.payment_methods : null,
+      brand_color:        (r as unknown as Record<string, unknown>)['brand_color']    ?? null,
+      logo_url:           (r as unknown as Record<string, unknown>)['logo_url']       ?? null,
+      eslogan:            (r as unknown as Record<string, unknown>)['eslogan']        ?? null,
+      texto_banner:       (r as unknown as Record<string, unknown>)['texto_banner']   ?? null,
+      redes_sociales:     (r as unknown as Record<string, unknown>)['redes_sociales'] ?? null,
+      theme_id:           (r as unknown as Record<string, unknown>)['theme_id']       ?? null,
     });
 
   } catch (err) {
@@ -1177,7 +1184,7 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
 //   knows why the field was rejected rather than seeing a 503.
 // ----------------------------------------------------------------------------
 
-const UPDATABLE_TEXT_FIELDS = ['nombre', 'telefono', 'direccion', 'mensaje_bienvenida', 'mensaje_cerrado'] as const;
+const UPDATABLE_TEXT_FIELDS = ['nombre', 'telefono', 'direccion', 'mensaje_bienvenida', 'mensaje_cerrado', 'eslogan', 'texto_banner'] as const;
 
 // Max lengths per field — text columns have no DB-level constraint; we enforce
 // here to prevent unbounded payloads reaching PostgreSQL.
@@ -1187,14 +1194,22 @@ const TEXT_FIELD_MAX_LENGTH: Record<typeof UPDATABLE_TEXT_FIELDS[number], number
   direccion:          300,
   mensaje_bienvenida: 500,
   mensaje_cerrado:    500,
+  eslogan:            200,
+  texto_banner:       500,
 };
 
 const VALID_PAYMENT_METHODS = ['efectivo', 'transferencia', 'tarjeta', 'bizum', 'online'] as const;
 
+const VALID_REDES = ['instagram','tiktok','facebook','twitter','youtube','whatsapp','telegram','linkedin','pinterest','web'] as const;
+
+const VALID_THEME_IDS = ['indigo','emerald','rose','amber','violet','sky'] as const;
+
 // All keys the endpoint knowingly accepts.
-// Anything else in the body is silently ignored and reported back as
-// ignored_fields so the caller knows their key was not persisted.
-const KNOWN_SETTINGS_KEYS = new Set<string>([...UPDATABLE_TEXT_FIELDS, 'payment_methods', 'datos_bancarios']);
+const KNOWN_SETTINGS_KEYS = new Set<string>([
+  ...UPDATABLE_TEXT_FIELDS,
+  'payment_methods', 'datos_bancarios',
+  'brand_color', 'logo_url', 'redes_sociales', 'theme_id',
+]);
 
 dashboardRoutes.patch('/:slug/settings', async (c) => {
   // MEDIO-2: validate restaurante_id early — resolveTenant always sets it, but
@@ -1324,7 +1339,67 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
     }
   }
 
-  if (textClauses.length === 0 && pmVal === undefined && dbVal === undefined) {
+  // --- Validate brand_color -------------------------------------------------
+  let brandColorVal: string | undefined;
+  if ('brand_color' in raw) {
+    const bc = raw['brand_color'];
+    if (bc === null || bc === '') {
+      brandColorVal = '';  // clear to default
+    } else if (typeof bc !== 'string' || !HEX_COLOR_RE.test(bc as string)) {
+      return c.json({ error: 'invalid_field', field: 'brand_color', detail: 'must be a hex color #RRGGBB or empty string' }, 400);
+    } else {
+      brandColorVal = bc as string;
+    }
+  }
+
+  // --- Validate logo_url ----------------------------------------------------
+  let logoUrlVal: string | null | undefined;
+  if ('logo_url' in raw) {
+    const lu = raw['logo_url'];
+    if (lu === null) { logoUrlVal = null; }
+    else if (typeof lu !== 'string' || lu.length > 500) {
+      return c.json({ error: 'invalid_field', field: 'logo_url', detail: 'must be a string URL or null' }, 400);
+    } else { logoUrlVal = lu as string; }
+  }
+
+  // --- Validate theme_id ----------------------------------------------------
+  let themeIdVal: string | undefined;
+  if ('theme_id' in raw) {
+    const ti = raw['theme_id'];
+    if (!(VALID_THEME_IDS as readonly unknown[]).includes(ti)) {
+      return c.json({ error: 'invalid_field', field: 'theme_id', detail: `must be one of: ${VALID_THEME_IDS.join(', ')}` }, 400);
+    }
+    themeIdVal = ti as string;
+  }
+
+  // --- Validate redes_sociales ----------------------------------------------
+  type RedSocial = { red: string; url: string };
+  let redesVal: RedSocial[] | null | undefined;
+  if ('redes_sociales' in raw) {
+    const rs = raw['redes_sociales'];
+    if (rs === null) {
+      redesVal = null;
+    } else if (!Array.isArray(rs)) {
+      return c.json({ error: 'invalid_field', field: 'redes_sociales', detail: 'must be an array or null' }, 400);
+    } else {
+      const validated: RedSocial[] = [];
+      for (const item of rs) {
+        if (typeof item !== 'object' || !item || typeof (item as Record<string,unknown>)['red'] !== 'string' || typeof (item as Record<string,unknown>)['url'] !== 'string') {
+          return c.json({ error: 'invalid_field', field: 'redes_sociales', detail: 'each item must have { red: string, url: string }' }, 400);
+        }
+        const red = (item as Record<string,unknown>)['red'] as string;
+        if (!(VALID_REDES as readonly unknown[]).includes(red)) {
+          return c.json({ error: 'invalid_field', field: 'redes_sociales', detail: `red "${red}" not valid. Valid: ${VALID_REDES.join(', ')}` }, 400);
+        }
+        validated.push({ red, url: (item as Record<string,unknown>)['url'] as string });
+      }
+      redesVal = validated;
+    }
+  }
+
+  if (textClauses.length === 0 && pmVal === undefined && dbVal === undefined
+      && brandColorVal === undefined && logoUrlVal === undefined
+      && themeIdVal === undefined && redesVal === undefined) {
     return c.json({
       error:  'no_valid_fields',
       detail: 'body must include at least one updatable field',
@@ -1354,9 +1429,34 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
           await tx`UPDATE restaurante SET datos_bancarios = ${tx.json(dbVal)} WHERE id = ${restaurante_id}`;
         }
       }
+      if (brandColorVal !== undefined) {
+        if (brandColorVal === '') {
+          await tx`UPDATE restaurante SET brand_color = NULL WHERE id = ${restaurante_id}`;
+        } else {
+          await tx`UPDATE restaurante SET brand_color = ${brandColorVal} WHERE id = ${restaurante_id}`;
+        }
+      }
+      if (logoUrlVal !== undefined) {
+        if (logoUrlVal === null) {
+          await tx`UPDATE restaurante SET logo_url = NULL WHERE id = ${restaurante_id}`;
+        } else {
+          await tx`UPDATE restaurante SET logo_url = ${logoUrlVal} WHERE id = ${restaurante_id}`;
+        }
+      }
+      if (themeIdVal !== undefined) {
+        await tx`UPDATE restaurante SET theme_id = ${themeIdVal}::public.theme_id_enum WHERE id = ${restaurante_id}`;
+      }
+      if (redesVal !== undefined) {
+        if (redesVal === null) {
+          await tx`UPDATE restaurante SET redes_sociales = NULL WHERE id = ${restaurante_id}`;
+        } else {
+          await tx`UPDATE restaurante SET redes_sociales = ${tx.json(redesVal)} WHERE id = ${restaurante_id}`;
+        }
+      }
       return tx<UpdateRow[]>`
         SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
-               payment_methods, datos_bancarios
+               payment_methods, datos_bancarios,
+               brand_color, logo_url, eslogan, texto_banner, redes_sociales, theme_id
         FROM   restaurante
         WHERE  id = ${restaurante_id}
         LIMIT  1
@@ -1381,6 +1481,18 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
     }
     if (dbVal !== undefined) {
       responseFields['datos_bancarios'] = persisted['datos_bancarios'];
+    }
+    if (brandColorVal !== undefined) {
+      responseFields['brand_color'] = persisted['brand_color'];
+    }
+    if (logoUrlVal !== undefined) {
+      responseFields['logo_url'] = persisted['logo_url'];
+    }
+    if (themeIdVal !== undefined) {
+      responseFields['theme_id'] = persisted['theme_id'];
+    }
+    if (redesVal !== undefined) {
+      responseFields['redes_sociales'] = persisted['redes_sociales'];
     }
     if (ignoredFields.length > 0) {
       responseFields['ignored_fields'] = ignoredFields;

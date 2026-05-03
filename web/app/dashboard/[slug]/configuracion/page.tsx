@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { THEME_LIST, type ThemeId } from '@/lib/themes'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +14,8 @@ interface DatosBancarios {
   alias?:   string
 }
 
+interface RedSocial { red: string; url: string }
+
 interface Settings {
   nombre:             string
   telefono:           string | null
@@ -22,6 +25,13 @@ interface Settings {
   datos_bancarios:    DatosBancarios | null
   moneda:             string
   payment_methods:    string[] | null
+  // branding
+  brand_color:        string | null
+  logo_url:           string | null
+  eslogan:            string | null
+  texto_banner:       string | null
+  redes_sociales:     RedSocial[] | null
+  theme_id:           string | null
 }
 
 interface DeliveryZone {
@@ -40,9 +50,9 @@ interface HorarioLocal {
   id:         number
   dia:        string
   disponible: boolean
-  apertura_1: string   // 'HH:MM' or ''
+  apertura_1: string
   cierre_1:   string
-  apertura_2: string   // '' means no 2nd shift
+  apertura_2: string
   cierre_2:   string
 }
 
@@ -56,19 +66,28 @@ const ALL_PAYMENT_METHODS = [
   { key: 'online',        label: 'Online',        icon: '🌐' },
 ]
 
+const REDES_OPTS: { key: string; label: string; placeholder: string }[] = [
+  { key: 'instagram',  label: 'Instagram',  placeholder: 'https://instagram.com/tu_local' },
+  { key: 'tiktok',     label: 'TikTok',     placeholder: 'https://tiktok.com/@tu_local' },
+  { key: 'facebook',   label: 'Facebook',   placeholder: 'https://facebook.com/tu_local' },
+  { key: 'twitter',    label: 'Twitter / X',placeholder: 'https://x.com/tu_local' },
+  { key: 'youtube',    label: 'YouTube',    placeholder: 'https://youtube.com/@tu_local' },
+  { key: 'whatsapp',   label: 'WhatsApp',   placeholder: 'https://wa.me/56912345678' },
+  { key: 'telegram',   label: 'Telegram',   placeholder: 'https://t.me/tu_local' },
+  { key: 'linkedin',   label: 'LinkedIn',   placeholder: 'https://linkedin.com/company/tu_local' },
+  { key: 'pinterest',  label: 'Pinterest',  placeholder: 'https://pinterest.com/tu_local' },
+  { key: 'web',        label: 'Sitio web',  placeholder: 'https://tu-local.com' },
+]
+
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
+type Tab = 'branding' | 'config' | 'pago'
+
+// ─── Shared components ────────────────────────────────────────────────────────
 
 function SaveButton({ state, onClick, disabled }: { state: SaveState; onClick: () => void; disabled?: boolean }) {
-  const labels: Record<SaveState, string> = {
-    idle:   'Guardar cambios',
-    saving: 'Guardando…',
-    saved:  '✓ Guardado',
-    error:  'Error al guardar',
-  }
+  const labels: Record<SaveState, string> = { idle: 'Guardar cambios', saving: 'Guardando…', saved: '✓ Guardado', error: 'Error al guardar' }
   const styles: Record<SaveState, string> = {
     idle:   'bg-indigo-500 hover:bg-indigo-600 text-white',
     saving: 'bg-gray-300 text-gray-500 cursor-not-allowed',
@@ -76,173 +95,80 @@ function SaveButton({ state, onClick, disabled }: { state: SaveState; onClick: (
     error:  'bg-red-100 text-red-700 border border-red-300',
   }
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled || state === 'saving' || state === 'saved'}
-      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${styles[state]}`}
-    >
+    <button onClick={onClick} disabled={disabled || state === 'saving' || state === 'saved'}
+      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${styles[state]}`}>
       {labels[state]}
     </button>
   )
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mt-6 mb-3 px-1">
-      {children}
-    </h2>
-  )
+  return <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mt-6 mb-3 px-1">{children}</h2>
 }
 
-function Field({
-  label, value, onChange, placeholder, multiline, maxLength,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  multiline?: boolean
-  maxLength?: number
+function Field({ label, value, onChange, placeholder, multiline, maxLength, hint }: {
+  label: string; value: string; onChange: (v: string) => void
+  placeholder?: string; multiline?: boolean; maxLength?: number; hint?: string
 }) {
   const base = 'w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white transition-shadow'
   return (
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      {multiline ? (
-        <textarea className={`${base} resize-none`} rows={3} value={value}
-          onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
-      ) : (
-        <input className={base} type="text" value={value}
-          onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
-      )}
-      {maxLength && value.length > maxLength * 0.85 && (
+      {hint && <p className="text-xs text-gray-400 mb-1.5">{hint}</p>}
+      {multiline
+        ? <textarea className={`${base} resize-none`} rows={3} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
+        : <input className={base} type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
+      }
+      {maxLength && value.length > maxLength * 0.8 && (
         <p className="text-xs text-gray-400 text-right mt-1">{value.length}/{maxLength}</p>
       )}
     </div>
   )
 }
 
-// ─── Horario row component ─────────────────────────────────────────────────
-
-function TimeInput({
-  value,
-  onChange,
-  disabled,
-  placeholder,
-}: {
-  value: string
-  onChange: (v: string) => void
-  disabled?: boolean
-  placeholder?: string
+function TimeInput({ value, onChange, disabled, placeholder }: {
+  value: string; onChange: (v: string) => void; disabled?: boolean; placeholder?: string
 }) {
   return (
-    <input
-      type="time"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={disabled}
-      placeholder={placeholder}
-      className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed w-[110px] tabular-nums"
-    />
+    <input type="time" value={value} onChange={e => onChange(e.target.value)} disabled={disabled} placeholder={placeholder}
+      className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed w-[110px] tabular-nums" />
   )
 }
 
-function HorarioRow({
-  horario,
-  onChange,
-}: {
-  horario: HorarioLocal
-  onChange: (updated: HorarioLocal) => void
-}) {
-  const has2ndShift = horario.apertura_2 !== '' || horario.cierre_2 !== ''
-
-  function update(fields: Partial<HorarioLocal>) {
-    onChange({ ...horario, ...fields })
-  }
-
-  function toggle2ndShift() {
-    if (has2ndShift) {
-      update({ apertura_2: '', cierre_2: '' })
-    } else {
-      update({ apertura_2: '', cierre_2: '' }) // will show the inputs empty
-      // trigger a small state flip to show the inputs
-      setTimeout(() => onChange({ ...horario, apertura_2: ' ', cierre_2: ' ' }), 0)
-    }
-  }
-
+function HorarioRow({ horario, onChange }: { horario: HorarioLocal; onChange: (u: HorarioLocal) => void }) {
+  const has2nd = horario.apertura_2 !== '' || horario.cierre_2 !== ''
+  const up = (fields: Partial<HorarioLocal>) => onChange({ ...horario, ...fields })
   return (
     <div className={`py-3 px-4 border-b border-gray-50 last:border-0 ${!horario.disponible ? 'bg-gray-50/50' : ''}`}>
-      {/* Day toggle */}
       <div className="flex items-center justify-between mb-2">
-        <button
-          onClick={() => update({ disponible: !horario.disponible })}
-          className="flex items-center gap-2.5 group"
-          type="button"
-        >
-          {/* Toggle pill */}
+        <button onClick={() => up({ disponible: !horario.disponible })} className="flex items-center gap-2.5" type="button">
           <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${horario.disponible ? 'bg-indigo-500' : 'bg-gray-300'}`}>
             <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${horario.disponible ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </span>
-          <span className={`text-sm font-semibold ${horario.disponible ? 'text-gray-800' : 'text-gray-400'}`}>
-            {horario.dia}
-          </span>
+          <span className={`text-sm font-semibold ${horario.disponible ? 'text-gray-800' : 'text-gray-400'}`}>{horario.dia}</span>
         </button>
-        {!horario.disponible && (
-          <span className="text-xs text-gray-400 italic">Cerrado</span>
-        )}
+        {!horario.disponible && <span className="text-xs text-gray-400 italic">Cerrado</span>}
       </div>
-
-      {/* Shift inputs — only visible when disponible */}
       {horario.disponible && (
         <div className="pl-11 space-y-2">
-          {/* Shift 1 */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-gray-400 w-14 shrink-0">1° turno</span>
-            <TimeInput
-              value={horario.apertura_1}
-              onChange={(v) => update({ apertura_1: v })}
-              placeholder="09:00"
-            />
+            <TimeInput value={horario.apertura_1} onChange={v => up({ apertura_1: v })} placeholder="09:00" />
             <span className="text-gray-300 text-sm">→</span>
-            <TimeInput
-              value={horario.cierre_1}
-              onChange={(v) => update({ cierre_1: v })}
-              placeholder="15:00"
-            />
-            {!has2ndShift && (
-              <button
-                onClick={toggle2ndShift}
-                type="button"
-                className="ml-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors"
-              >
-                + 2° turno
-              </button>
+            <TimeInput value={horario.cierre_1} onChange={v => up({ cierre_1: v })} placeholder="15:00" />
+            {!has2nd && (
+              <button onClick={() => setTimeout(() => onChange({ ...horario, apertura_2: ' ', cierre_2: ' ' }), 0)}
+                type="button" className="ml-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium">+ 2° turno</button>
             )}
           </div>
-
-          {/* Shift 2 */}
-          {has2ndShift && (
+          {has2nd && (
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-gray-400 w-14 shrink-0">2° turno</span>
-              <TimeInput
-                value={horario.apertura_2}
-                onChange={(v) => update({ apertura_2: v })}
-                placeholder="18:00"
-              />
+              <TimeInput value={horario.apertura_2} onChange={v => up({ apertura_2: v })} placeholder="18:00" />
               <span className="text-gray-300 text-sm">→</span>
-              <TimeInput
-                value={horario.cierre_2}
-                onChange={(v) => update({ cierre_2: v })}
-                placeholder="23:00"
-              />
-              <button
-                onClick={() => update({ apertura_2: '', cierre_2: '' })}
-                type="button"
-                className="ml-1 text-xs text-gray-400 hover:text-red-500 transition-colors"
-                title="Quitar 2° turno"
-              >
-                × quitar
-              </button>
+              <TimeInput value={horario.cierre_2} onChange={v => up({ cierre_2: v })} placeholder="23:00" />
+              <button onClick={() => up({ apertura_2: '', cierre_2: '' })} type="button"
+                className="ml-1 text-xs text-gray-400 hover:text-red-500">× quitar</button>
             </div>
           )}
         </div>
@@ -251,33 +177,16 @@ function HorarioRow({
   )
 }
 
-// ─── Zone card ────────────────────────────────────────────────────────────────
-
-function NumberInput({
-  label, value, onChange, min, placeholder, step,
-}: {
-  label: string
-  value: number | null
-  onChange: (v: number | null) => void
-  min?: number
-  placeholder?: string
-  step?: string
+function NumberInput({ label, value, onChange, min, placeholder, step }: {
+  label: string; value: number | null; onChange: (v: number | null) => void
+  min?: number; placeholder?: string; step?: string
 }) {
   return (
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
-      <input
-        type="number"
-        min={min ?? 0}
-        step={step ?? '1'}
-        value={value ?? ''}
-        placeholder={placeholder ?? '0'}
-        onChange={(e) => {
-          const v = e.target.value
-          onChange(v === '' ? null : Number(v))
-        }}
-        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white"
-      />
+      <input type="number" min={min ?? 0} step={step ?? '1'} value={value ?? ''} placeholder={placeholder ?? '0'}
+        onChange={e => { const v = e.target.value; onChange(v === '' ? null : Number(v)) }}
+        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white" />
     </div>
   )
 }
@@ -286,13 +195,23 @@ function NumberInput({
 
 export default function ConfiguracionPage() {
   const { slug } = useParams<{ slug: string }>()
-  const router = useRouter()
+  const router   = useRouter()
   const authFetch = useAuthFetch()
+  const [tab, setTab] = useState<Tab>('branding')
 
-  const [loading, setLoading] = useState(true)
+  const [loading,    setLoading]    = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  // ── Sección: Básico
+  // ── Branding
+  const [logoUrl,      setLogoUrl]      = useState('')
+  const [brandColor,   setBrandColor]   = useState('#6366F1')
+  const [themeId,      setThemeId]      = useState<ThemeId>('indigo')
+  const [eslogan,      setEslogan]      = useState('')
+  const [textoBanner,  setTextoBanner]  = useState('')
+  const [redes,        setRedes]        = useState<RedSocial[]>([])
+  const [brandingState,setBrandingState]= useState<SaveState>('idle')
+
+  // ── Básico
   const [nombre,        setNombre]        = useState('')
   const [telefono,      setTelefono]      = useState('')
   const [direccion,     setDireccion]     = useState('')
@@ -300,33 +219,27 @@ export default function ConfiguracionPage() {
   const [msgCerrado,    setMsgCerrado]    = useState('')
   const [basicoState,   setBasicoState]   = useState<SaveState>('idle')
 
-  // ── Sección: Métodos de pago
+  // ── Pago
   const [paymentMethods, setPaymentMethods] = useState<string[]>([])
   const [pagoState,      setPagoState]      = useState<SaveState>('idle')
+  const [banco,          setBanco]          = useState('')
+  const [titular,        setTitular]        = useState('')
+  const [cuenta,         setCuenta]         = useState('')
+  const [alias,          setAlias]          = useState('')
+  const [bancosState,    setBancosState]    = useState<SaveState>('idle')
 
-  // ── Sección: Datos bancarios
-  const [banco,      setBanco]      = useState('')
-  const [titular,    setTitular]    = useState('')
-  const [cuenta,     setCuenta]     = useState('')
-  const [alias,      setAlias]      = useState('')
-  const [bancosState, setBancosState] = useState<SaveState>('idle')
-
-  // ── Sección: Horarios
-  const [horarios,      setHorarios]      = useState<HorarioLocal[]>([])
-  const [horariosState, setHorariosState] = useState<SaveState>('idle')
-
-  // ── Sección: Delivery zones
-  const [zones,         setZones]         = useState<DeliveryZone[]>([])
-  const [zoneSaving,    setZoneSaving]    = useState<Record<number, SaveState>>({})
-  const [zoneAdding,    setZoneAdding]    = useState(false)
-  const [zoneDeleting,  setZoneDeleting]  = useState<Record<number, boolean>>({})
+  // ── Horarios / Zonas
+  const [horarios,         setHorarios]         = useState<HorarioLocal[]>([])
+  const [horariosState,    setHorariosState]    = useState<SaveState>('idle')
+  const [zones,            setZones]            = useState<DeliveryZone[]>([])
+  const [zoneSaving,       setZoneSaving]       = useState<Record<number, SaveState>>({})
+  const [zoneAdding,       setZoneAdding]       = useState(false)
+  const [zoneDeleting,     setZoneDeleting]     = useState<Record<number, boolean>>({})
   const [zonasExpanded,    setZonasExpanded]    = useState(true)
   const [horariosExpanded, setHorariosExpanded] = useState(true)
 
-  // ── Load settings + horarios in parallel
   const fetchAll = useCallback(async () => {
-    setLoading(true)
-    setFetchError(null)
+    setLoading(true); setFetchError(null)
     try {
       const base = process.env.NEXT_PUBLIC_API_URL
       const [settingsRes, statusRes, zonesRes] = await Promise.all([
@@ -337,83 +250,62 @@ export default function ConfiguracionPage() {
       if (!settingsRes.ok) throw new Error(`settings HTTP ${settingsRes.status}`)
       if (!statusRes.ok)   throw new Error(`status HTTP ${statusRes.status}`)
 
-      const settings: Settings = await settingsRes.json()
-      const status: { horarios_semana: Array<{
-        id: number; dia: string; disponible: boolean;
-        apertura_1: string | null; cierre_1: string | null;
-        apertura_2: string | null; cierre_2: string | null;
-      }> } = await statusRes.json()
+      const s: Settings = await settingsRes.json()
+      const st: { horarios_semana: Array<{ id: number; dia: string; disponible: boolean; apertura_1: string | null; cierre_1: string | null; apertura_2: string | null; cierre_2: string | null }> } = await statusRes.json()
 
-      // Populate básico
-      setNombre(settings.nombre ?? '')
-      setTelefono(settings.telefono ?? '')
-      setDireccion(settings.direccion ?? '')
-      setMsgBienvenida(settings.mensaje_bienvenida ?? '')
-      setMsgCerrado(settings.mensaje_cerrado ?? '')
+      setNombre(s.nombre ?? '');        setTelefono(s.telefono ?? '')
+      setDireccion(s.direccion ?? '');  setMsgBienvenida(s.mensaje_bienvenida ?? '')
+      setMsgCerrado(s.mensaje_cerrado ?? '')
+      setPaymentMethods(s.payment_methods ?? [])
+      setBanco(s.datos_bancarios?.banco   ?? '');  setTitular(s.datos_bancarios?.titular ?? '')
+      setCuenta(s.datos_bancarios?.cuenta ?? '');  setAlias(s.datos_bancarios?.alias    ?? '')
+      // branding
+      setLogoUrl(s.logo_url ?? '')
+      setBrandColor(s.brand_color ?? '#6366F1')
+      setThemeId((s.theme_id as ThemeId) ?? 'indigo')
+      setEslogan(s.eslogan ?? '')
+      setTextoBanner(s.texto_banner ?? '')
+      setRedes(s.redes_sociales ?? [])
 
-      // Populate pago
-      setPaymentMethods(settings.payment_methods ?? [])
-
-      // Populate bancarios
-      setBanco(settings.datos_bancarios?.banco   ?? '')
-      setTitular(settings.datos_bancarios?.titular ?? '')
-      setCuenta(settings.datos_bancarios?.cuenta  ?? '')
-      setAlias(settings.datos_bancarios?.alias    ?? '')
-
-      // Populate horarios — ensure all 7 days ordered correctly
-      const sorted = [...(status.horarios_semana ?? [])].sort(
-        (a, b) => DIAS.indexOf(a.dia) - DIAS.indexOf(b.dia)
-      )
-      if (zonesRes.ok) {
-        const zd: { zones: DeliveryZone[] } = await zonesRes.json()
-        setZones(zd.zones)
-      }
-
-      setHorarios(sorted.map((h) => ({
-        id:         h.id,
-        dia:        h.dia,
-        disponible: h.disponible,
-        apertura_1: h.apertura_1?.slice(0, 5) ?? '',
-        cierre_1:   h.cierre_1?.slice(0, 5)   ?? '',
-        apertura_2: h.apertura_2?.slice(0, 5) ?? '',
-        cierre_2:   h.cierre_2?.slice(0, 5)   ?? '',
+      const sorted = [...(st.horarios_semana ?? [])].sort((a, b) => DIAS.indexOf(a.dia) - DIAS.indexOf(b.dia))
+      setHorarios(sorted.map(h => ({
+        id: h.id, dia: h.dia, disponible: h.disponible,
+        apertura_1: h.apertura_1?.slice(0, 5) ?? '', cierre_1: h.cierre_1?.slice(0, 5) ?? '',
+        apertura_2: h.apertura_2?.slice(0, 5) ?? '', cierre_2: h.cierre_2?.slice(0, 5) ?? '',
       })))
-
-    } catch {
-      setFetchError('No se pudo cargar la configuración.')
-    } finally {
-      setLoading(false)
-    }
+      if (zonesRes.ok) { const zd: { zones: DeliveryZone[] } = await zonesRes.json(); setZones(zd.zones) }
+    } catch { setFetchError('No se pudo cargar la configuración.') }
+    finally { setLoading(false) }
   }, [slug, authFetch])
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // ── Generic PATCH helper
   async function patch(body: Record<string, unknown>, setState: (s: SaveState) => void) {
     setState('saving')
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL
-      const res = await authFetch(`${base}/dashboard/${slug}/settings`, {
-        method: 'PATCH',
-        body: JSON.stringify(body),
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/settings`, {
+        method: 'PATCH', body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setState('saved')
-      setTimeout(() => setState('idle'), 2000)
-    } catch {
-      setState('error')
-      setTimeout(() => setState('idle'), 3000)
-    }
+      setState('saved'); setTimeout(() => setState('idle'), 2000)
+    } catch { setState('error'); setTimeout(() => setState('idle'), 3000) }
+  }
+
+  function saveBranding() {
+    const cleanRedes = redes.filter(r => r.url.trim() !== '')
+    patch({
+      logo_url:      logoUrl.trim() || null,
+      brand_color:   brandColor,
+      theme_id:      themeId,
+      eslogan:       eslogan.trim(),
+      texto_banner:  textoBanner.trim(),
+      redes_sociales: cleanRedes.length > 0 ? cleanRedes : null,
+    }, setBrandingState)
   }
 
   function saveBasico() {
-    patch({
-      nombre:             nombre.trim(),
-      telefono:           telefono.trim(),
-      direccion:          direccion.trim(),
-      mensaje_bienvenida: msgBienvenida.trim(),
-      mensaje_cerrado:    msgCerrado.trim(),
-    }, setBasicoState)
+    patch({ nombre: nombre.trim(), telefono: telefono.trim(), direccion: direccion.trim(),
+            mensaje_bienvenida: msgBienvenida.trim(), mensaje_cerrado: msgCerrado.trim() }, setBasicoState)
   }
 
   function savePago() {
@@ -432,141 +324,102 @@ export default function ConfiguracionPage() {
 
   async function saveZone(zone: DeliveryZone) {
     const id = zone.delivery_zone_id
-    setZoneSaving((prev) => ({ ...prev, [id]: 'saving' }))
+    setZoneSaving(p => ({ ...p, [id]: 'saving' }))
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL
-      const res = await authFetch(`${base}/dashboard/${slug}/delivery-zones/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name:                  zone.zone_name,
-          postal_code:           zone.postal_code,
-          delivery_fee:          zone.fee,
-          min_order_amount:      zone.min_order_amount,
-          estimated_minutes_min: zone.estimated_minutes_min,
-          estimated_minutes_max: zone.estimated_minutes_max,
-          is_active:             zone.is_active,
-        }),
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/delivery-zones/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: zone.zone_name, postal_code: zone.postal_code, delivery_fee: zone.fee,
+          min_order_amount: zone.min_order_amount, estimated_minutes_min: zone.estimated_minutes_min,
+          estimated_minutes_max: zone.estimated_minutes_max, is_active: zone.is_active }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) throw new Error()
       const updated: DeliveryZone = await res.json()
-      setZones((prev) => prev.map((z) => z.delivery_zone_id === id ? updated : z))
-      setZoneSaving((prev) => ({ ...prev, [id]: 'saved' }))
-      setTimeout(() => setZoneSaving((prev) => ({ ...prev, [id]: 'idle' })), 2000)
-    } catch {
-      setZoneSaving((prev) => ({ ...prev, [id]: 'error' }))
-      setTimeout(() => setZoneSaving((prev) => ({ ...prev, [id]: 'idle' })), 3000)
-    }
-  }
-
-  function updateZone(id: number, fields: Partial<DeliveryZone>) {
-    setZones((prev) => prev.map((z) => z.delivery_zone_id === id ? { ...z, ...fields } : z))
+      setZones(p => p.map(z => z.delivery_zone_id === id ? updated : z))
+      setZoneSaving(p => ({ ...p, [id]: 'saved' })); setTimeout(() => setZoneSaving(p => ({ ...p, [id]: 'idle' })), 2000)
+    } catch { setZoneSaving(p => ({ ...p, [id]: 'error' })); setTimeout(() => setZoneSaving(p => ({ ...p, [id]: 'idle' })), 3000) }
   }
 
   async function addZone() {
     setZoneAdding(true)
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL
-      const res = await authFetch(`${base}/dashboard/${slug}/delivery-zones`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name:                  'Nueva zona',
-          postal_code:           String(Date.now()).slice(-8),
-          delivery_fee:          0,
-          min_order_amount:      0,
-          estimated_minutes_min: null,
-          estimated_minutes_max: null,
-          is_active:             false,
-        }),
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/delivery-zones`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Nueva zona', postal_code: String(Date.now()).slice(-8),
+          delivery_fee: 0, min_order_amount: 0, estimated_minutes_min: null, estimated_minutes_max: null, is_active: false }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const newZone: DeliveryZone = await res.json()
-      setZones((prev) => [...prev, newZone])
-    } catch {
-      alert('Error al crear la zona. Revisa que todos los campos estén completos.')
-    } finally {
-      setZoneAdding(false)
-    }
+      if (!res.ok) throw new Error()
+      const z: DeliveryZone = await res.json(); setZones(p => [...p, z])
+    } catch { alert('Error al crear la zona.') }
+    finally { setZoneAdding(false) }
   }
 
-  async function deleteZone(id: number, zoneName: string) {
-    if (!confirm(`¿Eliminar la zona "${zoneName}"? Esta acción no se puede deshacer.`)) return
-    setZoneDeleting((prev) => ({ ...prev, [id]: true }))
+  async function deleteZone(id: number, name: string) {
+    if (!confirm(`¿Eliminar la zona "${name}"?`)) return
+    setZoneDeleting(p => ({ ...p, [id]: true }))
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL
-      await authFetch(`${base}/dashboard/${slug}/delivery-zones/${id}`, { method: 'DELETE' })
-      setZones((prev) => prev.filter((z) => z.delivery_zone_id !== id))
-    } catch {
-      alert('Error al eliminar la zona.')
-    } finally {
-      setZoneDeleting((prev) => ({ ...prev, [id]: false }))
-    }
+      await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/delivery-zones/${id}`, { method: 'DELETE' })
+      setZones(p => p.filter(z => z.delivery_zone_id !== id))
+    } catch { alert('Error al eliminar la zona.') }
+    finally { setZoneDeleting(p => ({ ...p, [id]: false })) }
   }
 
   async function saveHorarios() {
-    // Validate: available days need shift 1 times
     for (const h of horarios) {
-      if (h.disponible && (!h.apertura_1 || !h.cierre_1)) {
-        alert(`${h.dia}: faltan los horarios del 1° turno.`)
-        return
-      }
+      if (h.disponible && (!h.apertura_1 || !h.cierre_1)) { alert(`${h.dia}: falta 1° turno.`); return }
     }
-
     setHorariosState('saving')
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL
-      const res = await authFetch(`${base}/dashboard/${slug}/horarios`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          horarios: horarios.map((h) => ({
-            id:         h.id,
-            disponible: h.disponible,
-            apertura_1: h.apertura_1 || null,
-            cierre_1:   h.cierre_1   || null,
-            apertura_2: h.apertura_2 || null,
-            cierre_2:   h.cierre_2   || null,
-          })),
-        }),
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/horarios`, {
+        method: 'PATCH', body: JSON.stringify({ horarios: horarios.map(h => ({
+          id: h.id, disponible: h.disponible,
+          apertura_1: h.apertura_1 || null, cierre_1: h.cierre_1 || null,
+          apertura_2: h.apertura_2 || null, cierre_2: h.cierre_2 || null,
+        })) }),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setHorariosState('saved')
-      setTimeout(() => setHorariosState('idle'), 2000)
-    } catch {
-      setHorariosState('error')
-      setTimeout(() => setHorariosState('idle'), 3000)
-    }
+      if (!res.ok) throw new Error()
+      setHorariosState('saved'); setTimeout(() => setHorariosState('idle'), 2000)
+    } catch { setHorariosState('error'); setTimeout(() => setHorariosState('idle'), 3000) }
   }
 
-  function togglePayment(key: string) {
-    setPaymentMethods((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    )
-    setPagoState('idle')
+  function setRed(red: string, url: string) {
+    setRedes(prev => {
+      const exists = prev.find(r => r.red === red)
+      if (exists) return prev.map(r => r.red === red ? { ...r, url } : r)
+      return [...prev, { red, url }]
+    })
+    setBrandingState('idle')
   }
 
-  function updateHorario(updated: HorarioLocal) {
-    setHorarios((prev) => prev.map((h) => h.id === updated.id ? updated : h))
-    setHorariosState('idle')
+  function getRedUrl(red: string) {
+    return redes.find(r => r.red === red)?.url ?? ''
   }
 
-  // ── Render
+  const TABS: { key: Tab; label: string }[] = [
+    { key: 'branding', label: '🎨 Branding' },
+    { key: 'config',   label: '⚙️ Configuración' },
+    { key: 'pago',     label: '💳 Pago' },
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
-          <button
-            onClick={() => router.push(`/dashboard/${slug}`)}
-            className="text-gray-400 hover:text-gray-700 transition-colors text-lg"
-            aria-label="Volver"
-          >
-            ←
-          </button>
+          <button onClick={() => router.push(`/dashboard/${slug}`)} className="text-gray-400 hover:text-gray-700 transition-colors text-lg">←</button>
           <div>
             <h1 className="text-lg font-bold text-gray-900">Configuración</h1>
             <p className="text-xs text-gray-400 capitalize">{slug}</p>
           </div>
+        </div>
+        {/* Tabs */}
+        <div className="max-w-2xl mx-auto px-4 flex gap-1 pb-0">
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                tab === t.key ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}>
+              {t.label}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -578,84 +431,154 @@ export default function ConfiguracionPage() {
         ) : fetchError ? (
           <div className="rounded-2xl bg-red-50 border border-red-200 px-5 py-5 text-center">
             <p className="text-sm text-red-700">{fetchError}</p>
-            <button onClick={fetchAll} className="mt-3 text-xs text-red-600 underline">
-              Reintentar
-            </button>
+            <button onClick={fetchAll} className="mt-3 text-xs text-red-600 underline">Reintentar</button>
           </div>
-        ) : (
+        ) : tab === 'branding' ? (
           <>
-            {/* ── Datos básicos ───────────────────────────────────────── */}
-            <SectionTitle>Datos del local</SectionTitle>
+            {/* ── Logo ──────────────────────────────────────────────────── */}
+            <SectionTitle>Logo del local</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
+              <div className="flex items-center gap-4">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="h-16 w-16 rounded-2xl object-cover border border-gray-200 shrink-0" />
+                ) : (
+                  <div className="h-16 w-16 rounded-2xl flex items-center justify-center shrink-0 text-white text-2xl font-bold" style={{ backgroundColor: brandColor }}>
+                    {nombre.charAt(0).toUpperCase() || 'E'}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <Field label="URL del logo" value={logoUrl}
+                    onChange={v => { setLogoUrl(v); setBrandingState('idle') }}
+                    placeholder="https://..." hint="PNG, JPG, WEBP. Sube la imagen a tu CDN y pega la URL." />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Identidad ─────────────────────────────────────────────── */}
+            <SectionTitle>Identidad</SectionTitle>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
               <Field label="Nombre del local" value={nombre}
-                onChange={(v) => { setNombre(v); setBasicoState('idle') }}
-                placeholder="La Isla Pizzería" maxLength={150} />
+                onChange={v => { setNombre(v); setBrandingState('idle') }} placeholder="La Isla Pizzería" maxLength={150} />
+              <Field label="Eslogan" value={eslogan}
+                onChange={v => { setEslogan(v); setBrandingState('idle') }}
+                placeholder="La mejor pizza de la ciudad" maxLength={200}
+                hint="Tagline corto que aparece bajo el nombre en el menú público." />
+              <Field label="Banner promocional" value={textoBanner}
+                onChange={v => { setTextoBanner(v); setBrandingState('idle') }}
+                placeholder="🍕 2x1 en pizzas los Martes · Delivery gratis sobre €25" maxLength={500}
+                multiline hint="Se muestra como franja destacada en el menú público. Déjalo vacío para ocultarlo." />
+            </div>
+
+            {/* ── Paleta de colores ─────────────────────────────────────── */}
+            <SectionTitle>Paleta de colores</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5">
+              <p className="text-xs text-gray-400 mb-4">Elige el color de acento de tu menú público y dashboard.</p>
+              <div className="grid grid-cols-3 gap-3">
+                {THEME_LIST.map(theme => (
+                  <button key={theme.id} onClick={() => { setThemeId(theme.id); setBrandColor(theme.accent); setBrandingState('idle') }}
+                    className={`rounded-2xl border-2 p-3 text-left transition-all ${themeId === theme.id ? 'border-indigo-500 shadow-sm' : 'border-gray-100 hover:border-gray-300'}`}>
+                    <div className="flex gap-1.5 mb-2">
+                      {theme.swatches.map((sw, i) => (
+                        <span key={i} className="h-5 w-5 rounded-full border border-white shadow-sm" style={{ backgroundColor: sw }} />
+                      ))}
+                    </div>
+                    <p className="text-xs font-semibold text-gray-800">{theme.name}</p>
+                    <p className="text-xs text-gray-400 leading-tight mt-0.5">{theme.description.split('.')[0]}</p>
+                  </button>
+                ))}
+              </div>
+              {/* Custom hex override */}
+              <div className="mt-4 flex items-center gap-3">
+                <input type="color" value={brandColor} onChange={e => { setBrandColor(e.target.value); setBrandingState('idle') }}
+                  className="h-9 w-9 rounded-lg border border-gray-200 cursor-pointer p-0.5 bg-white" />
+                <div>
+                  <p className="text-xs font-medium text-gray-700">Color personalizado</p>
+                  <p className="text-xs text-gray-400">{brandColor}</p>
+                </div>
+              </div>
+              {/* Preview */}
+              <div className="mt-4 rounded-xl px-4 py-3 flex items-center gap-3" style={{ backgroundColor: brandColor + '14' }}>
+                <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-sm font-bold" style={{ backgroundColor: brandColor }}>
+                  {nombre.charAt(0).toUpperCase() || 'E'}
+                </div>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: brandColor }}>{nombre || 'Nombre del local'}</p>
+                  {eslogan && <p className="text-xs text-gray-500">{eslogan}</p>}
+                </div>
+                <span className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-full text-white" style={{ backgroundColor: brandColor }}>Agregar</span>
+              </div>
+            </div>
+
+            {/* ── Redes sociales ────────────────────────────────────────── */}
+            <SectionTitle>Redes sociales</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-3">
+              <p className="text-xs text-gray-400">Agrega las redes que quieras mostrar en el menú público.</p>
+              {REDES_OPTS.map(opt => (
+                <div key={opt.key} className="flex items-center gap-3">
+                  <span className="text-xs font-medium text-gray-600 w-24 shrink-0">{opt.label}</span>
+                  <input type="url" value={getRedUrl(opt.key)} onChange={e => setRed(opt.key, e.target.value)}
+                    placeholder={opt.placeholder}
+                    className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white" />
+                </div>
+              ))}
+              <p className="text-xs text-gray-400 pt-1">Deja vacíos los que no uses — no se mostrarán.</p>
+            </div>
+
+            <div className="flex justify-end mt-4">
+              <SaveButton state={brandingState} onClick={saveBranding} />
+            </div>
+          </>
+
+        ) : tab === 'config' ? (
+          <>
+            {/* ── Datos básicos ────────────────────────────────────────── */}
+            <SectionTitle>Datos del local</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
               <Field label="Teléfono / WhatsApp" value={telefono}
-                onChange={(v) => { setTelefono(v); setBasicoState('idle') }}
-                placeholder="+56912345678" maxLength={30} />
+                onChange={v => { setTelefono(v); setBasicoState('idle') }} placeholder="+56912345678" maxLength={30} />
               <Field label="Dirección" value={direccion}
-                onChange={(v) => { setDireccion(v); setBasicoState('idle') }}
-                placeholder="Calle Ejemplo 123, Ciudad" maxLength={300} />
+                onChange={v => { setDireccion(v); setBasicoState('idle') }} placeholder="Calle Ejemplo 123, Ciudad" maxLength={300} />
               <Field label="Mensaje de bienvenida (WhatsApp)" value={msgBienvenida}
-                onChange={(v) => { setMsgBienvenida(v); setBasicoState('idle') }}
+                onChange={v => { setMsgBienvenida(v); setBasicoState('idle') }}
                 placeholder="Bienvenido 👋 ¿En qué te puedo ayudar?" multiline maxLength={500} />
               <Field label="Mensaje de local cerrado (WhatsApp)" value={msgCerrado}
-                onChange={(v) => { setMsgCerrado(v); setBasicoState('idle') }}
+                onChange={v => { setMsgCerrado(v); setBasicoState('idle') }}
                 placeholder="Gracias por contactarnos. Estamos cerrados." multiline maxLength={500} />
               <div className="flex justify-end pt-1">
                 <SaveButton state={basicoState} onClick={saveBasico} />
               </div>
             </div>
 
-            {/* ── Horarios de atención ────────────────────────────────── */}
-            <button
-              type="button"
-              onClick={() => setHorariosExpanded(v => !v)}
-              className="w-full flex items-center justify-between mt-6 mb-3 px-1 py-1 text-left group"
-            >
+            {/* ── Horarios ─────────────────────────────────────────────── */}
+            <button type="button" onClick={() => setHorariosExpanded(v => !v)}
+              className="w-full flex items-center justify-between mt-6 mb-3 px-1 py-1 text-left">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
                 {horariosExpanded ? '▼' : '▶'} Horarios de atención
               </h2>
-              <span className="text-xs text-gray-400 group-hover:text-gray-600">{horariosExpanded ? 'Colapsar' : 'Expandir'}</span>
+              <span className="text-xs text-gray-400">{horariosExpanded ? 'Colapsar' : 'Expandir'}</span>
             </button>
             {horariosExpanded && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {horarios.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">
-                    No hay horarios configurados.
-                  </p>
-                ) : (
-                  horarios.map((h) => (
-                    <HorarioRow key={h.id} horario={h} onChange={updateHorario} />
-                  ))
-                )}
+                {horarios.length === 0
+                  ? <p className="text-sm text-gray-400 text-center py-6">No hay horarios configurados.</p>
+                  : horarios.map(h => <HorarioRow key={h.id} horario={h} onChange={u => { setHorarios(p => p.map(x => x.id === u.id ? u : x)); setHorariosState('idle') }} />)
+                }
                 <div className="flex justify-end px-4 py-3 border-t border-gray-100">
-                  <SaveButton
-                    state={horariosState}
-                    onClick={saveHorarios}
-                    disabled={horarios.length === 0}
-                  />
+                  <SaveButton state={horariosState} onClick={saveHorarios} disabled={horarios.length === 0} />
                 </div>
               </div>
             )}
 
-            {/* ── Zonas de delivery ───────────────────────────────────── */}
+            {/* ── Zonas de delivery ─────────────────────────────────────── */}
             <div className="flex items-center justify-between mt-6 mb-0 px-1 py-1 border-b border-gray-100">
-              <button
-                type="button"
-                onClick={() => setZonasExpanded(v => !v)}
-                className="flex items-center gap-2 text-left group"
-              >
+              <button type="button" onClick={() => setZonasExpanded(v => !v)} className="flex items-center gap-2 text-left">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   {zonasExpanded ? '▼' : '▶'} Zonas de delivery
                 </h2>
               </button>
-              <button
-                onClick={addZone}
-                disabled={zoneAdding}
+              <button onClick={addZone} disabled={zoneAdding}
                 className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white disabled:opacity-60"
-                style={{ backgroundColor: '#6366F1' }}
-              >
+                style={{ backgroundColor: '#6366F1' }}>
                 {zoneAdding ? '…' : '+ Nueva zona'}
               </button>
             </div>
@@ -664,157 +587,82 @@ export default function ConfiguracionPage() {
                 <p className="text-sm text-gray-400 text-center">No hay zonas configuradas.</p>
               </div>
             )}
-            {zonasExpanded && zones.length > 0 && (
-              <div className="space-y-3 mt-3">
-                {zones.map((zone) => {
-                  const state = zoneSaving[zone.delivery_zone_id] ?? 'idle'
-                  return (
-                    <div key={zone.delivery_zone_id}
-                      className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4">
-                      {/* Header: name + active toggle */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex-1 mr-3">
-                          <input
-                            type="text"
-                            value={zone.zone_name}
-                            onChange={(e) => updateZone(zone.delivery_zone_id, { zone_name: e.target.value })}
-                            className="text-sm font-bold text-gray-900 border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent w-full pb-0.5"
-                          />
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Código postal:&nbsp;
-                            <input
-                              type="text"
-                              value={zone.postal_code}
-                              onChange={(e) => updateZone(zone.delivery_zone_id, { postal_code: e.target.value })}
-                              className="border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent text-gray-500 w-20"
-                            />
-                          </p>
-                        </div>
-                        {/* Active toggle */}
-                        <button
-                          onClick={() => updateZone(zone.delivery_zone_id, { is_active: !zone.is_active })}
-                          className="flex items-center gap-1.5 shrink-0"
-                          type="button"
-                        >
-                          <span className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${zone.is_active ? 'bg-green-500' : 'bg-gray-300'}`}>
-                            <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5 ${zone.is_active ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                          </span>
-                          <span className={`text-xs font-medium ${zone.is_active ? 'text-green-700' : 'text-gray-400'}`}>
-                            {zone.is_active ? 'Activa' : 'Inactiva'}
-                          </span>
-                        </button>
-                      </div>
-
-                      {/* Fields grid */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <NumberInput
-                          label="Costo de envío"
-                          value={zone.fee}
-                          onChange={(v) => updateZone(zone.delivery_zone_id, { fee: v ?? 0 })}
-                          min={0}
-                          step="0.01"
-                          placeholder="2500"
-                        />
-                        <NumberInput
-                          label="Monto mínimo"
-                          value={zone.min_order_amount}
-                          onChange={(v) => updateZone(zone.delivery_zone_id, { min_order_amount: v })}
-                          min={0}
-                          step="0.01"
-                          placeholder="Sin mínimo"
-                        />
-                        <NumberInput
-                          label="Tiempo mín. (min)"
-                          value={zone.estimated_minutes_min}
-                          onChange={(v) => updateZone(zone.delivery_zone_id, { estimated_minutes_min: v })}
-                          min={0}
-                          placeholder="30"
-                        />
-                        <NumberInput
-                          label="Tiempo máx. (min)"
-                          value={zone.estimated_minutes_max}
-                          onChange={(v) => updateZone(zone.delivery_zone_id, { estimated_minutes_max: v })}
-                          min={0}
-                          placeholder="45"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between mt-3">
-                        <button
-                          onClick={() => deleteZone(zone.delivery_zone_id, zone.zone_name)}
-                          disabled={zoneDeleting[zone.delivery_zone_id]}
-                          className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-50"
-                          type="button"
-                        >
-                          {zoneDeleting[zone.delivery_zone_id] ? 'Eliminando…' : '🗑 Eliminar zona'}
-                        </button>
-                        <SaveButton
-                          state={state}
-                          onClick={() => saveZone(zone)}
-                        />
-                      </div>
+            {zonasExpanded && zones.map(zone => {
+              const state = zoneSaving[zone.delivery_zone_id] ?? 'idle'
+              return (
+                <div key={zone.delivery_zone_id} className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mt-3">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex-1 mr-3">
+                      <input type="text" value={zone.zone_name} onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, zone_name: e.target.value } : z))}
+                        className="text-sm font-bold text-gray-900 border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent w-full pb-0.5" />
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        CP:&nbsp;
+                        <input type="text" value={zone.postal_code} onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, postal_code: e.target.value } : z))}
+                          className="border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent text-gray-500 w-20" />
+                      </p>
                     </div>
-                  )
-                })}
-              </div>
-            )}
+                    <button onClick={() => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, is_active: !z.is_active } : z))}
+                      className="flex items-center gap-1.5 shrink-0" type="button">
+                      <span className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${zone.is_active ? 'bg-green-500' : 'bg-gray-300'}`}>
+                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5 ${zone.is_active ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </span>
+                      <span className={`text-xs font-medium ${zone.is_active ? 'text-green-700' : 'text-gray-400'}`}>{zone.is_active ? 'Activa' : 'Inactiva'}</span>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <NumberInput label="Costo de envío" value={zone.fee} onChange={v => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, fee: v ?? 0 } : z))} min={0} step="0.01" placeholder="2500" />
+                    <NumberInput label="Monto mínimo" value={zone.min_order_amount} onChange={v => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, min_order_amount: v } : z))} min={0} step="0.01" />
+                    <NumberInput label="Tiempo mín. (min)" value={zone.estimated_minutes_min} onChange={v => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, estimated_minutes_min: v } : z))} placeholder="30" />
+                    <NumberInput label="Tiempo máx. (min)" value={zone.estimated_minutes_max} onChange={v => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, estimated_minutes_max: v } : z))} placeholder="45" />
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <button onClick={() => deleteZone(zone.delivery_zone_id, zone.zone_name)} disabled={zoneDeleting[zone.delivery_zone_id]}
+                      className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50" type="button">
+                      {zoneDeleting[zone.delivery_zone_id] ? 'Eliminando…' : '🗑 Eliminar'}
+                    </button>
+                    <SaveButton state={state} onClick={() => saveZone(zone)} />
+                  </div>
+                </div>
+              )
+            })}
+          </>
 
-            {/* ── Métodos de pago ─────────────────────────────────────── */}
+        ) : (
+          <>
+            {/* ── Métodos de pago ──────────────────────────────────────── */}
             <SectionTitle>Métodos de pago</SectionTitle>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4">
-              <p className="text-xs text-gray-400 mb-4">
-                Los métodos activos se mostrarán al cliente en el checkout.
-              </p>
+              <p className="text-xs text-gray-400 mb-4">Los métodos activos se mostrarán al cliente en el checkout.</p>
               <div className="space-y-2">
                 {ALL_PAYMENT_METHODS.map(({ key, label, icon }) => {
                   const active = paymentMethods.includes(key)
                   return (
-                    <button key={key} onClick={() => togglePayment(key)}
-                      className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors text-left ${
-                        active ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-white hover:bg-gray-50'
-                      }`}
-                    >
+                    <button key={key} onClick={() => { setPaymentMethods(p => p.includes(key) ? p.filter(k => k !== key) : [...p, key]); setPagoState('idle') }}
+                      className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors text-left ${active ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
                       <span className="text-xl">{icon}</span>
                       <span className="flex-1 text-sm font-medium text-gray-900">{label}</span>
-                      {active && (
-                        <span className="text-indigo-500 text-sm font-semibold">✓</span>
-                      )}
+                      {active && <span className="text-indigo-500 text-sm font-semibold">✓</span>}
                     </button>
                   )
                 })}
               </div>
               <div className="flex justify-end pt-3 border-t border-gray-100 mt-3">
-                <SaveButton
-                  state={pagoState}
-                  onClick={savePago}
-                  disabled={paymentMethods.length === 0}
-                />
+                <SaveButton state={pagoState} onClick={savePago} disabled={paymentMethods.length === 0} />
               </div>
             </div>
 
-            {/* ── Datos bancarios ─────────────────────────────────────── */}
+            {/* ── Datos bancarios ───────────────────────────────────────── */}
             <SectionTitle>Datos bancarios (Transferencia)</SectionTitle>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
-              <p className="text-xs text-gray-400">
-                Se muestran al cliente cuando elige pago por transferencia.
-              </p>
-              <Field label="Banco" value={banco}
-                onChange={(v) => { setBanco(v); setBancosState('idle') }}
-                placeholder="CaixaBank" maxLength={100} />
-              <Field label="Titular" value={titular}
-                onChange={(v) => { setTitular(v); setBancosState('idle') }}
-                placeholder="La Isla Pizzería S.L." maxLength={200} />
-              <Field label="Cuenta / IBAN" value={cuenta}
-                onChange={(v) => { setCuenta(v); setBancosState('idle') }}
-                placeholder="ES12 3456 7890 1234 5678 9012" maxLength={50} />
-              <Field label="Alias (Bizum, etc.)" value={alias}
-                onChange={(v) => { setAlias(v); setBancosState('idle') }}
-                placeholder="620123456" maxLength={50} />
+              <p className="text-xs text-gray-400">Se muestran al cliente cuando elige pago por transferencia.</p>
+              <Field label="Banco" value={banco} onChange={v => { setBanco(v); setBancosState('idle') }} placeholder="CaixaBank" maxLength={100} />
+              <Field label="Titular" value={titular} onChange={v => { setTitular(v); setBancosState('idle') }} placeholder="La Isla Pizzería S.L." maxLength={200} />
+              <Field label="Cuenta / IBAN" value={cuenta} onChange={v => { setCuenta(v); setBancosState('idle') }} placeholder="ES12 3456 7890 1234 5678 9012" maxLength={50} />
+              <Field label="Alias (Bizum, etc.)" value={alias} onChange={v => { setAlias(v); setBancosState('idle') }} placeholder="620123456" maxLength={50} />
               <div className="flex justify-end pt-1">
                 <SaveButton state={bancosState} onClick={saveBancarios} />
               </div>
             </div>
-
           </>
         )}
       </main>
