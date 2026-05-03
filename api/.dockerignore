@@ -1,6 +1,0 @@
-api/node_modules
-api/dist
-web/
-.env
-.env.local
-*.log

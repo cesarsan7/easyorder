@@ -1,6 +1,0 @@
-web/node_modules
-web/.next
-api/
-.env.local
-.env*.local
-*.log
