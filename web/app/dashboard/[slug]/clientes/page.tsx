@@ -37,7 +37,7 @@ interface ClienteDetalle {
   pedidos: PedidoCliente[]
 }
 
-const PRIMARY = '#F3274C'
+const PRIMARY = '#6366F1'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -118,9 +118,8 @@ function ClientePanel({
       {/* Panel */}
       <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <div className="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-            style={{ backgroundColor: PRIMARY }}>
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-indigo-100 bg-indigo-50">
+          <div className="h-10 w-10 rounded-full flex items-center justify-center text-indigo-700 text-sm font-bold shrink-0 bg-indigo-200">
             {c?.nombre?.charAt(0).toUpperCase() ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
@@ -132,7 +131,7 @@ function ClientePanel({
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-gray-200 border-t-red-500 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin" />
           </div>
         ) : !data ? (
           <div className="flex-1 flex items-center justify-center text-sm text-gray-400">No se encontró el cliente</div>
@@ -270,7 +269,7 @@ export default function ClientesPage() {
           <h1 className="text-sm font-bold text-gray-900 leading-none">Clientes</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <button onClick={() => router.push(`/dashboard/${slug}`)}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              className="text-xs text-gray-400 hover:text-indigo-500 transition-colors">
               ← pedidos
             </button>
             <span className="text-gray-200">|</span>
@@ -286,7 +285,7 @@ export default function ClientesPage() {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Buscar por nombre o teléfono…"
-          className="flex-1 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+          className="flex-1 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
         />
         <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">
           {loading ? '…' : `${total} cliente${total !== 1 ? 's' : ''}`}
@@ -313,36 +312,50 @@ export default function ClientesPage() {
           <>
             <div className="flex flex-col gap-2">
               {clientes.map(c => (
-                <button
+                <div
                   key={c.usuario_id}
-                  onClick={() => setSelected(c.telefono)}
-                  className="w-full text-left rounded-2xl border border-gray-200 bg-white px-4 py-3 hover:border-red-200 hover:shadow-sm transition-all"
+                  className="w-full text-left rounded-2xl border border-gray-200 bg-white px-4 py-3 hover:bg-indigo-50 hover:border-indigo-200 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-center gap-3">
-                    {/* Avatar */}
-                    <div className="h-9 w-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                      style={{ backgroundColor: PRIMARY }}>
+                    {/* Avatar circular 40x40 con iniciales */}
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center text-indigo-700 text-sm font-bold shrink-0 bg-indigo-100">
                       {c.nombre?.charAt(0).toUpperCase() ?? c.telefono.charAt(0)}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-gray-900 truncate">
                           {c.nombre ?? c.telefono}
                         </span>
-                        {c.nombre && <span className="text-xs text-gray-400 shrink-0">{c.telefono}</span>}
+                        {c.nombre && (
+                          <a
+                            href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`}
+                            target="_blank" rel="noopener noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 shrink-0 underline underline-offset-2"
+                          >
+                            {c.telefono}
+                          </a>
+                        )}
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
-                        <span>{c.total_pedidos} pedido{c.total_pedidos !== 1 ? 's' : ''}</span>
-                        <span className="font-semibold text-gray-700">{fmtPrice(c.total_gastado)}</span>
-                        {c.ultimo_pedido && <span className="text-gray-400">{timeAgo(c.ultimo_pedido)}</span>}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                          {c.total_pedidos} pedido{c.total_pedidos !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-xs font-semibold text-gray-700">{fmtPrice(c.total_gastado)}</span>
+                        {c.ultimo_pedido && <span className="text-xs text-gray-400">{timeAgo(c.ultimo_pedido)}</span>}
                       </div>
                     </div>
 
-                    <span className="text-gray-300 text-sm shrink-0">›</span>
+                    <button
+                      onClick={() => setSelected(c.telefono)}
+                      className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                    >
+                      Ver detalle
+                    </button>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
 

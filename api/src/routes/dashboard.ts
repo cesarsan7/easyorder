@@ -332,6 +332,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.telefono,
           COALESCE(u.nombre, p.telefono)  AS nombre_cliente,
           p.direccion,
+          p.postal_code,
+          dz.zone_name,
           p.tiempo_estimado,
           jsonb_array_length(p.items)     AS items_count,
           p.estado_pago,
@@ -339,7 +341,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.created_at,
           p.updated_at
         FROM   pedidos  p
-        LEFT JOIN usuarios u ON u.id = p.usuario_id
+        LEFT JOIN usuarios       u  ON u.id             = p.usuario_id
+        LEFT JOIN delivery_zone  dz ON dz.postal_code   = p.postal_code
         WHERE  p.restaurante_id = ${restaurante_id}
           ${dateFilter}
           ${estadoFilter}
@@ -366,6 +369,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         telefono:        o.telefono,
         nombre_cliente:  o.nombre_cliente,
         direccion:       o.direccion ?? null,
+        postal_code:     o.postal_code ?? null,
+        zone_name:       o.zone_name ?? null,
         tiempo_estimado: o.tiempo_estimado ?? null,
         items_count:     Number(o.items_count ?? 0),
         items:           o.items ?? [],
@@ -1853,6 +1858,8 @@ interface OrderListRow {
   telefono:        string;
   nombre_cliente:  string | null;
   direccion:       string | null;
+  postal_code:     string | null;
+  zone_name:       string | null;
   tiempo_estimado: string | null;
   items_count:     number | null;
   items:           unknown[] | null;
@@ -2236,6 +2243,54 @@ dashboardRoutes.get('/:slug/analytics', async (c) => {
       GROUP BY 1 ORDER BY pedidos DESC
     `;
 
+    const porEstado = await sql<{ estado: string; pedidos: number; ventas: number }[]>`
+      SELECT estado,
+        COUNT(*)::int AS pedidos,
+        COALESCE(SUM(total), 0)::numeric AS ventas
+      FROM  pedidos
+      WHERE restaurante_id = ${restaurante_id}
+        AND DATE(created_at AT TIME ZONE ${zonaHoraria}) >= CURRENT_DATE - (${dias} - 1) * INTERVAL '1 day'
+      GROUP BY 1 ORDER BY pedidos DESC
+    `;
+
+    const porZona = await sql<{ zona: string; pedidos: number; ventas: number }[]>`
+      SELECT COALESCE(dz.zone_name, 'Retiro / Sin zona') AS zona,
+        COUNT(*)::int AS pedidos,
+        COALESCE(SUM(p.total), 0)::numeric AS ventas
+      FROM  pedidos p
+      LEFT JOIN delivery_zone dz ON dz.postal_code = p.postal_code
+      WHERE p.restaurante_id = ${restaurante_id}
+        AND p.estado NOT IN ('expirado', 'cancelado')
+        AND DATE(p.created_at AT TIME ZONE ${zonaHoraria}) >= CURRENT_DATE - (${dias} - 1) * INTERVAL '1 day'
+      GROUP BY 1 ORDER BY pedidos DESC LIMIT 10
+    `;
+
+    const clientesTop = await sql<{ nombre: string; telefono: string; pedidos: number; ventas: number }[]>`
+      SELECT
+        COALESCE(u.nombre, p.telefono) AS nombre,
+        p.telefono,
+        COUNT(*)::int AS pedidos,
+        COALESCE(SUM(p.total), 0)::numeric AS ventas
+      FROM  pedidos p
+      LEFT JOIN usuarios u ON u.id = p.usuario_id
+      WHERE p.restaurante_id = ${restaurante_id}
+        AND p.estado NOT IN ('expirado', 'cancelado')
+        AND DATE(p.created_at AT TIME ZONE ${zonaHoraria}) >= CURRENT_DATE - (${dias} - 1) * INTERVAL '1 day'
+      GROUP BY u.nombre, p.telefono
+      ORDER BY pedidos DESC LIMIT 10
+    `;
+
+    const porDespacho = await sql<{ tipo: string; pedidos: number; ventas: number }[]>`
+      SELECT tipo_despacho AS tipo,
+        COUNT(*)::int AS pedidos,
+        COALESCE(SUM(total), 0)::numeric AS ventas
+      FROM  pedidos
+      WHERE restaurante_id = ${restaurante_id}
+        AND estado NOT IN ('expirado', 'cancelado')
+        AND DATE(created_at AT TIME ZONE ${zonaHoraria}) >= CURRENT_DATE - (${dias} - 1) * INTERVAL '1 day'
+      GROUP BY 1 ORDER BY pedidos DESC
+    `;
+
     return c.json({
       dias,
       resumen: {
@@ -2245,10 +2300,14 @@ dashboardRoutes.get('/:slug/analytics', async (c) => {
         pedidos_delivery: Number(resumen?.pedidos_delivery ?? 0),
         pedidos_retiro:   Number(resumen?.pedidos_retiro   ?? 0),
       },
-      por_dia:   porDia.map((r)   => ({ fecha: r.fecha, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
-      top_items: topItems.map((r) => ({ nombre: r.nombre, cantidad: Number(r.cantidad), ventas: Number(r.ventas) })),
-      por_canal: porCanal.map((r) => ({ canal: r.canal, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
-      por_pago:  porPago.map((r)  => ({ metodo: r.metodo, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
+      por_dia:       porDia.map((r)       => ({ fecha: r.fecha, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
+      top_items:     topItems.map((r)     => ({ nombre: r.nombre, cantidad: Number(r.cantidad), ventas: Number(r.ventas) })),
+      por_canal:     porCanal.map((r)     => ({ canal: r.canal, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
+      por_pago:      porPago.map((r)      => ({ metodo: r.metodo, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
+      por_estado:    porEstado.map((r)    => ({ estado: r.estado, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
+      por_zona:      porZona.map((r)      => ({ zona: r.zona, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
+      clientes_top:  clientesTop.map((r)  => ({ nombre: r.nombre, telefono: r.telefono, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
+      por_despacho:  porDespacho.map((r)  => ({ tipo: r.tipo, pedidos: Number(r.pedidos), ventas: Number(r.ventas) })),
     });
   } catch (err) {
     console.error('[GET /dashboard/:slug/analytics] Unhandled error:', err);

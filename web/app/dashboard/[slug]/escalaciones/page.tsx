@@ -25,7 +25,7 @@ interface Escalacion {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const PRIMARY = '#F3274C'
+const PRIMARY = '#6366F1'
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -129,7 +129,7 @@ export default function EscalacionesPage() {
                 onClick={() => setFilter(key)}
                 className={`px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 transition-colors ${
                   filter === key
-                    ? 'border-red-500 text-red-600'
+                    ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
@@ -144,7 +144,7 @@ export default function EscalacionesPage() {
       <main className="max-w-3xl mx-auto px-4 py-5">
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-red-500 animate-spin" />
+            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-indigo-500 animate-spin" />
           </div>
         ) : error ? (
           <div className="rounded-2xl bg-red-50 border border-red-200 px-5 py-5 text-center">

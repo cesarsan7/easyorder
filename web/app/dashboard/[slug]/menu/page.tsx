@@ -43,7 +43,7 @@ interface Extra {
 
 type Tab = 'productos' | 'extras'
 
-const PRIMARY = '#F3274C'
+const PRIMARY = '#6366F1'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ function ToggleSwitch({ value, onChange }: { value: boolean; onChange: (v: boole
     <button
       type="button"
       onClick={() => onChange(!value)}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${value ? 'bg-red-500' : 'bg-gray-200'}`}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${value ? 'bg-indigo-500' : 'bg-gray-200'}`}
     >
       <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
     </button>
@@ -102,7 +102,7 @@ function InputField({ label, value, onChange, placeholder, maxLength, type = 'te
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
       />
     </div>
   )
@@ -120,7 +120,7 @@ function TextareaField({ label, value, onChange, placeholder, maxLength }: {
         placeholder={placeholder}
         maxLength={maxLength}
         rows={2}
-        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 bg-white resize-none"
+        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white resize-none"
       />
     </div>
   )
@@ -230,7 +230,7 @@ function ItemModal({
           <select
             value={categoryId}
             onChange={e => setCategoryId(Number(e.target.value))}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400 bg-white"
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
           >
             <option value={0} disabled>Seleccionar…</option>
             {categories.filter(c => c.is_active).map(c => (
@@ -440,7 +440,7 @@ function VariantsPanel({ item, slug, authFetch }: { item: Item; slug: string; au
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-gray-700">{fmtPrice(v.price)}</span>
                 <button onClick={() => setModal(v)} className="text-xs text-gray-400 hover:text-gray-700">✏</button>
-                <button onClick={() => handleDelete(v)} className="text-xs text-gray-400 hover:text-red-500">✕</button>
+                <button onClick={() => handleDelete(v)} className="text-xs text-gray-400 hover:text-indigo-500">✕</button>
               </div>
             </div>
           ))}
@@ -529,13 +529,13 @@ function ItemRow({
 // ─── Category Section ─────────────────────────────────────────────────────────
 
 function CategorySection({
-  category, items, categories, slug, authFetch, onUpdateCategory, onUpdateItems,
+  category, items, categories, slug, authFetch, onUpdateCategory, onUpdateItems, isExpanded, onToggle,
 }: {
   category: Category; items: Item[]; categories: Category[]; slug: string
   authFetch: ReturnType<typeof useAuthFetch>
   onUpdateCategory: () => void; onUpdateItems: () => void
+  isExpanded: boolean; onToggle: () => void
 }) {
-  const [collapsed, setCollapsed] = useState(false)
   const [editModal, setEditModal] = useState(false)
   const [addItemModal, setAddItemModal] = useState(false)
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -563,20 +563,21 @@ function CategorySection({
   const catItems = items.filter(i => i.menu_category_id === category.menu_category_id)
 
   return (
-    <div className={`rounded-2xl border ${category.is_active ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
+    <div className={`rounded-2xl border ${category.is_active ? 'border-indigo-200' : 'border-gray-100 opacity-60'}`}>
       {/* Category header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-t-2xl">
-        <button onClick={() => setCollapsed(c => !c)} className="text-gray-500 text-sm w-4 shrink-0">
-          {collapsed ? '▸' : '▾'}
-        </button>
-        <span className="flex-1 text-sm font-semibold text-gray-800">{category.name}</span>
-        <span className="text-xs text-gray-400">{catItems.length} producto{catItems.length !== 1 ? 's' : ''}</span>
+      <div
+        className={`flex items-center gap-3 px-4 py-3 rounded-t-2xl cursor-pointer select-none border-l-4 ${isExpanded ? 'bg-indigo-50 border-l-indigo-500' : 'bg-gray-50 border-l-transparent'}`}
+        onClick={onToggle}
+      >
+        <span className="text-indigo-500 text-sm w-4 shrink-0">{isExpanded ? '▾' : '▸'}</span>
+        <span className={`flex-1 text-sm font-semibold ${isExpanded ? 'text-indigo-700' : 'text-gray-800'}`}>{category.name}</span>
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{catItems.length}</span>
         <Badge active={category.is_active} />
-        <button onClick={() => setEditModal(true)} className="text-xs text-gray-400 hover:text-gray-700 px-1">✏</button>
+        <button onClick={e => { e.stopPropagation(); setEditModal(true) }} className="text-xs text-gray-400 hover:text-gray-700 px-1">✏</button>
       </div>
 
       {/* Items */}
-      {!collapsed && (
+      {isExpanded && (
         <div className="p-3 flex flex-col gap-2">
           {catItems.length === 0 && (
             <p className="text-xs text-gray-400 italic text-center py-2">Sin productos en esta categoría</p>
@@ -587,7 +588,7 @@ function CategorySection({
           ))}
           <button
             onClick={() => setAddItemModal(true)}
-            className="mt-1 w-full rounded-xl border border-dashed border-gray-300 py-2 text-xs text-gray-400 hover:border-red-300 hover:text-red-500 transition-colors"
+            className="mt-1 w-full rounded-xl border border-dashed border-gray-300 py-2 text-xs text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors"
           >
             + Agregar producto
           </button>
@@ -706,6 +707,7 @@ export default function MenuPage() {
   const [loadingCats, setLoadingCats] = useState(true)
   const [loadingItems, setLoadingItems] = useState(true)
   const [addCatModal, setAddCatModal] = useState(false)
+  const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set())
 
   const loadCategories = useCallback(async () => {
     setLoadingCats(true)
@@ -754,6 +756,25 @@ export default function MenuPage() {
     return so !== 0 ? so : a.name.localeCompare(b.name)
   })
 
+  function toggleCat(id: number) {
+    setExpandedCats(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function expandAll() {
+    setExpandedCats(new Set(sortedCategories.map(c => c.menu_category_id)))
+  }
+
+  function collapseAll() {
+    setExpandedCats(new Set())
+  }
+
+  const allExpanded = sortedCategories.length > 0 && sortedCategories.every(c => expandedCats.has(c.menu_category_id))
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -768,7 +789,7 @@ export default function MenuPage() {
           <h1 className="text-sm font-bold text-gray-900 leading-none">Menú</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <button onClick={() => router.push(`/dashboard/${slug}`)}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              className="text-xs text-gray-400 hover:text-indigo-500 transition-colors">
               ← pedidos
             </button>
             <span className="text-gray-200">|</span>
@@ -784,7 +805,7 @@ export default function MenuPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-3 text-xs font-semibold border-b-2 transition-colors capitalize ${
-              tab === t ? 'border-red-500 text-red-500' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === t ? 'border-indigo-500 text-indigo-500' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
             {t}
@@ -801,13 +822,23 @@ export default function MenuPage() {
               <p className="text-xs text-gray-500">
                 {loading ? 'Cargando…' : `${categories.length} categorías · ${items.length} productos`}
               </p>
-              <button
-                onClick={() => setAddCatModal(true)}
-                className="px-3 py-2 rounded-xl text-xs font-semibold text-white"
-                style={{ backgroundColor: PRIMARY }}
-              >
-                + Categoría
-              </button>
+              <div className="flex items-center gap-2">
+                {!loading && sortedCategories.length > 0 && (
+                  <button
+                    onClick={allExpanded ? collapseAll : expandAll}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                  >
+                    {allExpanded ? 'Colapsar todo' : 'Expandir todo'}
+                  </button>
+                )}
+                <button
+                  onClick={() => setAddCatModal(true)}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-white"
+                  style={{ backgroundColor: PRIMARY }}
+                >
+                  + Categoría
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -841,6 +872,8 @@ export default function MenuPage() {
                     authFetch={authFetch}
                     onUpdateCategory={loadCategories}
                     onUpdateItems={loadItems}
+                    isExpanded={expandedCats.has(cat.menu_category_id)}
+                    onToggle={() => toggleCat(cat.menu_category_id)}
                   />
                 ))}
               </div>

@@ -70,7 +70,7 @@ function SaveButton({ state, onClick, disabled }: { state: SaveState; onClick: (
     error:  'Error al guardar',
   }
   const styles: Record<SaveState, string> = {
-    idle:   'bg-red-500 hover:bg-red-600 text-white',
+    idle:   'bg-indigo-500 hover:bg-indigo-600 text-white',
     saving: 'bg-gray-300 text-gray-500 cursor-not-allowed',
     saved:  'bg-green-500 text-white',
     error:  'bg-red-100 text-red-700 border border-red-300',
@@ -104,7 +104,7 @@ function Field({
   multiline?: boolean
   maxLength?: number
 }) {
-  const base = 'w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent bg-white transition-shadow'
+  const base = 'w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white transition-shadow'
   return (
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
@@ -142,7 +142,7 @@ function TimeInput({
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       placeholder={placeholder}
-      className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed w-[110px] tabular-nums"
+      className="rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed w-[110px] tabular-nums"
     />
   )
 }
@@ -180,7 +180,7 @@ function HorarioRow({
           type="button"
         >
           {/* Toggle pill */}
-          <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${horario.disponible ? 'bg-red-500' : 'bg-gray-300'}`}>
+          <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${horario.disponible ? 'bg-indigo-500' : 'bg-gray-300'}`}>
             <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${horario.disponible ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </span>
           <span className={`text-sm font-semibold ${horario.disponible ? 'text-gray-800' : 'text-gray-400'}`}>
@@ -276,7 +276,7 @@ function NumberInput({
           const v = e.target.value
           onChange(v === '' ? null : Number(v))
         }}
-        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent bg-white"
+        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white"
       />
     </div>
   )
@@ -320,6 +320,8 @@ export default function ConfiguracionPage() {
   const [zoneSaving,    setZoneSaving]    = useState<Record<number, SaveState>>({})
   const [zoneAdding,    setZoneAdding]    = useState(false)
   const [zoneDeleting,  setZoneDeleting]  = useState<Record<number, boolean>>({})
+  const [zonasExpanded,    setZonasExpanded]    = useState(true)
+  const [horariosExpanded, setHorariosExpanded] = useState(true)
 
   // ── Load settings + horarios in parallel
   const fetchAll = useCallback(async () => {
@@ -571,7 +573,7 @@ export default function ConfiguracionPage() {
       <main className="max-w-2xl mx-auto px-4 py-5">
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-red-500 animate-spin" />
+            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-indigo-500 animate-spin" />
           </div>
         ) : fetchError ? (
           <div className="rounded-2xl bg-red-50 border border-red-200 px-5 py-5 text-center">
@@ -606,44 +608,64 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* ── Horarios de atención ────────────────────────────────── */}
-            <SectionTitle>Horarios de atención</SectionTitle>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              {horarios.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">
-                  No hay horarios configurados.
-                </p>
-              ) : (
-                horarios.map((h) => (
-                  <HorarioRow key={h.id} horario={h} onChange={updateHorario} />
-                ))
-              )}
-              <div className="flex justify-end px-4 py-3 border-t border-gray-100">
-                <SaveButton
-                  state={horariosState}
-                  onClick={saveHorarios}
-                  disabled={horarios.length === 0}
-                />
+            <button
+              type="button"
+              onClick={() => setHorariosExpanded(v => !v)}
+              className="w-full flex items-center justify-between mt-6 mb-3 px-1 py-1 text-left group"
+            >
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                {horariosExpanded ? '▼' : '▶'} Horarios de atención
+              </h2>
+              <span className="text-xs text-gray-400 group-hover:text-gray-600">{horariosExpanded ? 'Colapsar' : 'Expandir'}</span>
+            </button>
+            {horariosExpanded && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                {horarios.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">
+                    No hay horarios configurados.
+                  </p>
+                ) : (
+                  horarios.map((h) => (
+                    <HorarioRow key={h.id} horario={h} onChange={updateHorario} />
+                  ))
+                )}
+                <div className="flex justify-end px-4 py-3 border-t border-gray-100">
+                  <SaveButton
+                    state={horariosState}
+                    onClick={saveHorarios}
+                    disabled={horarios.length === 0}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* ── Zonas de delivery ───────────────────────────────────── */}
-            <div className="flex items-center justify-between mt-6 mb-3 px-1">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Zonas de delivery</h2>
+            <div className="flex items-center justify-between mt-6 mb-0 px-1 py-1 border-b border-gray-100">
+              <button
+                type="button"
+                onClick={() => setZonasExpanded(v => !v)}
+                className="flex items-center gap-2 text-left group"
+              >
+                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                  {zonasExpanded ? '▼' : '▶'} Zonas de delivery
+                </h2>
+              </button>
               <button
                 onClick={addZone}
                 disabled={zoneAdding}
                 className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white disabled:opacity-60"
-                style={{ backgroundColor: '#F3274C' }}
+                style={{ backgroundColor: '#6366F1' }}
               >
                 {zoneAdding ? '…' : '+ Nueva zona'}
               </button>
             </div>
-            {zones.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5">
+            {zonasExpanded && zones.length === 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 mt-3">
                 <p className="text-sm text-gray-400 text-center">No hay zonas configuradas.</p>
               </div>
-            ) : (
-              <div className="space-y-3">
+            )}
+            {zonasExpanded && zones.length > 0 && (
+              <div className="space-y-3 mt-3">
                 {zones.map((zone) => {
                   const state = zoneSaving[zone.delivery_zone_id] ?? 'idle'
                   return (
@@ -656,7 +678,7 @@ export default function ConfiguracionPage() {
                             type="text"
                             value={zone.zone_name}
                             onChange={(e) => updateZone(zone.delivery_zone_id, { zone_name: e.target.value })}
-                            className="text-sm font-bold text-gray-900 border-b border-dashed border-gray-200 focus:border-red-400 focus:outline-none bg-transparent w-full pb-0.5"
+                            className="text-sm font-bold text-gray-900 border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent w-full pb-0.5"
                           />
                           <p className="text-xs text-gray-400 mt-0.5">
                             Código postal:&nbsp;
@@ -664,7 +686,7 @@ export default function ConfiguracionPage() {
                               type="text"
                               value={zone.postal_code}
                               onChange={(e) => updateZone(zone.delivery_zone_id, { postal_code: e.target.value })}
-                              className="border-b border-dashed border-gray-200 focus:border-red-400 focus:outline-none bg-transparent text-gray-500 w-20"
+                              className="border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent text-gray-500 w-20"
                             />
                           </p>
                         </div>
@@ -749,13 +771,13 @@ export default function ConfiguracionPage() {
                   return (
                     <button key={key} onClick={() => togglePayment(key)}
                       className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors text-left ${
-                        active ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white hover:bg-gray-50'
+                        active ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-white hover:bg-gray-50'
                       }`}
                     >
                       <span className="text-xl">{icon}</span>
                       <span className="flex-1 text-sm font-medium text-gray-900">{label}</span>
                       {active && (
-                        <span className="text-red-500 text-sm font-semibold">✓</span>
+                        <span className="text-indigo-500 text-sm font-semibold">✓</span>
                       )}
                     </button>
                   )
