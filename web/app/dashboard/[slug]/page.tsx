@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 
 // Design tokens -- Riday-inspired orange accent
-const ACCENT = '#F97316'
+const ACCENT = '#6366F1'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

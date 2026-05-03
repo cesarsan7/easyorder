@@ -5,9 +5,9 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 
 // Design tokens -- Riday-inspired light sidebar palette
-const ACCENT       = '#F97316'  // orange-500 -- warm food accent
-const ACCENT_LIGHT = '#FFF7ED'  // orange-50
-const ACCENT_TEXT  = '#EA580C'  // orange-600
+const ACCENT       = '#6366F1'  // indigo-500 -- modern SaaS accent
+const ACCENT_LIGHT = '#EEF2FF'  // indigo-50
+const ACCENT_TEXT  = '#4338CA'  // indigo-700
 const SIDEBAR_BG   = '#FFFFFF'
 const SIDEBAR_BDR  = '#E5E7EB'  // gray-200
 const SIDEBAR_TEXT = '#6B7280'  // gray-500
@@ -207,6 +207,7 @@ function MobileTopBar({ slug, notifBadge }: { slug: string; notifBadge: number }
   )
 }
 
+
 export default function DashboardSlugLayout({ children }: { children: React.ReactNode }) {
   const params    = useParams<{ slug: string }>()
   const slug      = params.slug
@@ -222,4 +223,5 @@ export default function DashboardSlugLayout({ children }: { children: React.Reac
       </div>
     </div>
   )
+
 }
