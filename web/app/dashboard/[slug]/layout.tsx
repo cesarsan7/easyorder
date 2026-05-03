@@ -224,15 +224,6 @@ function MobileTopBar({ slug, notifBadge }: { slug: string; notifBadge: number }
   )
 }
 
-// ─── Logout helper (exported for use in pages) ────────────────────────────────
-
-async function handleLogout(router: ReturnType<typeof useRouter>) {
-  const supabase = createClient()
-  await supabase.auth.signOut()
-  router.replace('/login')
-}
-export { handleLogout }
-
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
 export default function DashboardSlugLayout({ children }: { children: React.ReactNode }) {
