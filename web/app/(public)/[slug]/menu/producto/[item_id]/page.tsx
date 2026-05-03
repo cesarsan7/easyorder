@@ -7,7 +7,7 @@ import type { MenuItem, MenuVariant, Extra } from '@/types/api'
 import { useCartStore } from '@/lib/store/cart'
 import { fmtPrice } from '@/lib/fmt'
 
-const ACCENT_FALLBACK = '#E63946'
+const DEFAULT_ACCENT = '#6366F1'
 
 export default function ProductoPage() {
   const { slug, item_id } = useParams<{ slug: string; item_id: string }>()
@@ -17,6 +17,7 @@ export default function ProductoPage() {
   const fmt = (n: number) => fmtPrice(n, moneda)
 
   const [item, setItem] = useState<MenuItem | null>(null)
+  const [accent, setAccent] = useState(DEFAULT_ACCENT)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState<MenuVariant | null>(null)
@@ -31,6 +32,8 @@ export default function ProductoPage() {
         return r.json()
       })
       .then((d) => {
+        // Read brand color from API response
+        setAccent(d.brand_color ?? DEFAULT_ACCENT)
         // Find the item across all categories
         const allItems = (d.categories ?? []).flatMap((c: any) => c.items ?? [])
         const found = allItems.find((i: any) => String(i.menu_item_id) === String(item_id))
@@ -44,7 +47,10 @@ export default function ProductoPage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-gray-500 animate-spin" />
+        <div
+          className="h-9 w-9 rounded-full border-4 border-gray-100 animate-spin"
+          style={{ borderTopColor: DEFAULT_ACCENT }}
+        />
       </main>
     )
   }
@@ -63,7 +69,6 @@ export default function ProductoPage() {
     )
   }
 
-  const accent = ACCENT_FALLBACK
   const basePrice = selectedVariant ? selectedVariant.price : item.base_price
   const extrasTotal = selectedExtras.reduce((s, e) => s + (e.price ?? 0), 0)
   const lineTotal = (basePrice + extrasTotal) * qty
@@ -93,26 +98,41 @@ export default function ProductoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
+      {/* Sticky top bar */}
+      <div
+        className="sticky top-0 z-30 flex items-center gap-3 px-4 py-3 shadow-sm"
+        style={{ backgroundColor: accent }}
+      >
+        <button
+          onClick={() => router.push(`/${slug}/menu`)}
+          className="flex items-center gap-1.5 text-sm font-medium text-white/90 hover:text-white transition-colors"
+          aria-label="Volver al menú"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fillRule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Volver al menú
+        </button>
+      </div>
+
       <div className="max-w-lg mx-auto">
         {/* Product image */}
-        <div className="relative h-56 sm:h-72 w-full bg-gray-100 overflow-hidden">
+        <div className="relative h-56 sm:h-64 w-full bg-gray-100 overflow-hidden">
           {item.image_url ? (
             <Image src={item.image_url} alt={item.name} fill className="object-cover" priority />
           ) : (
             <div
-              className="flex h-full w-full items-center justify-center text-7xl font-bold text-white select-none"
-              style={{ backgroundColor: accent }}
+              className="flex h-full w-full flex-col items-center justify-center gap-2 select-none"
+              style={{ background: `linear-gradient(135deg, ${accent}22 0%, ${accent}44 100%)` }}
             >
-              {item.name.charAt(0).toUpperCase()}
+              <span className="text-7xl">🍽️</span>
+              <span className="text-xs text-gray-400 font-medium tracking-wide uppercase">Sin foto</span>
             </div>
           )}
-          <button
-            onClick={() => router.push(`/${slug}/menu`)}
-            className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-sm font-medium text-gray-800 shadow backdrop-blur-sm hover:bg-white transition-colors"
-            aria-label="Volver al menú"
-          >
-            ← Volver
-          </button>
         </div>
 
         <div className="bg-white px-5 pt-5 pb-6 space-y-6">
@@ -235,7 +255,7 @@ export default function ProductoPage() {
                 className="h-9 w-9 rounded-full bg-gray-100 text-gray-700 text-xl flex items-center justify-center hover:bg-gray-200 leading-none"
                 aria-label="Reducir cantidad"
               >
-                −
+                &minus;
               </button>
               <span className="w-6 text-center text-base font-semibold tabular-nums">{qty}</span>
               <button
@@ -258,7 +278,7 @@ export default function ProductoPage() {
               className="w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ backgroundColor: accent }}
             >
-              Agregar al pedido · {fmt(lineTotal)}
+              Agregar al pedido &middot; {fmt(lineTotal)}
             </button>
             <button
               onClick={() => router.push(`/${slug}/menu`)}
