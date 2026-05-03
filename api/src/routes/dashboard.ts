@@ -2257,6 +2257,3 @@ dashboardRoutes.get('/:slug/analytics', async (c) => {
 });
 
 export default dashboardRoutes;
-});
-
-export default dashboardRoutes;
