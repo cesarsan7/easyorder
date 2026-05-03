@@ -5,10 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const ACCENT = '#F43F5E'
+// Design tokens -- Riday-inspired orange accent
+const ACCENT = '#F97316'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
 interface OrderItem {
   menu_item_id: number
@@ -56,7 +56,7 @@ interface Order {
   updated_at: string
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ── Constants ────────────────────────────────────────────────────────────────
 
 const POLL_MS = 30_000
 
@@ -88,35 +88,35 @@ const TRANSITIONS: Record<string, string[]> = {
 
 const STATE_FLOW = [
   { key:'recibido',       emoji:'⏳', label:'Por confirmar'  },
-  { key:'confirmado',     emoji:'✓',  label:'Confirmado'     },
+  { key:'confirmado',     emoji:'✓', label:'Confirmado'     },
   { key:'en_preparacion', emoji:'🍳', label:'En preparación' },
   { key:'listo',          emoji:'🔔', label:'Listo'          },
   { key:'en_camino',      emoji:'🛵', label:'En despacho'    },
   { key:'entregado',      emoji:'📦', label:'Entregado'      },
 ]
 
+// All statuses shown in filter tabs (with emojis)
 const FILTER_TABS = [
-  { key:'',               label:'Activos'       },
-  { key:'recibido',       label:'Por confirmar' },
-  { key:'pendiente_pago', label:'Pend. pago'    },
-  { key:'en_preparacion', label:'Preparando'    },
-  { key:'entregado',      label:'Entregados'    },
-  { key:'cancelado',      label:'Cancelados'    },
-  { key:'expirado',       label:'Expirados'     },
+  { key:'',               emoji:'📋', label:'Activos'        },
+  { key:'recibido',       emoji:'⏳',        label:'Por confirmar'  },
+  { key:'confirmado',     emoji:'✓',        label:'Confirmado'     },
+  { key:'en_preparacion', emoji:'🍳',  label:'En preparación' },
+  { key:'listo',          emoji:'🔔',  label:'Listo'          },
+  { key:'en_camino',      emoji:'🛵',  label:'En despacho'    },
+  { key:'entregado',      emoji:'📦',  label:'Entregado'      },
+  { key:'expirado',       emoji:'💤',  label:'Expirados'      },
+  { key:'cancelado',      emoji:'✕',        label:'Cancelados'     },
 ]
 
 const PAGO_LABEL: Record<string,string> = {
   efectivo:'Efectivo', transferencia:'Transfer.', tarjeta:'Tarjeta', bizum:'Bizum', online:'Online',
 }
 
-// Sortable columns
 type SortField = 'pedido_codigo' | 'created_at' | 'nombre_cliente' | 'estado' | 'total'
 type SortDir   = 'asc' | 'desc'
-
-// Date preset
 type DatePreset = 'hoy'|'ayer'|'7dias'|'mes'|'rango'|null
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n:number) { return `€${n.toFixed(2).replace('.',',')}` }
 
@@ -125,15 +125,24 @@ function timeAgo(iso:string) {
   if (s<60) return `${s}s`; if (s<3600) return `${Math.floor(s/60)}m`
   return `${Math.floor(s/3600)}h`
 }
+
 function formatTime(iso:string) {
   return new Date(iso).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Atlantic/Canary'})
 }
-function formatDate(iso:string) {
-  return new Date(iso).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',timeZone:'Atlantic/Canary'})
+
+// Merged datetime: YYYY-MM-DD HH:MM (Swedish locale = ISO date naturally)
+function formatDateTime(iso:string) {
+  const d = new Date(iso)
+  const tz = 'Atlantic/Canary'
+  const date = d.toLocaleDateString('sv-SE',{timeZone:tz})
+  const time = d.toLocaleTimeString('sv-SE',{timeZone:tz,hour:'2-digit',minute:'2-digit'})
+  return `${date} ${time}`
 }
+
 function localDateStr(d:Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
+
 function getDateRange(preset:DatePreset, from:string, to:string) {
   const t = new Date()
   if (preset==='hoy')  { const d=localDateStr(t); return {fecha_desde:d,fecha_hasta:d} }
@@ -143,7 +152,25 @@ function getDateRange(preset:DatePreset, from:string, to:string) {
   if (preset==='rango'&&from&&to) return {fecha_desde:from,fecha_hasta:to}
   return {} as Record<string,string>
 }
+
 function openWhatsApp(tel:string) { window.open(`https://wa.me/${tel.replace(/\D/g,'')}`, '_blank') }
+
+function extractZona(order: Order): string {
+  if (order.tipo_despacho !== 'delivery') return '—'
+  if (!order.direccion) return 'Delivery'
+  const d = order.direccion.trim()
+  return d.length > 26 ? d.slice(0, 24) + '…' : d
+}
+
+function previewItems(order: Order): string {
+  if (Array.isArray(order.items) && order.items.length > 0) {
+    const raw = order.items as Array<Record<string, unknown>>
+    const names = raw.slice(0, 2).map(i => String(i.item_name ?? i.nombre ?? '?'))
+    const more = order.items_count - 2
+    return names.join(', ') + (more > 0 ? ` +${more}` : '')
+  }
+  return `${order.items_count} ítem${order.items_count !== 1 ? 's' : ''}`
+}
 
 function normalizeItem(raw:unknown):OrderItem {
   const r = raw as Record<string,unknown>
@@ -173,7 +200,7 @@ function sortOrders(orders: Order[], field: SortField, dir: SortDir): Order[] {
   })
 }
 
-// ─── Print comanda ────────────────────────────────────────────────────────────
+// ── Print comanda ─────────────────────────────────────────────────────────────
 
 function printComanda(order:Order, detail:OrderDetail|null) {
   const items = detail?.items??[]
@@ -194,7 +221,7 @@ function printComanda(order:Order, detail:OrderDetail|null) {
   setTimeout(()=>{win.print();win.close()},300)
 }
 
-// ─── Sort header button ───────────────────────────────────────────────────────
+// ── SortTh ────────────────────────────────────────────────────────────────────
 
 function SortTh({ label, field, sortField, sortDir, onSort }: {
   label:string; field:SortField; sortField:SortField; sortDir:SortDir
@@ -208,14 +235,14 @@ function SortTh({ label, field, sortField, sortDir, onSort }: {
       onClick={()=>onSort(field)}
     >
       {label}{' '}
-      <span className="text-xs" style={{ opacity: active?1:0.3 }}>
+      <span style={{ opacity: active?1:0.3 }}>
         {active ? (sortDir==='asc'?'↑':'↓') : '↕'}
       </span>
     </th>
   )
 }
 
-// ─── Order detail panel ───────────────────────────────────────────────────────
+// ── OrderDetailPanel ──────────────────────────────────────────────────────────
 
 function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
   slug:string; order:Order; onClose:()=>void
@@ -245,13 +272,13 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
       .catch(()=>{}).finally(()=>setLoadingDetail(false))
   },[slug,order.pedido_codigo])
 
-  const meta       = ESTADO_META[order.estado]??{label:order.estado,color:'#6B7280',bg:'#F3F4F6'}
+  const meta        = ESTADO_META[order.estado]??{label:order.estado,color:'#6B7280',bg:'#F3F4F6'}
   const transitions = TRANSITIONS[order.estado]??[]
-  const canCancel  = transitions.includes('cancelado')
-  const updating   = updatingId===order.id
-  const isDelivery = order.tipo_despacho==='delivery'
-  const flowKeys   = STATE_FLOW.map(s=>s.key)
-  const currentIdx = flowKeys.indexOf(order.estado)
+  const canCancel   = transitions.includes('cancelado')
+  const updating    = updatingId===order.id
+  const isDelivery  = order.tipo_despacho==='delivery'
+  const flowKeys    = STATE_FLOW.map(s=>s.key)
+  const currentIdx  = flowKeys.indexOf(order.estado)
 
   return (
     <>
@@ -279,7 +306,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
         <div className="px-5 py-4 space-y-4">
           {loadingDetail ? (
             <div className="flex justify-center py-6">
-              <div className="h-6 w-6 rounded-full border-4 border-gray-200 border-t-rose-500 animate-spin" />
+              <div className="h-6 w-6 rounded-full border-4 border-gray-200 border-t-orange-400 animate-spin" />
             </div>
           ) : detail ? (
             <div>
@@ -358,7 +385,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Cambiar estado</p>
           <div className="flex flex-wrap gap-2 mb-3">
             {STATE_FLOW.filter(s=>s.key!=='en_camino'||isDelivery).map(s=>{
-              const stepIdx  = flowKeys.indexOf(s.key)
+              const stepIdx   = flowKeys.indexOf(s.key)
               const isCurrent = s.key===order.estado
               const isPast    = stepIdx>=0&&currentIdx>=0&&stepIdx<currentIdx
               const isNext    = transitions.includes(s.key)
@@ -394,7 +421,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
         <div className="flex gap-2 px-5 pb-8 pt-3">
           <button onClick={()=>printComanda(order,detail)}
             className="rounded-xl px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">
-            🖨 Imprimir
+            🖶 Imprimir
           </button>
           <button onClick={()=>openWhatsApp(order.telefono)}
             className="rounded-xl px-4 py-2.5 text-sm font-medium"
@@ -407,11 +434,11 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
   )
 }
 
-// ─── StatusToggle ─────────────────────────────────────────────────────────────
+// ── StatusToggle ──────────────────────────────────────────────────────────────
 
 function StatusToggle({slug,authFetch}:{slug:string;authFetch:ReturnType<typeof useAuthFetch>}) {
-  const [isOpen,  setIsOpen]  = useState<boolean|null>(null)
-  const [toggling,setToggling]= useState(false)
+  const [isOpen,   setIsOpen]  = useState<boolean|null>(null)
+  const [toggling, setToggling]= useState(false)
   useEffect(()=>{
     authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/restaurant/status`)
       .then(r=>r.json()).then((d:{is_open:boolean})=>setIsOpen(d.is_open)).catch(()=>{})
@@ -436,11 +463,11 @@ function StatusToggle({slug,authFetch}:{slug:string;authFetch:ReturnType<typeof 
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const {slug}  = useParams<{slug:string}>()
-  const router  = useRouter()
+  const {slug}    = useParams<{slug:string}>()
+  const router    = useRouter()
   const authFetch = useAuthFetch()
 
   useEffect(()=>{ localStorage.setItem('easyorder-last-slug', slug) },[slug])
@@ -449,20 +476,22 @@ export default function DashboardPage() {
     const supabase = createClient(); await supabase.auth.signOut(); router.replace('/login')
   }
 
-  const [orders,        setOrders]        = useState<Order[]>([])
-  const [total,         setTotal]         = useState(0)
-  const [newCount,      setNewCount]      = useState(0)
-  const [loading,       setLoading]       = useState(true)
-  const [error,         setError]         = useState<string|null>(null)
-  const [filter,        setFilter]        = useState('')
-  const [datePreset,    setDatePreset]    = useState<DatePreset>(null)
-  const [dateFrom,      setDateFrom]      = useState('')
-  const [dateTo,        setDateTo]        = useState('')
-  const [sortField,     setSortField]     = useState<SortField>('created_at')
-  const [sortDir,       setSortDir]       = useState<SortDir>('desc')
-  const [updatingId,    setUpdatingId]    = useState<number|null>(null)
-  const [lastUpdated,   setLastUpdated]   = useState<Date|null>(null)
-  const [selectedOrder, setSelectedOrder] = useState<Order|null>(null)
+  const [orders,         setOrders]         = useState<Order[]>([])
+  const [total,          setTotal]          = useState(0)
+  const [newCount,       setNewCount]       = useState(0)
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState<string|null>(null)
+  const [filter,         setFilter]         = useState('')
+  const [filterPago,     setFilterPago]     = useState('')
+  const [filterDespacho, setFilterDespacho] = useState('')
+  const [datePreset,     setDatePreset]     = useState<DatePreset>(null)
+  const [dateFrom,       setDateFrom]       = useState('')
+  const [dateTo,         setDateTo]         = useState('')
+  const [sortField,      setSortField]      = useState<SortField>('created_at')
+  const [sortDir,        setSortDir]        = useState<SortDir>('desc')
+  const [updatingId,     setUpdatingId]     = useState<number|null>(null)
+  const [lastUpdated,    setLastUpdated]    = useState<Date|null>(null)
+  const [selectedOrder,  setSelectedOrder]  = useState<Order|null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   const DATE_PRESETS: {key:DatePreset;label:string}[] = [
@@ -524,18 +553,27 @@ export default function DashboardPage() {
     else { setSortField(field); setSortDir('asc') }
   }
 
-  const displayOrders = sortOrders(orders, sortField, sortDir)
-  const activeTab = FILTER_TABS.find(t=>t.key===filter)??FILTER_TABS[0]
+  // Client-side secondary filters applied on top of server results
+  const filteredOrders = orders
+    .filter(o => !filterPago     || o.estado_pago    === filterPago)
+    .filter(o => !filterDespacho || o.tipo_despacho  === filterDespacho)
+
+  const displayOrders   = sortOrders(filteredOrders, sortField, sortDir)
+  const activeTab       = FILTER_TABS.find(t=>t.key===filter)??FILTER_TABS[0]
+  const hasExtraFilters = !!(filterPago || filterDespacho)
 
   return (
     <div className="flex-1 flex flex-col min-w-0">
-      {/* Top bar */}
+
+      {/* ── Top bar ── */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+
+        {/* Title row */}
         <div className="px-6 py-3 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-base font-bold text-gray-900">Pedidos</h1>
             <p className="text-xs text-gray-400">
-              {lastUpdated ? `Actualizado hace ${timeAgo(lastUpdated.toISOString())}` : 'Cargando...'}
+              {lastUpdated ? `Actualizado hace ${timeAgo(lastUpdated.toISOString())}` : 'Cargando…'}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -559,23 +597,29 @@ export default function DashboardPage() {
             </span>
             {newCount>0&&(
               <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                style={{backgroundColor:'#FFF1F3',color:ACCENT}}>
+                style={{backgroundColor:'#FFF7ED',color:ACCENT}}>
                 <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{backgroundColor:ACCENT}} />
                 {newCount} por confirmar
+              </span>
+            )}
+            {filteredOrders.length !== orders.length && (
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-600">
+                {filteredOrders.length} mostrados
               </span>
             )}
           </div>
         )}
 
-        {/* Status filter tabs */}
-        <div className="px-6 flex gap-0 overflow-x-auto scrollbar-none" style={{borderTop:'1px solid #F3F4F6'}}>
+        {/* Status tabs -- all statuses with emojis */}
+        <div className="px-6 flex gap-0 overflow-x-auto" style={{borderTop:'1px solid #F3F4F6',scrollbarWidth:'none'}}>
           {FILTER_TABS.map(tab=>(
             <button key={tab.key} onClick={()=>setFilter(tab.key)}
-              className="shrink-0 px-4 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5"
+              className="shrink-0 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1"
               style={filter===tab.key
                 ?{borderColor:ACCENT,color:ACCENT}
                 :{borderColor:'transparent',color:'#9CA3AF'}}>
-              {tab.label}
+              <span>{tab.emoji}</span>
+              <span>{tab.label}</span>
               {tab.key==='recibido'&&newCount>0&&(
                 <span className="rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center text-white font-bold"
                   style={{fontSize:9,backgroundColor:ACCENT}}>{newCount}</span>
@@ -584,39 +628,75 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Date preset bar */}
-        <div className="px-6 py-2 flex flex-wrap items-center gap-1.5" style={{borderTop:'1px solid #F9FAFB'}}>
-          {DATE_PRESETS.map(p=>(
-            <button key={p.key as string}
-              onClick={()=>setDatePreset(datePreset===p.key?null:p.key)}
-              className="rounded-full px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap"
-              style={datePreset===p.key
-                ?{backgroundColor:ACCENT,color:'#fff'}
-                :{backgroundColor:'#F3F4F6',color:'#6B7280'}}>
-              {p.label}
-            </button>
-          ))}
-          {datePreset==='rango'&&(
-            <div className="flex items-center gap-1.5 ml-1">
-              <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
-                className="rounded-lg border border-gray-200 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-rose-300" />
-              <span className="text-xs text-gray-300">–</span>
-              <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
-                className="rounded-lg border border-gray-200 text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-rose-300" />
-            </div>
-          )}
-          {datePreset&&(
-            <button onClick={()=>{setDatePreset(null);setDateFrom('');setDateTo('')}}
-              className="text-xs text-gray-400 hover:text-gray-600 ml-1">× limpiar</button>
+        {/* Filter bar: date presets + pago + despacho */}
+        <div className="px-6 py-2 flex flex-wrap items-center gap-x-3 gap-y-1.5" style={{borderTop:'1px solid #F9FAFB'}}>
+
+          {/* Date presets */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {DATE_PRESETS.map(p=>(
+              <button key={p.key as string}
+                onClick={()=>setDatePreset(datePreset===p.key?null:p.key)}
+                className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors whitespace-nowrap"
+                style={datePreset===p.key
+                  ?{backgroundColor:ACCENT,color:'#fff'}
+                  :{backgroundColor:'#F3F4F6',color:'#6B7280'}}>
+                {p.label}
+              </button>
+            ))}
+            {datePreset==='rango'&&(
+              <div className="flex items-center gap-1">
+                <input type="date" value={dateFrom} onChange={e=>setDateFrom(e.target.value)}
+                  className="rounded-lg border border-gray-200 text-xs px-2 py-0.5 focus:outline-none" />
+                <span className="text-gray-300 text-xs">-</span>
+                <input type="date" value={dateTo} onChange={e=>setDateTo(e.target.value)}
+                  className="rounded-lg border border-gray-200 text-xs px-2 py-0.5 focus:outline-none" />
+              </div>
+            )}
+            {datePreset&&(
+              <button onClick={()=>{setDatePreset(null);setDateFrom('');setDateTo('')}}
+                className="text-xs text-gray-400 hover:text-gray-600">× fecha</button>
+            )}
+          </div>
+
+          <span className="h-4 w-px bg-gray-200" />
+
+          {/* Estado pago */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Pago:</span>
+            <select value={filterPago} onChange={e=>setFilterPago(e.target.value)}
+              className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
+              style={{borderColor:filterPago?ACCENT:'#E5E7EB',color:filterPago?ACCENT:'#374151'}}>
+              <option value="">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="pagado">Pagado</option>
+              <option value="rechazado">Rechazado</option>
+            </select>
+          </div>
+
+          {/* Tipo despacho */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Despacho:</span>
+            <select value={filterDespacho} onChange={e=>setFilterDespacho(e.target.value)}
+              className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
+              style={{borderColor:filterDespacho?ACCENT:'#E5E7EB',color:filterDespacho?ACCENT:'#374151'}}>
+              <option value="">Todos</option>
+              <option value="delivery">Delivery</option>
+              <option value="retiro">Retiro</option>
+            </select>
+          </div>
+
+          {hasExtraFilters&&(
+            <button onClick={()=>{setFilterPago('');setFilterDespacho('')}}
+              className="text-xs text-gray-400 hover:text-orange-500 transition-colors">× limpiar</button>
           )}
         </div>
       </header>
 
-      {/* Content */}
+      {/* ── Content ── */}
       <main className="flex-1 p-6">
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-rose-500 animate-spin" />
+            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-orange-400 animate-spin" />
           </div>
         ) : error ? (
           <div className="rounded-xl bg-red-50 border border-red-200 px-5 py-5 text-center">
@@ -626,121 +706,133 @@ export default function DashboardPage() {
         ) : displayOrders.length===0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-3xl"
-              style={{backgroundColor:'#FFF1F3'}}>🎉</div>
+              style={{backgroundColor:'#FFF7ED'}}>🎉</div>
             <p className="text-sm font-medium text-gray-500">
-              {filter?`Sin pedidos en "${activeTab.label}"` : 'No hay pedidos activos'}
+              {filter||hasExtraFilters
+                ? `Sin pedidos con los filtros aplicados`
+                : 'No hay pedidos activos'}
             </p>
+            {hasExtraFilters&&(
+              <button onClick={()=>{setFilterPago('');setFilterDespacho('')}}
+                className="text-xs text-orange-500 underline">Limpiar filtros</button>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-            <table className="w-full min-w-[700px] border-collapse">
-              <thead>
-                <tr style={{backgroundColor:'#F9FAFB',borderBottom:'1px solid #E5E7EB'}}>
-                  {/* Fixed narrow columns */}
-                  <SortTh label="Pedido"  field="pedido_codigo" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
-                  <SortTh label="Fecha"   field="created_at"    sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
-                  <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Hora</th>
-                  <SortTh label="Cliente" field="nombre_cliente" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
-                  <SortTh label="Estado"  field="estado"        sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
-                  <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Despacho</th>
-                  <SortTh label="Total"   field="total"         sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
-                  <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayOrders.map((order,idx)=>{
-                  const meta       = ESTADO_META[order.estado]??{label:order.estado,color:'#6B7280',bg:'#F3F4F6'}
-                  const transitions = TRANSITIONS[order.estado]??[]
-                  const primaryNext = transitions.filter(t=>t!=='cancelado')[0]
-                  const isNew      = order.estado==='recibido'
-                  const isEven     = idx%2===0
-                  return (
-                    <tr key={order.id}
-                      className="transition-colors cursor-pointer"
-                      style={{
-                        backgroundColor:isNew?'#FFFBEB':isEven?'#FFFFFF':'#FAFAFA',
-                        borderBottom:'1px solid #F3F4F6',
-                        borderLeft:isNew?`3px solid ${ACCENT}`:'3px solid transparent',
-                      }}
-                      onClick={()=>setSelectedOrder(order)}
-                      onMouseEnter={e=>(e.currentTarget as HTMLTableRowElement).style.backgroundColor='#F0F9FF'}
-                      onMouseLeave={e=>(e.currentTarget as HTMLTableRowElement).style.backgroundColor=isNew?'#FFFBEB':isEven?'#FFFFFF':'#FAFAFA'}
-                    >
-                      {/* Pedido # */}
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs font-semibold text-gray-700">
-                            #{order.pedido_codigo}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] border-collapse">
+                <thead>
+                  <tr style={{backgroundColor:'#F9FAFB',borderBottom:'2px solid #E5E7EB'}}>
+                    <SortTh label="Pedido"     field="pedido_codigo"  sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+                    <SortTh label="Fecha/Hora" field="created_at"     sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+                    <SortTh label="Cliente"    field="nombre_cliente" sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+                    <SortTh label="Estado"     field="estado"         sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+                    <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Despacho</th>
+                    <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Zona / Dir.</th>
+                    <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Productos</th>
+                    <SortTh label="Total"      field="total"          sortField={sortField} sortDir={sortDir} onSort={toggleSort} />
+                    <th className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayOrders.map((order,idx)=>{
+                    const meta        = ESTADO_META[order.estado]??{label:order.estado,color:'#6B7280',bg:'#F3F4F6'}
+                    const transitions = TRANSITIONS[order.estado]??[]
+                    const primaryNext = transitions.filter(t=>t!=='cancelado')[0]
+                    const isNew       = order.estado==='recibido'
+                    const isEven      = idx%2===0
+                    return (
+                      <tr key={order.id}
+                        className="transition-colors cursor-pointer"
+                        style={{
+                          backgroundColor:isNew?'#FFFBEB':isEven?'#FFFFFF':'#FAFAFA',
+                          borderBottom:'1px solid #F3F4F6',
+                          borderLeft:isNew?`3px solid ${ACCENT}`:'3px solid transparent',
+                        }}
+                        onClick={()=>setSelectedOrder(order)}
+                        onMouseEnter={e=>(e.currentTarget as HTMLTableRowElement).style.backgroundColor='#FFF7ED'}
+                        onMouseLeave={e=>(e.currentTarget as HTMLTableRowElement).style.backgroundColor=isNew?'#FFFBEB':isEven?'#FFFFFF':'#FAFAFA'}
+                      >
+                        {/* Pedido # */}
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-semibold text-gray-700">#{order.pedido_codigo}</span>
+                            {isNew&&(
+                              <span className="rounded-full px-1.5 py-0.5 text-white font-bold leading-none"
+                                style={{backgroundColor:ACCENT,fontSize:9}}>NEW</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Fecha/Hora -- merged, sortable */}
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          <span className="font-mono text-xs text-gray-700">{formatDateTime(order.created_at)}</span>
+                        </td>
+
+                        {/* Cliente */}
+                        <td className="px-3 py-3" style={{maxWidth:150}}>
+                          <p className="text-sm font-medium text-gray-900 truncate">{order.nombre_cliente}</p>
+                          <p className="text-xs text-gray-400 truncate">{order.telefono}</p>
+                        </td>
+
+                        {/* Estado */}
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          <span className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                            style={{color:meta.color,backgroundColor:meta.bg}}>
+                            {meta.label}
                           </span>
-                          {isNew&&(
-                            <span className="rounded-full px-1.5 py-0.5 text-xs font-bold text-white leading-none"
-                              style={{backgroundColor:ACCENT,fontSize:9}}>NEW</span>
+                          {order.estado_pago==='pendiente'&&(
+                            <p className="text-xs mt-0.5 font-medium text-amber-600">⚠ pago</p>
                           )}
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Fecha */}
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="text-xs text-gray-600">{formatDate(order.created_at)}</span>
-                      </td>
+                        {/* Despacho + metodo pago */}
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          <p className="text-xs font-medium text-gray-700">
+                            {order.tipo_despacho==='delivery'?'🛵 Delivery':'🏪 Retiro'}
+                          </p>
+                          <p className="text-xs text-gray-400">{PAGO_LABEL[order.metodo_pago]??order.metodo_pago}</p>
+                        </td>
 
-                      {/* Hora */}
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="text-xs font-medium text-gray-700">{formatTime(order.created_at)}</span>
-                      </td>
+                        {/* Zona / Direccion */}
+                        <td className="px-3 py-3" style={{maxWidth:140}}>
+                          <span className="text-xs text-gray-600 truncate block">{extractZona(order)}</span>
+                        </td>
 
-                      {/* Cliente — ancho controlado */}
-                      <td className="px-3 py-3" style={{maxWidth:160}}>
-                        <p className="text-sm font-medium text-gray-900 truncate">{order.nombre_cliente}</p>
-                        <p className="text-xs text-gray-400 truncate">{order.telefono}</p>
-                      </td>
+                        {/* Productos preview */}
+                        <td className="px-3 py-3" style={{maxWidth:180}}>
+                          <span className="text-xs text-gray-600 truncate block">{previewItems(order)}</span>
+                        </td>
 
-                      {/* Estado */}
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="rounded-full px-2 py-0.5 text-xs font-semibold"
-                          style={{color:meta.color,backgroundColor:meta.bg}}>
-                          {meta.label}
-                        </span>
-                        {order.estado_pago==='pendiente'&&(
-                          <p className="text-xs mt-0.5 font-medium" style={{color:'#B45309'}}>⚠ pago</p>
-                        )}
-                      </td>
+                        {/* Total */}
+                        <td className="px-3 py-3 whitespace-nowrap text-right">
+                          <p className="text-sm font-bold text-gray-900 tabular-nums">{fmt(order.total)}</p>
+                        </td>
 
-                      {/* Despacho + pago */}
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <p className="text-xs text-gray-600">{order.tipo_despacho==='delivery'?'🛵 Delivery':'🏪 Retiro'}</p>
-                        <p className="text-xs text-gray-400">{PAGO_LABEL[order.metodo_pago]??order.metodo_pago}</p>
-                      </td>
-
-                      {/* Total */}
-                      <td className="px-3 py-3 whitespace-nowrap text-right">
-                        <p className="text-sm font-bold text-gray-900 tabular-nums">{fmt(order.total)}</p>
-                        <p className="text-xs text-gray-400">{order.items_count} ítem{order.items_count!==1?'s':''}</p>
-                      </td>
-
-                      {/* Acción */}
-                      <td className="px-3 py-3 whitespace-nowrap" onClick={e=>e.stopPropagation()}>
-                        <div className="flex items-center gap-1">
-                          <button onClick={()=>openWhatsApp(order.telefono)}
-                            className="rounded-lg px-2 py-1 text-xs font-medium transition-colors"
-                            style={{backgroundColor:'#D1FAE5',color:'#065F46'}}>
-                            WA
-                          </button>
-                          {primaryNext&&(
-                            <button onClick={()=>handleStatusChange(order.id,primaryNext)}
-                              disabled={updatingId===order.id}
-                              className="rounded-lg px-2 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                              style={{backgroundColor:ACCENT}}>
-                              {updatingId===order.id?'…':STATE_FLOW.find(s=>s.key===primaryNext)?.emoji??'›'}
+                        {/* Acciones */}
+                        <td className="px-3 py-3 whitespace-nowrap" onClick={e=>e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            <button onClick={()=>openWhatsApp(order.telefono)}
+                              className="rounded-lg px-2 py-1 text-xs font-medium"
+                              style={{backgroundColor:'#D1FAE5',color:'#065F46'}}>
+                              WA
                             </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                            {primaryNext&&(
+                              <button onClick={()=>handleStatusChange(order.id,primaryNext)}
+                                disabled={updatingId===order.id}
+                                className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                                style={{backgroundColor:ACCENT}}>
+                                {updatingId===order.id?'…':STATE_FLOW.find(s=>s.key===primaryNext)?.emoji??'>'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </main>
