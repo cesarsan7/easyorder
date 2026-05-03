@@ -166,7 +166,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
 // ----------------------------------------------------------------------------
 // GET /public/:slug/menu
 // Returns the full catalog: categories → items → variants + extras.
-// image_url is hardcoded null — pending DB migration (column does not exist yet).
+// image_url is read from menu_item.image_url (added in migration M-15).
 // ----------------------------------------------------------------------------
 publicRoutes.get('/:slug/menu', async (c) => {
   const restaurante_id = c.get('restaurante_id');

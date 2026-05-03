@@ -5,11 +5,9 @@ import { useRouter, useParams } from 'next/navigation'
 import { useCartStore, DispatchType, ZoneInfo } from '@/lib/store/cart'
 import { fmtPrice } from '@/lib/fmt'
 
-const ACCENT = '#E63946'
-
 const STEPS = ['Datos', 'Despacho', 'Pago', 'Confirmar'] as const
 
-function ProgressBar({ current }: { current: number }) {
+function ProgressBar({ current, accent }: { current: number; accent: string }) {
   return (
     <div className="flex items-center gap-1 px-5 py-4">
       {STEPS.map((label, i) => {
@@ -20,11 +18,11 @@ function ProgressBar({ current }: { current: number }) {
             <div className="flex flex-col items-center gap-1">
               <div
                 className="h-2 w-2 rounded-full shrink-0"
-                style={{ backgroundColor: active || done ? ACCENT : '#D1D5DB' }}
+                style={{ backgroundColor: active || done ? accent : '#D1D5DB' }}
               />
               <span
                 className="text-[10px] font-medium whitespace-nowrap"
-                style={{ color: active ? ACCENT : done ? '#6B7280' : '#9CA3AF' }}
+                style={{ color: active ? accent : done ? '#6B7280' : '#9CA3AF' }}
               >
                 {label}
               </span>
@@ -32,7 +30,7 @@ function ProgressBar({ current }: { current: number }) {
             {i < STEPS.length - 1 && (
               <div
                 className="flex-1 h-px mb-3 mx-1"
-                style={{ backgroundColor: done ? ACCENT : '#E5E7EB' }}
+                style={{ backgroundColor: done ? accent : '#E5E7EB' }}
               />
             )}
           </div>
@@ -68,6 +66,7 @@ export default function CheckoutDespachoPage() {
   const isCartEmpty = useCartStore((s) => s.isCartEmpty)
   const setDispatch = useCartStore((s) => s.setDispatch)
   const moneda = useCartStore((s) => s.moneda)
+  const accent = useCartStore((s) => s.accentColor)
 
   const fmt = (n: number) => fmtPrice(n, moneda)
 
@@ -164,7 +163,7 @@ export default function CheckoutDespachoPage() {
             >←</button>
             <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
           </div>
-          <ProgressBar current={1} />
+          <ProgressBar current={1} accent={accent} />
         </div>
 
         <div className="mx-4 mt-6 space-y-4">
@@ -186,13 +185,13 @@ export default function CheckoutDespachoPage() {
                     onClick={() => setSelectedType('pickup')}
                     className="rounded-2xl border-2 p-4 text-left transition-all"
                     style={{
-                      borderColor:     selectedType === 'pickup' ? ACCENT : '#E5E7EB',
+                      borderColor:     selectedType === 'pickup' ? accent : '#E5E7EB',
                       backgroundColor: selectedType === 'pickup' ? '#FFF5F5' : 'white',
                     }}
                   >
                     <span className="text-2xl block mb-2">🏪</span>
                     <span className="text-sm font-semibold block"
-                      style={{ color: selectedType === 'pickup' ? ACCENT : '#111827' }}>
+                      style={{ color: selectedType === 'pickup' ? accent : '#111827' }}>
                       Retiro en local
                     </span>
                     <span className="text-xs text-gray-500 mt-1 block">Sin costo de envío</span>
@@ -205,13 +204,13 @@ export default function CheckoutDespachoPage() {
                     onClick={() => setSelectedType('delivery')}
                     className="rounded-2xl border-2 p-4 text-left transition-all"
                     style={{
-                      borderColor:     selectedType === 'delivery' ? ACCENT : '#E5E7EB',
+                      borderColor:     selectedType === 'delivery' ? accent : '#E5E7EB',
                       backgroundColor: selectedType === 'delivery' ? '#FFF5F5' : 'white',
                     }}
                   >
                     <span className="text-2xl block mb-2">🛵</span>
                     <span className="text-sm font-semibold block"
-                      style={{ color: selectedType === 'delivery' ? ACCENT : '#111827' }}>
+                      style={{ color: selectedType === 'delivery' ? accent : '#111827' }}>
                       Delivery
                     </span>
                     <span className="text-xs text-gray-500 mt-1 block">
@@ -261,7 +260,7 @@ export default function CheckoutDespachoPage() {
                                 selected ? 'border-red-500' : 'border-gray-300'
                               }`}>
                                 {selected && (
-                                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: ACCENT }} />
+                                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
                                 )}
                               </span>
                               <div>
@@ -276,7 +275,7 @@ export default function CheckoutDespachoPage() {
                             </div>
                             <span
                               className="text-sm font-bold shrink-0 ml-2"
-                              style={{ color: selected ? ACCENT : '#374151' }}
+                              style={{ color: selected ? accent : '#374151' }}
                             >
                               {fmt(zone.fee)}
                             </span>
@@ -302,7 +301,7 @@ export default function CheckoutDespachoPage() {
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
                           className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition"
-                          style={{ '--tw-ring-color': ACCENT } as React.CSSProperties}
+                          style={{ '--tw-ring-color': accent } as React.CSSProperties}
                         />
                       </div>
 
@@ -349,7 +348,7 @@ export default function CheckoutDespachoPage() {
                                 type="button"
                                 onClick={() => setSelectedType('pickup')}
                                 className="flex-1 rounded-xl py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                                style={{ backgroundColor: ACCENT }}
+                                style={{ backgroundColor: accent }}
                               >
                                 Cambiar a Retiro
                               </button>
@@ -373,7 +372,7 @@ export default function CheckoutDespachoPage() {
             onClick={handleContinue}
             disabled={!canContinue}
             className="w-full rounded-2xl py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: ACCENT }}
+            style={{ backgroundColor: accent }}
           >
             Continuar
           </button>

@@ -280,19 +280,12 @@ function CartFloatingButton({ slug, accent }: { slug: string; accent: string }) 
 }
 
 // ─── Social footer ────────────────────────────────────────────────────────────
-function SocialFooter({ redes, name, eslogan }: { redes: RedSocial[] | null; name: string; eslogan: string | null }) {
-  const validRedes = (redes ?? []).filter(r => r.url?.trim())
+function SocialFooter({ name }: { name: string }) {
   return (
     <footer className="border-t border-gray-100 mt-8 pb-10 md:pb-6">
-      <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-3 text-center">
-        <p className="text-sm font-semibold text-gray-700">{name}</p>
-        {eslogan && <p className="text-xs text-gray-400">{eslogan}</p>}
-        {validRedes.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap justify-center mt-1">
-            {validRedes.map(r => <SocialLink key={r.red} red={r.red} url={r.url} />)}
-          </div>
-        )}
-        <p className="text-xs text-gray-300 mt-2">Pedidos online · EasyOrder</p>
+      <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col items-center gap-2 text-center">
+        <p className="text-xs font-semibold text-gray-500">{name}</p>
+        <p className="text-xs text-gray-300">Pedidos online · EasyOrder</p>
       </div>
     </footer>
   )
@@ -305,8 +298,12 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
   const isOpen   = restaurant.is_open
   const deliveryMinOrder = menu.delivery_min_order ?? restaurant.delivery_min_order ?? 0
   const moneda: string = menu.moneda ?? restaurant.moneda ?? 'EUR'
-  const setMoneda = useCartStore((s) => s.setMoneda)
-  useEffect(() => { setMoneda(moneda) }, [moneda, setMoneda])
+  const setMoneda      = useCartStore((s) => s.setMoneda)
+  const setAccentColor = useCartStore((s) => s.setAccentColor)
+  useEffect(() => {
+    setMoneda(moneda)
+    setAccentColor(accent)
+  }, [moneda, accent, setMoneda, setAccentColor])
 
   const activeCategories = categories
     .filter((c) => c.items.some((i) => i.is_active))
@@ -360,6 +357,25 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
             <p className="font-bold text-gray-900 text-sm truncate leading-tight">{restaurant.name}</p>
             {restaurant.eslogan && <p className="text-xs text-gray-400 truncate leading-tight">{restaurant.eslogan}</p>}
           </div>
+
+          {/* Redes sociales — visible solo en desktop */}
+          {(() => {
+            const validRedes = (restaurant.redes_sociales ?? []).filter(r => r.url?.trim())
+            return validRedes.length > 0 ? (
+              <div className="hidden md:flex items-center gap-1.5 shrink-0">
+                {validRedes.slice(0, 5).map(r => (
+                  <a key={r.red} href={r.url} target="_blank" rel="noopener noreferrer"
+                    aria-label={r.red}
+                    className="flex items-center justify-center h-7 w-7 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
+                    style={{ color: accent }}
+                  >
+                    {SOCIAL_ICONS[r.red] ?? SOCIAL_ICONS['web']}
+                  </a>
+                ))}
+              </div>
+            ) : null
+          })()}
+
           {isOpen ? (
             <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 shrink-0">
               <span className="relative flex h-1.5 w-1.5">
@@ -434,13 +450,7 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
         <CartSidebar slug={slug} deliveryMinOrder={deliveryMinOrder} accent={accent} />
       </div>
 
-      {/* ── Footer con redes sociales ─────────────────────────────────────── */}
-      <SocialFooter
-        redes={restaurant.redes_sociales ?? null}
-        name={restaurant.name}
-        eslogan={restaurant.eslogan ?? null}
-      />
-
+      <SocialFooter name={restaurant.name} />
       <div className="h-20 md:hidden" />
       <CartFloatingButton slug={slug} accent={accent} />
     </div>

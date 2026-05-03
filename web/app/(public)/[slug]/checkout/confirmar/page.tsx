@@ -5,8 +5,6 @@ import { useRouter, useParams } from 'next/navigation'
 import { useCartStore } from '@/lib/store/cart'
 import { fmtPrice } from '@/lib/fmt'
 
-const ACCENT = '#E63946'
-
 const STEPS = ['Datos', 'Despacho', 'Pago', 'Confirmar'] as const
 
 const DISPATCH_LABELS: Record<string, string> = {
@@ -22,7 +20,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   online: 'Online',
 }
 
-function ProgressBar({ current }: { current: number }) {
+function ProgressBar({ current, accent }: { current: number; accent: string }) {
   return (
     <div className="flex items-center gap-1 px-5 py-4">
       {STEPS.map((label, i) => {
@@ -33,11 +31,11 @@ function ProgressBar({ current }: { current: number }) {
             <div className="flex flex-col items-center gap-1">
               <div
                 className="h-2 w-2 rounded-full shrink-0"
-                style={{ backgroundColor: active || done ? ACCENT : '#D1D5DB' }}
+                style={{ backgroundColor: active || done ? accent : '#D1D5DB' }}
               />
               <span
                 className="text-[10px] font-medium whitespace-nowrap"
-                style={{ color: active ? ACCENT : done ? '#6B7280' : '#9CA3AF' }}
+                style={{ color: active ? accent : done ? '#6B7280' : '#9CA3AF' }}
               >
                 {label}
               </span>
@@ -45,7 +43,7 @@ function ProgressBar({ current }: { current: number }) {
             {i < STEPS.length - 1 && (
               <div
                 className="flex-1 h-px mb-3 mx-1"
-                style={{ backgroundColor: done ? ACCENT : '#E5E7EB' }}
+                style={{ backgroundColor: done ? accent : '#E5E7EB' }}
               />
             )}
           </div>
@@ -148,9 +146,10 @@ export default function CheckoutConfirmarPage() {
   const subtotal = useCartStore((s) => s.subtotal)
   const total = useCartStore((s) => s.total)
   const setOrderId = useCartStore((s) => s.setOrderId)
-  const moneda = useCartStore((s) => s.moneda)
-  const notas = useCartStore((s) => s.notas)
-  const setNotas = useCartStore((s) => s.setNotas)
+  const moneda     = useCartStore((s) => s.moneda)
+  const notas      = useCartStore((s) => s.notas)
+  const setNotas   = useCartStore((s) => s.setNotas)
+  const accent     = useCartStore((s) => s.accentColor)
 
   const [whatsappNumber, setWhatsappNumber] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -276,7 +275,7 @@ export default function CheckoutConfirmarPage() {
             </button>
             <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
           </div>
-          <ProgressBar current={3} />
+          <ProgressBar current={3} accent={accent} />
         </div>
 
         <div className="mx-4 mt-6 space-y-4">
@@ -358,7 +357,7 @@ export default function CheckoutConfirmarPage() {
             />
             <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between items-baseline">
               <span className="text-sm font-bold text-gray-900">Total</span>
-              <span className="text-lg font-bold" style={{ color: ACCENT }}>
+              <span className="text-lg font-bold" style={{ color: accent }}>
                 {fmt(currentTotal)}
               </span>
             </div>

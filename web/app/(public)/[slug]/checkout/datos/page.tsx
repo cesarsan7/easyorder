@@ -4,12 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useCartStore } from '@/lib/store/cart'
 
-const ACCENT = '#E63946'
 const PHONE_PREFIX = '+34'
 
 const STEPS = ['Datos', 'Despacho', 'Pago', 'Confirmar'] as const
 
-function ProgressBar({ current }: { current: number }) {
+function ProgressBar({ current, accent }: { current: number; accent: string }) {
   return (
     <div className="flex items-center gap-1 px-5 py-4">
       {STEPS.map((label, i) => {
@@ -20,13 +19,11 @@ function ProgressBar({ current }: { current: number }) {
             <div className="flex flex-col items-center gap-1">
               <div
                 className="h-2 w-2 rounded-full shrink-0"
-                style={{
-                  backgroundColor: active || done ? ACCENT : '#D1D5DB',
-                }}
+                style={{ backgroundColor: active || done ? accent : '#D1D5DB' }}
               />
               <span
                 className="text-[10px] font-medium whitespace-nowrap"
-                style={{ color: active ? ACCENT : done ? '#6B7280' : '#9CA3AF' }}
+                style={{ color: active ? accent : done ? '#6B7280' : '#9CA3AF' }}
               >
                 {label}
               </span>
@@ -34,7 +31,7 @@ function ProgressBar({ current }: { current: number }) {
             {i < STEPS.length - 1 && (
               <div
                 className="flex-1 h-px mb-3 mx-1"
-                style={{ backgroundColor: done ? ACCENT : '#E5E7EB' }}
+                style={{ backgroundColor: done ? accent : '#E5E7EB' }}
               />
             )}
           </div>
@@ -48,10 +45,11 @@ export default function CheckoutDatosPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
 
-  const isCartEmpty = useCartStore((s) => s.isCartEmpty)
-  const customerName = useCartStore((s) => s.customerName)
+  const isCartEmpty   = useCartStore((s) => s.isCartEmpty)
+  const customerName  = useCartStore((s) => s.customerName)
   const customerPhone = useCartStore((s) => s.customerPhone)
-  const setCustomer = useCartStore((s) => s.setCustomer)
+  const setCustomer   = useCartStore((s) => s.setCustomer)
+  const accent        = useCartStore((s) => s.accentColor)
 
   const [name, setName] = useState(customerName)
   const [phone, setPhone] = useState(customerPhone)
@@ -114,7 +112,7 @@ export default function CheckoutDatosPage() {
             </button>
             <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
           </div>
-          <ProgressBar current={0} />
+          <ProgressBar current={0} accent={accent} />
         </div>
 
         {/* Form card */}
@@ -139,7 +137,7 @@ export default function CheckoutDatosPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition"
-              style={{ '--tw-ring-color': ACCENT } as React.CSSProperties}
+              style={{ '--tw-ring-color': accent } as React.CSSProperties}
             />
           </div>
 
@@ -164,7 +162,7 @@ export default function CheckoutDatosPage() {
                 onChange={(e) => setPhone(e.target.value)}
                 onBlur={handlePhoneBlur}
                 className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition"
-                style={{ '--tw-ring-color': ACCENT } as React.CSSProperties}
+                style={{ '--tw-ring-color': accent } as React.CSSProperties}
               />
             </div>
             {lookupLoading && (
@@ -181,7 +179,7 @@ export default function CheckoutDatosPage() {
             onClick={handleContinue}
             disabled={!canContinue}
             className="w-full rounded-2xl py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: ACCENT }}
+            style={{ backgroundColor: accent }}
           >
             Continuar
           </button>

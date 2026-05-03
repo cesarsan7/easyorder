@@ -5,8 +5,6 @@ import { useRouter, useParams } from 'next/navigation'
 import { useCartStore, CartItem } from '@/lib/store/cart'
 import { fmtPrice } from '@/lib/fmt'
 
-const ACCENT = '#E63946'
-
 function TrashIcon() {
   return (
     <svg
@@ -37,12 +35,13 @@ export default function CarritoPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
 
-  const items = useCartStore((s) => s.items)
-  const updateQty = useCartStore((s) => s.updateQty)
+  const items      = useCartStore((s) => s.items)
+  const updateQty  = useCartStore((s) => s.updateQty)
   const removeItem = useCartStore((s) => s.removeItem)
   const subtotalFn = useCartStore((s) => s.subtotal)
-  const subtotal = subtotalFn()
-  const moneda = useCartStore((s) => s.moneda)
+  const subtotal   = subtotalFn()
+  const moneda     = useCartStore((s) => s.moneda)
+  const accent     = useCartStore((s) => s.accentColor)
   const fmt = (n: number) => fmtPrice(n, moneda)
 
   const [validating, setValidating] = useState(false)
@@ -144,7 +143,7 @@ export default function CarritoPage() {
         <button
           onClick={() => router.push(`/${slug}/menu`)}
           className="rounded-2xl py-3 px-8 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: ACCENT }}
+          style={{ backgroundColor: accent }}
         >
           Volver al menú
         </button>
@@ -242,7 +241,7 @@ export default function CarritoPage() {
                     <button
                       onClick={() => handleQtyChange(item, +1)}
                       className="h-8 w-8 rounded-full text-white text-lg flex items-center justify-center hover:opacity-90 leading-none"
-                      style={{ backgroundColor: ACCENT }}
+                      style={{ backgroundColor: accent }}
                       aria-label="Aumentar cantidad"
                     >
                       +
@@ -297,7 +296,7 @@ export default function CarritoPage() {
             onClick={handleContinue}
             disabled={validating || items.length === 0}
             className="w-full rounded-2xl py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: ACCENT }}
+            style={{ backgroundColor: accent }}
           >
             {validating ? 'Verificando precios…' : 'Continuar con el pedido'}
           </button>

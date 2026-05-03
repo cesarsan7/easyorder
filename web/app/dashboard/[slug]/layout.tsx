@@ -3,23 +3,20 @@
 import { useParams, usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { BrandingProvider, useBranding } from '@/lib/context/branding'
 
-// Design tokens -- Riday-inspired light sidebar palette
-const ACCENT       = '#6366F1'  // indigo-500 -- modern SaaS accent
-const ACCENT_LIGHT = '#EEF2FF'  // indigo-50
-const ACCENT_TEXT  = '#4338CA'  // indigo-700
 const SIDEBAR_BG   = '#FFFFFF'
-const SIDEBAR_BDR  = '#E5E7EB'  // gray-200
-const SIDEBAR_TEXT = '#6B7280'  // gray-500
-const SIDEBAR_HOVER = '#F9FAFB' // gray-50
+const SIDEBAR_BDR  = '#E5E7EB'
+const SIDEBAR_TEXT = '#6B7280'
+const SIDEBAR_HOVER = '#F9FAFB'
 
 const NAV = [
-  { path: '',               icon: '\u25C8', label: 'Pedidos'       },
-  { path: '/metricas',      icon: '\u25A6', label: 'M\u00e9tricas'  },
-  { path: '/menu',          icon: '\u2261', label: 'Men\u00fa'      },
-  { path: '/clientes',      icon: '\u2299', label: 'Clientes'      },
-  { path: '/configuracion', icon: '\u2699', label: 'Configuraci\u00f3n' },
-  { path: '/escalaciones',  icon: '\u2691', label: 'Derivados'     },
+  { path: '',               icon: '◈', label: 'Pedidos'        },
+  { path: '/metricas',      icon: '▦', label: 'Métricas'       },
+  { path: '/menu',          icon: '≡', label: 'Menú'           },
+  { path: '/clientes',      icon: '⊙', label: 'Clientes'       },
+  { path: '/configuracion', icon: '⚙', label: 'Configuración'  },
+  { path: '/escalaciones',  icon: '⚑', label: 'Derivados'      },
 ]
 
 interface NotifData {
@@ -52,9 +49,15 @@ function useLayoutNotifs(slug: string, authFetch: ReturnType<typeof useAuthFetch
   return data
 }
 
+// ─── Sidebar (desktop) ────────────────────────────────────────────────────────
 function DashboardSidebar({ slug, notifBadge }: { slug: string; notifBadge: number }) {
   const router   = useRouter()
   const pathname = usePathname()
+  const { theme, restaurantName, eslogan, logoUrl } = useBranding()
+
+  const ACCENT       = theme.accent
+  const ACCENT_LIGHT = theme.accentLight
+  const ACCENT_TEXT  = theme.accentText
 
   function activePath() {
     const base = `/dashboard/${slug}`
@@ -63,23 +66,42 @@ function DashboardSidebar({ slug, notifBadge }: { slug: string; notifBadge: numb
   }
   const active = activePath()
 
+  const displayName = restaurantName ?? slug
+
   return (
     <aside
       className="hidden lg:flex flex-col shrink-0 h-screen sticky top-0 overflow-y-auto"
       style={{ width: 220, backgroundColor: SIDEBAR_BG, borderRight: `1px solid ${SIDEBAR_BDR}` }}
     >
-      {/* Logo */}
+      {/* Logo / Brand */}
       <div className="px-5 py-5" style={{ borderBottom: `1px solid ${SIDEBAR_BDR}` }}>
         <div className="flex items-center gap-2.5">
-          <div
-            className="h-9 w-9 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-sm"
-            style={{ backgroundColor: ACCENT }}
-          >
-            E
-          </div>
-          <div>
-            <p className="text-sm font-bold leading-none" style={{ color: '#111827' }}>EasyOrder</p>
-            <p className="text-xs mt-0.5 capitalize truncate" style={{ color: SIDEBAR_TEXT, maxWidth: 120 }}>{slug}</p>
+          {logoUrl ? (
+            <div className="h-9 w-9 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoUrl} alt={displayName} className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div
+              className="h-9 w-9 rounded-xl flex items-center justify-center font-black text-sm text-white shadow-sm shrink-0"
+              style={{ backgroundColor: ACCENT }}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-bold leading-none truncate" style={{ color: '#111827' }}>
+              {displayName}
+            </p>
+            {eslogan ? (
+              <p className="text-xs mt-0.5 truncate" style={{ color: SIDEBAR_TEXT, maxWidth: 130 }}>
+                {eslogan}
+              </p>
+            ) : (
+              <p className="text-xs mt-0.5 capitalize truncate" style={{ color: SIDEBAR_TEXT, maxWidth: 130 }}>
+                {slug}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -121,20 +143,42 @@ function DashboardSidebar({ slug, notifBadge }: { slug: string; notifBadge: numb
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-4 pb-5 pt-3" style={{ borderTop: `1px solid ${SIDEBAR_BDR}` }}>
-        <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>EasyOrder SaaS</p>
-        <p className="text-xs mt-0.5" style={{ color: '#CBD5E1' }}>MVP v0.1</p>
+      {/* Footer — botón "Ver menú" + versión */}
+      <div className="px-4 pb-5 pt-3 space-y-2" style={{ borderTop: `1px solid ${SIDEBAR_BDR}` }}>
+        <a
+          href={`/${slug}/menu`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-xs font-medium transition-colors"
+          style={{ color: ACCENT, backgroundColor: ACCENT_LIGHT }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+            <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clipRule="evenodd" />
+            <path fillRule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clipRule="evenodd" />
+          </svg>
+          Ver menú público
+        </a>
+        <div>
+          <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>EasyOrder SaaS</p>
+          <p className="text-xs mt-0.5" style={{ color: '#CBD5E1' }}>MVP v0.1</p>
+        </div>
       </div>
     </aside>
   )
 }
 
+// ─── Mobile top bar ───────────────────────────────────────────────────────────
 function MobileTopBar({ slug, notifBadge }: { slug: string; notifBadge: number }) {
   const router   = useRouter()
   const pathname = usePathname()
+  const { theme, restaurantName } = useBranding()
+  const ACCENT       = theme.accent
+  const ACCENT_LIGHT = theme.accentLight
+  const ACCENT_TEXT  = theme.accentText
+
   const [open, setOpen] = useState(false)
   const active = pathname.replace(`/dashboard/${slug}`, '') || ''
+  const displayName = restaurantName ?? slug
 
   const currentNav = NAV.find(n => n.path === active || (n.path !== '' && active.startsWith(n.path))) ?? NAV[0]
 
@@ -145,7 +189,9 @@ function MobileTopBar({ slug, notifBadge }: { slug: string; notifBadge: number }
     >
       <div className="flex items-center gap-3">
         <div className="h-7 w-7 rounded-lg flex items-center justify-center text-white font-black text-xs"
-          style={{ backgroundColor: ACCENT }}>E</div>
+          style={{ backgroundColor: ACCENT }}>
+          {displayName.charAt(0).toUpperCase()}
+        </div>
         <span className="text-sm font-semibold" style={{ color: '#111827' }}>{currentNav.label}</span>
       </div>
       <div className="flex items-center gap-2">
@@ -173,7 +219,7 @@ function MobileTopBar({ slug, notifBadge }: { slug: string; notifBadge: number }
           <div className="fixed top-0 left-0 bottom-0 z-40 w-64 flex flex-col py-4"
             style={{ backgroundColor: SIDEBAR_BG, borderRight: `1px solid ${SIDEBAR_BDR}` }}>
             <div className="px-5 pb-4 mb-2" style={{ borderBottom: `1px solid ${SIDEBAR_BDR}` }}>
-              <p className="text-sm font-bold" style={{ color: '#111827' }}>EasyOrder</p>
+              <p className="text-sm font-bold" style={{ color: '#111827' }}>{displayName}</p>
               <p className="text-xs capitalize" style={{ color: SIDEBAR_TEXT }}>{slug}</p>
             </div>
             <nav className="flex-1 px-3 space-y-0.5">
@@ -200,6 +246,22 @@ function MobileTopBar({ slug, notifBadge }: { slug: string; notifBadge: number }
                 )
               })}
             </nav>
+            <div className="px-4 pt-3" style={{ borderTop: `1px solid ${SIDEBAR_BDR}` }}>
+              <a
+                href={`/${slug}/menu`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-xs font-medium"
+                style={{ color: ACCENT, backgroundColor: ACCENT_LIGHT }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+                  <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clipRule="evenodd" />
+                </svg>
+                Ver menu publico
+              </a>
+            </div>
           </div>
         </>
       )}
@@ -207,7 +269,7 @@ function MobileTopBar({ slug, notifBadge }: { slug: string; notifBadge: number }
   )
 }
 
-
+// Root layout
 export default function DashboardSlugLayout({ children }: { children: React.ReactNode }) {
   const params    = useParams<{ slug: string }>()
   const slug      = params.slug
@@ -215,13 +277,14 @@ export default function DashboardSlugLayout({ children }: { children: React.Reac
   const notifData = useLayoutNotifs(slug, authFetch)
 
   return (
-    <div className="flex min-h-screen" style={{ backgroundColor: '#F8FAFC' }}>
-      <DashboardSidebar slug={slug} notifBadge={notifData.badge} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <MobileTopBar slug={slug} notifBadge={notifData.badge} />
-        {children}
+    <BrandingProvider slug={slug} authFetch={authFetch}>
+      <div className="flex min-h-screen" style={{ backgroundColor: '#F8FAFC' }}>
+        <DashboardSidebar slug={slug} notifBadge={notifData.badge} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <MobileTopBar slug={slug} notifBadge={notifData.badge} />
+          {children}
+        </div>
       </div>
-    </div>
+    </BrandingProvider>
   )
-
 }

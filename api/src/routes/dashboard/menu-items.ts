@@ -28,6 +28,7 @@ menuItemsRoutes.get('/:slug/menu/items', async (c) => {
         mi.is_pizza,
         mi.is_active,
         mi.tags,
+        mi.image_url,
         mi.restaurante_id
       FROM menu_item mi
       WHERE mi.restaurante_id = ${restaurante_id}
@@ -131,6 +132,19 @@ menuItemsRoutes.post('/:slug/menu/items', async (c) => {
     tags = t.length > 0 ? t : null;
   }
 
+  // --- Validate image_url (optional) ------------------------------------------
+  let image_url: string | null = null;
+  if ('image_url' in raw && raw['image_url'] !== null && raw['image_url'] !== undefined) {
+    if (typeof raw['image_url'] !== 'string') {
+      return c.json({ error: 'invalid_image_url', detail: 'must be a string or null' }, 400);
+    }
+    const u = raw['image_url'].trim();
+    if (u.length > 500) {
+      return c.json({ error: 'image_url_too_long', max_length: 500, received: u.length }, 400);
+    }
+    image_url = u.length > 0 ? u : null;
+  }
+
   try {
     // Verify menu_category_id belongs to this tenant before inserting.
     const catRows = await sql<{ menu_category_id: number }[]>`
@@ -147,10 +161,10 @@ menuItemsRoutes.post('/:slug/menu/items', async (c) => {
 
     const rows = await sql<ItemRow[]>`
       INSERT INTO menu_item
-        (restaurante_id, menu_category_id, name, description, is_pizza, is_active, tags)
+        (restaurante_id, menu_category_id, name, description, is_pizza, is_active, tags, image_url)
       VALUES
-        (${restaurante_id}, ${menu_category_id}, ${name}, ${description}, ${is_pizza}, ${is_active}, ${tags})
-      RETURNING menu_item_id, menu_category_id, name, description, is_pizza, is_active, tags, restaurante_id
+        (${restaurante_id}, ${menu_category_id}, ${name}, ${description}, ${is_pizza}, ${is_active}, ${tags}, ${image_url})
+      RETURNING menu_item_id, menu_category_id, name, description, is_pizza, is_active, tags, image_url, restaurante_id
     `;
 
     return c.json(mapItem(rows[0]), 201);
@@ -251,6 +265,21 @@ menuItemsRoutes.patch('/:slug/menu/items/:item_id', async (c) => {
     updates['tags'] = raw['tags'];
   }
 
+  if ('image_url' in raw) {
+    // null is accepted to clear the image
+    if (raw['image_url'] !== null) {
+      if (typeof raw['image_url'] !== 'string') {
+        return c.json({ error: 'invalid_image_url', detail: 'must be a string or null' }, 400);
+      }
+      if ((raw['image_url'] as string).length > 500) {
+        return c.json({ error: 'image_url_too_long', max_length: 500, received: (raw['image_url'] as string).length }, 400);
+      }
+      updates['image_url'] = (raw['image_url'] as string).trim() || null;
+    } else {
+      updates['image_url'] = null;
+    }
+  }
+
   if (Object.keys(updates).length === 0) {
     return c.json({ error: 'no_valid_fields', detail: 'body must include at least one updatable field' }, 400);
   }
@@ -276,7 +305,7 @@ menuItemsRoutes.patch('/:slug/menu/items/:item_id', async (c) => {
       SET ${sql(updates)}
       WHERE menu_item_id  = ${item_id}
         AND restaurante_id = ${restaurante_id}
-      RETURNING menu_item_id, menu_category_id, name, description, is_pizza, is_active, tags, restaurante_id
+      RETURNING menu_item_id, menu_category_id, name, description, is_pizza, is_active, tags, image_url, restaurante_id
     `;
 
     if (rows.length === 0) {
@@ -312,7 +341,7 @@ menuItemsRoutes.delete('/:slug/menu/items/:item_id', async (c) => {
       SET is_active = false
       WHERE menu_item_id  = ${item_id}
         AND restaurante_id = ${restaurante_id}
-      RETURNING menu_item_id, menu_category_id, name, description, is_pizza, is_active, tags, restaurante_id
+      RETURNING menu_item_id, menu_category_id, name, description, is_pizza, is_active, tags, image_url, restaurante_id
     `;
 
     if (rows.length === 0) {
@@ -447,19 +476,22 @@ menuItemsRoutes.put('/:slug/menu/items/:item_id/extras', async (c) => {
   }
 });
 
+// -------
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 interface ItemRow {
-  menu_item_id:    number;
+  menu_item_id:     number;
   menu_category_id: number;
-  name:            string;
-  description:     string | null;
-  is_pizza:        boolean;
-  is_active:       boolean;
-  tags:            string | null;
-  restaurante_id:  number;
+  name:             string;
+  description:      string | null;
+  is_pizza:         boolean;
+  is_active:        boolean;
+  tags:             string | null;
+  image_url:        string | null;
+  restaurante_id:   number;
 }
 
 interface ExtraRow {
@@ -489,7 +521,7 @@ function mapItem(row: ItemRow) {
     is_pizza:         row.is_pizza,
     is_active:        row.is_active,
     tags:             row.tags ?? null,
-    image_url:        null,  // pending migration: ADD COLUMN image_url to menu_item
+    image_url:        row.image_url ?? null,
   };
 }
 

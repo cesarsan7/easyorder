@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useCartStore } from '@/lib/store/cart'
 
-const ACCENT = '#E63946'
-
 const STEPS = ['Datos', 'Despacho', 'Pago', 'Confirmar'] as const
 
 const METHOD_ICONS: Record<string, string> = {
@@ -24,7 +22,7 @@ const METHOD_LABELS: Record<string, string> = {
   online: 'Online',
 }
 
-function ProgressBar({ current }: { current: number }) {
+function ProgressBar({ current, accent }: { current: number; accent: string }) {
   return (
     <div className="flex items-center gap-1 px-5 py-4">
       {STEPS.map((label, i) => {
@@ -35,11 +33,11 @@ function ProgressBar({ current }: { current: number }) {
             <div className="flex flex-col items-center gap-1">
               <div
                 className="h-2 w-2 rounded-full shrink-0"
-                style={{ backgroundColor: active || done ? ACCENT : '#D1D5DB' }}
+                style={{ backgroundColor: active || done ? accent : '#D1D5DB' }}
               />
               <span
                 className="text-[10px] font-medium whitespace-nowrap"
-                style={{ color: active ? ACCENT : done ? '#6B7280' : '#9CA3AF' }}
+                style={{ color: active ? accent : done ? '#6B7280' : '#9CA3AF' }}
               >
                 {label}
               </span>
@@ -47,7 +45,7 @@ function ProgressBar({ current }: { current: number }) {
             {i < STEPS.length - 1 && (
               <div
                 className="flex-1 h-px mb-3 mx-1"
-                style={{ backgroundColor: done ? ACCENT : '#E5E7EB' }}
+                style={{ backgroundColor: done ? accent : '#E5E7EB' }}
               />
             )}
           </div>
@@ -61,8 +59,9 @@ export default function CheckoutPagoPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
 
-  const dispatchType = useCartStore((s) => s.dispatchType)
+  const dispatchType     = useCartStore((s) => s.dispatchType)
   const setPaymentMethod = useCartStore((s) => s.setPaymentMethod)
+  const accent           = useCartStore((s) => s.accentColor)
 
   const [methods, setMethods] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,7 +111,7 @@ export default function CheckoutPagoPage() {
             </button>
             <h1 className="text-xl font-bold text-gray-900">Checkout</h1>
           </div>
-          <ProgressBar current={2} />
+          <ProgressBar current={2} accent={accent} />
         </div>
 
         <div className="mx-4 mt-6 space-y-3">
@@ -137,7 +136,7 @@ export default function CheckoutPagoPage() {
                     onClick={() => setSelected(method)}
                     className="w-full flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left transition-all"
                     style={{
-                      borderColor: isSelected ? ACCENT : '#E5E7EB',
+                      borderColor: isSelected ? accent : '#E5E7EB',
                       backgroundColor: isSelected ? '#FFF5F5' : 'white',
                     }}
                   >
@@ -146,14 +145,14 @@ export default function CheckoutPagoPage() {
                     </span>
                     <span
                       className="text-sm font-semibold"
-                      style={{ color: isSelected ? ACCENT : '#111827' }}
+                      style={{ color: isSelected ? accent : '#111827' }}
                     >
                       {METHOD_LABELS[method] ?? method}
                     </span>
                     {isSelected && (
                       <span
                         className="ml-auto w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: ACCENT }}
+                        style={{ backgroundColor: accent }}
                       >
                         <svg
                           width="10"
@@ -187,7 +186,7 @@ export default function CheckoutPagoPage() {
             onClick={handleContinue}
             disabled={!selected}
             className="w-full rounded-2xl py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: ACCENT }}
+            style={{ backgroundColor: accent }}
           >
             Continuar
           </button>

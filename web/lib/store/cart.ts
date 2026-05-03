@@ -34,6 +34,7 @@ interface CartState {
   orderId: string | null
   moneda: string
   notas: string
+  accentColor: string
 }
 
 export interface ZoneInfo {
@@ -54,6 +55,7 @@ interface CartActions {
   setOrderId: (id: string) => void
   setMoneda: (moneda: string) => void
   setNotas: (notas: string) => void
+  setAccentColor: (color: string) => void
   subtotal: () => number
   total: () => number
   itemCount: () => number
@@ -77,11 +79,12 @@ const initialState: CartState = {
   orderId: null,
   moneda: 'CLP',
   notas: '',
+  accentColor: '#6366F1',
 }
 
 function itemKey(itemId: number, variantId: number | null, extras: CartItemExtra[]): string {
   const extraIds = [...extras].sort((a, b) => a.id - b.id).map((e) => e.id).join(',')
-  return `${itemId}:${variantId ?? 'none'}:${extraIds}`
+  return itemId + ':' + (variantId ?? 'none') + ':' + extraIds
 }
 
 function isSameItem(
@@ -140,10 +143,10 @@ export const useCartStore = create<CartStore>()(
           dispatchType:        type,
           address,
           deliveryCost:        cost,
-          zoneId:              zone?.id              ?? null,
-          zoneName:            zone?.name            ?? null,
-          estimatedMinutesMin: zone?.estMin          ?? null,
-          estimatedMinutesMax: zone?.estMax          ?? null,
+          zoneId:              zone?.id   ?? null,
+          zoneName:            zone?.name ?? null,
+          estimatedMinutesMin: zone?.estMin ?? null,
+          estimatedMinutesMax: zone?.estMax ?? null,
         }),
 
       setPaymentMethod: (method) => set({ paymentMethod: method }),
@@ -151,6 +154,8 @@ export const useCartStore = create<CartStore>()(
       setMoneda: (moneda) => set({ moneda }),
 
       setNotas: (notas) => set({ notas }),
+
+      setAccentColor: (color) => set({ accentColor: color }),
 
       setOrderId: (id) => set({ orderId: id }),
 
@@ -165,13 +170,11 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: 'easyorder-cart',
-      // Guard SSR: sessionStorage no existe en Node.js.
-      // Se usa un noop storage en servidor para que persist no lance ReferenceError.
       storage: createJSONStorage(() => {
         if (typeof window === 'undefined') {
           return {
-            getItem: () => null,
-            setItem: () => {},
+            getItem:    () => null,
+            setItem:    () => {},
             removeItem: () => {},
           } as unknown as Storage
         }

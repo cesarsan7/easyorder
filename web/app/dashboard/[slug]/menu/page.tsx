@@ -1,8 +1,13 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { useBranding } from '@/lib/context/branding'
+
+// Accent color context — set in MenuPage, consumed in sub-components.
+const AccentCtx = createContext('#6366F1')
+const useAccent = () => useContext(AccentCtx)
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,6 +26,7 @@ interface Item {
   is_pizza: boolean
   is_active: boolean
   tags: string | null
+  image_url: string | null
 }
 
 interface Variant {
@@ -42,8 +48,6 @@ interface Extra {
 }
 
 type Tab = 'productos' | 'extras'
-
-const PRIMARY = '#6366F1'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -135,6 +139,7 @@ function CategoryModal({
   onSave: (data: { name: string; sort_order: number | null; is_active: boolean }) => Promise<void>
   onClose: () => void
 }) {
+  const accent = useAccent()
   const [name, setName] = useState(initial?.name ?? '')
   const [sortOrder, setSortOrder] = useState(initial?.sort_order?.toString() ?? '')
   const [isActive, setIsActive] = useState(initial?.is_active ?? true)
@@ -172,7 +177,7 @@ function CategoryModal({
           <button onClick={onClose} className="flex-1 rounded-xl border border-gray-200 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
           <button onClick={submit} disabled={saving}
             className="flex-1 rounded-xl py-2 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: PRIMARY }}>
+            style={{ backgroundColor: accent }}>
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
@@ -191,12 +196,14 @@ function ItemModal({
   onSave: (data: Partial<Item>) => Promise<void>
   onClose: () => void
 }) {
+  const accent = useAccent()
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [categoryId, setCategoryId] = useState<number>(initial?.menu_category_id ?? (categories[0]?.menu_category_id ?? 0))
   const [isPizza, setIsPizza] = useState(initial?.is_pizza ?? false)
   const [isActive, setIsActive] = useState(initial?.is_active ?? true)
   const [tags, setTags] = useState(initial?.tags ?? '')
+  const [imageUrl, setImageUrl] = useState(initial?.image_url ?? '')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
@@ -212,6 +219,7 @@ function ItemModal({
         is_pizza: isPizza,
         is_active: isActive,
         tags: tags.trim() || null,
+        image_url: imageUrl.trim() || null,
       })
       onClose()
     } catch (e: unknown) {
@@ -240,6 +248,22 @@ function ItemModal({
         </div>
         <TextareaField label="Descripción" value={description} onChange={setDescription} maxLength={500} />
         <InputField label="Tags (separados por coma)" value={tags} onChange={setTags} placeholder="pizza, sin gluten, picante" maxLength={300} />
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">URL de imagen (opcional)</label>
+          <div className="flex gap-2 items-start">
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={e => setImageUrl(e.target.value)}
+              placeholder="https://…"
+              className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+            />
+            {imageUrl.trim() && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl.trim()} alt="preview" className="h-10 w-10 rounded-lg object-cover border border-gray-200 shrink-0" onError={e => (e.currentTarget.style.display = 'none')} />
+            )}
+          </div>
+        </div>
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-600">Es pizza</span>
           <ToggleSwitch value={isPizza} onChange={setIsPizza} />
@@ -253,7 +277,7 @@ function ItemModal({
           <button onClick={onClose} className="flex-1 rounded-xl border border-gray-200 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
           <button onClick={submit} disabled={saving}
             className="flex-1 rounded-xl py-2 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: PRIMARY }}>
+            style={{ backgroundColor: accent }}>
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
@@ -271,6 +295,7 @@ function VariantModal({
   onSave: (data: Partial<Variant>) => Promise<void>
   onClose: () => void
 }) {
+  const accent = useAccent()
   const [variantName, setVariantName] = useState(initial?.variant_name ?? '')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '0')
   const [sku, setSku] = useState(initial?.sku ?? '')
@@ -313,7 +338,7 @@ function VariantModal({
           <button onClick={onClose} className="flex-1 rounded-xl border border-gray-200 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
           <button onClick={submit} disabled={saving}
             className="flex-1 rounded-xl py-2 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: PRIMARY }}>
+            style={{ backgroundColor: accent }}>
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
@@ -331,6 +356,7 @@ function ExtraModal({
   onSave: (data: Partial<Extra>) => Promise<void>
   onClose: () => void
 }) {
+  const accent = useAccent()
   const [name, setName] = useState(initial?.name ?? '')
   const [price, setPrice] = useState(initial?.price?.toString() ?? '0')
   const [allergens, setAllergens] = useState(initial?.allergens ?? '')
@@ -368,7 +394,7 @@ function ExtraModal({
           <button onClick={onClose} className="flex-1 rounded-xl border border-gray-200 py-2 text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
           <button onClick={submit} disabled={saving}
             className="flex-1 rounded-xl py-2 text-sm font-semibold text-white disabled:opacity-60"
-            style={{ backgroundColor: PRIMARY }}>
+            style={{ backgroundColor: accent }}>
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
@@ -380,6 +406,7 @@ function ExtraModal({
 // ─── Variants Sub-panel ───────────────────────────────────────────────────────
 
 function VariantsPanel({ item, slug, authFetch }: { item: Item; slug: string; authFetch: ReturnType<typeof useAuthFetch> }) {
+  const accent = useAccent()
   const [variants, setVariants] = useState<Variant[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'new' | Variant | null>(null)
@@ -424,7 +451,7 @@ function VariantsPanel({ item, slug, authFetch }: { item: Item; slug: string; au
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Variantes</span>
         <button onClick={() => setModal('new')}
           className="text-xs font-semibold px-2 py-1 rounded-lg text-white"
-          style={{ backgroundColor: PRIMARY }}>+ variante</button>
+          style={{ backgroundColor: accent }}>+ variante</button>
       </div>
       {variants.length === 0 ? (
         <p className="text-xs text-gray-400 italic">Sin variantes — este producto tiene precio único</p>
@@ -497,6 +524,14 @@ function ItemRow({
         <button onClick={() => setExpanded(e => !e)} className="text-gray-400 text-xs w-4 shrink-0">
           {expanded ? '▾' : '▸'}
         </button>
+        {item.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.image_url} alt={item.name} className="h-9 w-9 rounded-lg object-cover border border-gray-100 shrink-0" />
+        ) : (
+          <div className="h-9 w-9 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-gray-300 text-xs select-none">
+            🖼
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className={`text-sm font-medium ${item.is_active ? 'text-gray-900' : 'text-gray-400'}`}>{item.name}</span>
@@ -612,6 +647,7 @@ function CategorySection({
 // ─── Extras Panel ─────────────────────────────────────────────────────────────
 
 function ExtrasPanel({ slug, authFetch }: { slug: string; authFetch: ReturnType<typeof useAuthFetch> }) {
+  const accent = useAccent()
   const [extras, setExtras] = useState<Extra[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'new' | Extra | null>(null)
@@ -658,7 +694,7 @@ function ExtrasPanel({ slug, authFetch }: { slug: string; authFetch: ReturnType<
         <p className="text-xs text-gray-500">Ingredientes o complementos opcionales que se pueden añadir a cualquier producto.</p>
         <button onClick={() => setModal('new')}
           className="shrink-0 px-3 py-2 rounded-xl text-xs font-semibold text-white"
-          style={{ backgroundColor: PRIMARY }}>+ Extra</button>
+          style={{ backgroundColor: accent }}>+ Extra</button>
       </div>
 
       {extras.length === 0 ? (
@@ -699,6 +735,8 @@ export default function MenuPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
   const authFetch = useAuthFetch()
+  const { theme } = useBranding()
+  const accent = theme.accent
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
 
   const [tab, setTab] = useState<Tab>('productos')
@@ -776,12 +814,13 @@ export default function MenuPage() {
   const allExpanded = sortedCategories.length > 0 && sortedCategories.every(c => expandedCats.has(c.menu_category_id))
 
   return (
+    <AccentCtx.Provider value={accent}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
         <div
           className="h-8 w-8 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-          style={{ backgroundColor: PRIMARY }}
+          style={{ backgroundColor: accent }}
         >
           E
         </div>
@@ -834,7 +873,7 @@ export default function MenuPage() {
                 <button
                   onClick={() => setAddCatModal(true)}
                   className="px-3 py-2 rounded-xl text-xs font-semibold text-white"
-                  style={{ backgroundColor: PRIMARY }}
+                  style={{ backgroundColor: accent }}
                 >
                   + Categoría
                 </button>
@@ -855,7 +894,7 @@ export default function MenuPage() {
                 <button
                   onClick={() => setAddCatModal(true)}
                   className="mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
-                  style={{ backgroundColor: PRIMARY }}
+                  style={{ backgroundColor: accent }}
                 >
                   + Nueva categoría
                 </button>
@@ -891,5 +930,6 @@ export default function MenuPage() {
         <CategoryModal onSave={handleAddCategory} onClose={() => setAddCatModal(false)} />
       )}
     </div>
+    </AccentCtx.Provider>
   )
 }
