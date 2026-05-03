@@ -24,7 +24,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
   // Q3 has its own .catch() because restaurante_config.restaurante_id column
   // is a pending migration (CRÍTICO-2): if it doesn't exist yet, Q3 fails
   // gracefully and is_open_override falls back to null without breaking Q1/Q2.
-  const [restauranteRows, horariosRows, overrideRows] = await Promise.all([
+  const [restauranteRows, horariosRows, overrideRows, brandingRows] = await Promise.all([
 
     // Q1: Public restaurant fields. datos_bancarios / lat / long excluded explicitly.
     sql<RestauranteRow[]>`
@@ -35,10 +35,6 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
         descripcion,
         logo_url,
         brand_color,
-        eslogan,
-        texto_banner,
-        redes_sociales,
-        theme_id,
         direccion,
         delivery_enabled,
         pickup_enabled,
@@ -82,6 +78,15 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
         AND restaurante_id = ${restaurante_id}
       LIMIT 1
     `.catch(() => [] as { config_value: string }[]),
+
+    // Q4: Branding fields added by M-13 + M-14.
+    // Tolerant: if migrations not applied yet, falls back to [] silently.
+    sql<{ eslogan: string | null; texto_banner: string | null; redes_sociales: unknown; theme_id: string | null }[]>`
+      SELECT eslogan, texto_banner, redes_sociales, theme_id
+      FROM restaurante
+      WHERE id = ${restaurante_id}
+      LIMIT 1
+    `.catch(() => [] as { eslogan: null; texto_banner: null; redes_sociales: null; theme_id: null }[]),
   ]);
 
   // MEDIO-1: guard against race condition where restaurant is deleted between
@@ -119,10 +124,10 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
     description:         r.descripcion,
     logo_url:            r.logo_url,
     brand_color:         r.brand_color ?? '#6366F1',
-    eslogan:             r.eslogan             ?? null,
-    texto_banner:        r.texto_banner        ?? null,
-    redes_sociales:      r.redes_sociales      ?? null,
-    theme_id:            r.theme_id            ?? null,
+    eslogan:             brandingRows[0]?.eslogan      ?? null,
+    texto_banner:        brandingRows[0]?.texto_banner ?? null,
+    redes_sociales:      (brandingRows[0]?.redes_sociales as Array<{ red: string; url: string }> | null) ?? null,
+    theme_id:            brandingRows[0]?.theme_id     ?? null,
     address:             r.direccion,
     delivery_enabled:    r.delivery_enabled ?? true,
     pickup_enabled:      r.pickup_enabled ?? true,
@@ -904,10 +909,6 @@ interface RestauranteRow {
   descripcion: string | null;
   logo_url: string | null;
   brand_color: string | null;
-  eslogan: string | null;
-  texto_banner: string | null;
-  redes_sociales: Array<{ red: string; url: string }> | null;
-  theme_id: string | null;
   direccion: string | null;
   telefono: string | null;
   moneda: string;

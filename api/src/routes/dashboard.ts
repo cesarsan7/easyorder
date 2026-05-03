@@ -1124,20 +1124,29 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
   const restaurante_id = c.get('restaurante_id');
 
   try {
-    const rows = await sql<RestauranteFullRow[]>`
-      SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
-             datos_bancarios, moneda, payment_methods,
-             brand_color, logo_url, eslogan, texto_banner, redes_sociales, theme_id
-      FROM   restaurante
-      WHERE  id = ${restaurante_id}
-      LIMIT  1
-    `;
+    const [rows, brandingRows] = await Promise.all([
+      sql<RestauranteFullRow[]>`
+        SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
+               datos_bancarios, moneda, payment_methods, brand_color, logo_url
+        FROM   restaurante
+        WHERE  id = ${restaurante_id}
+        LIMIT  1
+      `,
+      // Branding fields from M-13 + M-14 — tolerant if migrations not applied yet
+      sql<{ eslogan: string | null; texto_banner: string | null; redes_sociales: unknown; theme_id: string | null }[]>`
+        SELECT eslogan, texto_banner, redes_sociales, theme_id
+        FROM   restaurante
+        WHERE  id = ${restaurante_id}
+        LIMIT  1
+      `.catch(() => [] as { eslogan: null; texto_banner: null; redes_sociales: null; theme_id: null }[]),
+    ]);
 
     if (rows.length === 0) {
       return c.json({ error: 'restaurant_not_found' }, 404);
     }
 
     const r = rows[0];
+    const b = brandingRows[0] ?? {};
     return c.json({
       nombre:             r.nombre,
       telefono:           r.telefono           ?? null,
@@ -1147,12 +1156,12 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
       datos_bancarios:    r.datos_bancarios     ?? null,
       moneda:             r.moneda              ?? 'CLP',
       payment_methods:    Array.isArray(r.payment_methods) ? r.payment_methods : null,
-      brand_color:        (r as unknown as Record<string, unknown>)['brand_color']    ?? null,
-      logo_url:           (r as unknown as Record<string, unknown>)['logo_url']       ?? null,
-      eslogan:            (r as unknown as Record<string, unknown>)['eslogan']        ?? null,
-      texto_banner:       (r as unknown as Record<string, unknown>)['texto_banner']   ?? null,
-      redes_sociales:     (r as unknown as Record<string, unknown>)['redes_sociales'] ?? null,
-      theme_id:           (r as unknown as Record<string, unknown>)['theme_id']       ?? null,
+      brand_color:        (r as unknown as Record<string, unknown>)['brand_color'] ?? null,
+      logo_url:           (r as unknown as Record<string, unknown>)['logo_url']    ?? null,
+      eslogan:            (b as Record<string, unknown>)['eslogan']        ?? null,
+      texto_banner:       (b as Record<string, unknown>)['texto_banner']   ?? null,
+      redes_sociales:     (b as Record<string, unknown>)['redes_sociales'] ?? null,
+      theme_id:           (b as Record<string, unknown>)['theme_id']       ?? null,
     });
 
   } catch (err) {
