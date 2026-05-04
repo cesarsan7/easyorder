@@ -1127,7 +1127,8 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
     const [rows, brandingRows] = await Promise.all([
       sql<RestauranteFullRow[]>`
         SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
-               datos_bancarios, moneda, payment_methods, brand_color, logo_url
+               datos_bancarios, moneda, payment_methods, brand_color, logo_url,
+               lat, long, radio_cobertura_km
         FROM   restaurante
         WHERE  id = ${restaurante_id}
         LIMIT  1
@@ -1162,6 +1163,9 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
       texto_banner:       (b as Record<string, unknown>)['texto_banner']   ?? null,
       redes_sociales:     (b as Record<string, unknown>)['redes_sociales'] ?? null,
       theme_id:           (b as Record<string, unknown>)['theme_id']       ?? null,
+      lat:                (r as unknown as Record<string, unknown>)['lat']                 ?? null,
+      lng:                (r as unknown as Record<string, unknown>)['long']                ?? null,
+      radio_cobertura_km: (r as unknown as Record<string, unknown>)['radio_cobertura_km'] ?? null,
     });
 
   } catch (err) {
@@ -1218,6 +1222,7 @@ const KNOWN_SETTINGS_KEYS = new Set<string>([
   ...UPDATABLE_TEXT_FIELDS,
   'payment_methods', 'datos_bancarios',
   'brand_color', 'logo_url', 'redes_sociales', 'theme_id',
+  'lat', 'lng', 'radio_cobertura_km',
 ]);
 
 dashboardRoutes.patch('/:slug/settings', async (c) => {
@@ -1406,9 +1411,37 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
     }
   }
 
+  // --- Validate lat / lng / radio_cobertura_km ----------------------------
+  let latVal: number | null | undefined;
+  let lngVal: number | null | undefined;
+  let radioKmVal: number | null | undefined;
+
+  if ('lat' in raw) {
+    const v = raw['lat'];
+    if (v === null) { latVal = null; }
+    else if (typeof v !== 'number' || v < -90 || v > 90) {
+      return c.json({ error: 'invalid_field', field: 'lat', detail: 'must be a number between -90 and 90, or null' }, 400);
+    } else { latVal = v; }
+  }
+  if ('lng' in raw) {
+    const v = raw['lng'];
+    if (v === null) { lngVal = null; }
+    else if (typeof v !== 'number' || v < -180 || v > 180) {
+      return c.json({ error: 'invalid_field', field: 'lng', detail: 'must be a number between -180 and 180, or null' }, 400);
+    } else { lngVal = v; }
+  }
+  if ('radio_cobertura_km' in raw) {
+    const v = raw['radio_cobertura_km'];
+    if (v === null) { radioKmVal = null; }
+    else if (typeof v !== 'number' || v <= 0 || v > 500) {
+      return c.json({ error: 'invalid_field', field: 'radio_cobertura_km', detail: 'must be a positive number <= 500, or null' }, 400);
+    } else { radioKmVal = v; }
+  }
+
   if (textClauses.length === 0 && pmVal === undefined && dbVal === undefined
       && brandColorVal === undefined && logoUrlVal === undefined
-      && themeIdVal === undefined && redesVal === undefined) {
+      && themeIdVal === undefined && redesVal === undefined
+      && latVal === undefined && lngVal === undefined && radioKmVal === undefined) {
     return c.json({
       error:  'no_valid_fields',
       detail: 'body must include at least one updatable field',
@@ -1462,10 +1495,32 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
           await tx`UPDATE restaurante SET redes_sociales = ${tx.json(redesVal)} WHERE id = ${restaurante_id}`;
         }
       }
+      if (latVal !== undefined) {
+        if (latVal === null) {
+          await tx`UPDATE restaurante SET lat = NULL WHERE id = ${restaurante_id}`;
+        } else {
+          await tx`UPDATE restaurante SET lat = ${latVal} WHERE id = ${restaurante_id}`;
+        }
+      }
+      if (lngVal !== undefined) {
+        if (lngVal === null) {
+          await tx`UPDATE restaurante SET long = NULL WHERE id = ${restaurante_id}`;
+        } else {
+          await tx`UPDATE restaurante SET long = ${lngVal} WHERE id = ${restaurante_id}`;
+        }
+      }
+      if (radioKmVal !== undefined) {
+        if (radioKmVal === null) {
+          await tx`UPDATE restaurante SET radio_cobertura_km = NULL WHERE id = ${restaurante_id}`;
+        } else {
+          await tx`UPDATE restaurante SET radio_cobertura_km = ${radioKmVal} WHERE id = ${restaurante_id}`;
+        }
+      }
       return tx<UpdateRow[]>`
         SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
                payment_methods, datos_bancarios,
-               brand_color, logo_url, eslogan, texto_banner, redes_sociales, theme_id
+               brand_color, logo_url, eslogan, texto_banner, redes_sociales, theme_id,
+               lat, long, radio_cobertura_km
         FROM   restaurante
         WHERE  id = ${restaurante_id}
         LIMIT  1
@@ -1502,6 +1557,15 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
     }
     if (redesVal !== undefined) {
       responseFields['redes_sociales'] = persisted['redes_sociales'];
+    }
+    if (latVal !== undefined) {
+      responseFields['lat'] = persisted['lat'];
+    }
+    if (lngVal !== undefined) {
+      responseFields['lng'] = persisted['long'];
+    }
+    if (radioKmVal !== undefined) {
+      responseFields['radio_cobertura_km'] = persisted['radio_cobertura_km'];
     }
     if (ignoredFields.length > 0) {
       responseFields['ignored_fields'] = ignoredFields;

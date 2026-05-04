@@ -8,8 +8,12 @@ import { useBranding } from '@/lib/context/branding'
 // Accent context — propagates theme to sub-components
 const AccentCtx = createContext('#6366F1')
 const useAccent = () => useContext(AccentCtx)
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { THEME_LIST, type ThemeId } from '@/lib/themes'
+import type { ZoneMapZone } from './ZoneMap'
+
+const ZoneMap = dynamic(() => import('./ZoneMap'), { ssr: false })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,17 +42,24 @@ interface Settings {
   texto_banner:       string | null
   redes_sociales:     RedSocial[] | null
   theme_id:           string | null
+  // geo
+  lat:                number | null
+  lng:                number | null
+  radio_cobertura_km: number | null
 }
 
 interface DeliveryZone {
   delivery_zone_id:      number
   zone_name:             string
-  postal_code:           string
+  postal_code:           string | null
   fee:                   number
   is_active:             boolean
   description:           string | null
   min_order_amount:      number | null
   estimated_minutes_min: number | null
+  lat_center:            number | null
+  lng_center:            number | null
+  radius_km:             number | null
   estimated_minutes_max: number | null
 }
 
@@ -249,6 +260,12 @@ export default function ConfiguracionPage() {
   const [zoneAdding,       setZoneAdding]       = useState(false)
   const [zoneDeleting,     setZoneDeleting]     = useState<Record<number, boolean>>({})
   const [zonasExpanded,    setZonasExpanded]    = useState(true)
+
+  // ── GIS — restaurant location + coverage radius
+  const [restLat,    setRestLat]    = useState<number | null>(null)
+  const [restLng,    setRestLng]    = useState<number | null>(null)
+  const [restRadius, setRestRadius] = useState<number>(5)
+  const [geoState,   setGeoState]   = useState<SaveState>('idle')
   const [horariosExpanded, setHorariosExpanded] = useState(true)
 
   const fetchAll = useCallback(async () => {
@@ -274,6 +291,9 @@ export default function ConfiguracionPage() {
       setCuenta(s.datos_bancarios?.cuenta ?? '');  setAlias(s.datos_bancarios?.alias    ?? '')
       // branding
       setLogoUrl(s.logo_url ?? '')
+      setRestLat(s.lat ?? null)
+      setRestLng(s.lng ?? null)
+      setRestRadius(s.radio_cobertura_km ?? 5)
       setBrandColor(s.brand_color ?? '#6366F1')
       setThemeId((s.theme_id as ThemeId) ?? 'indigo')
       setEslogan(s.eslogan ?? '')
@@ -335,6 +355,10 @@ export default function ConfiguracionPage() {
     patch({ datos_bancarios: Object.keys(db).length > 0 ? db : null }, setBancosState)
   }
 
+  function saveGeo() {
+    patch({ lat: restLat, lng: restLng, radio_cobertura_km: restRadius }, setGeoState)
+  }
+
   async function saveZone(zone: DeliveryZone) {
     const id = zone.delivery_zone_id
     setZoneSaving(p => ({ ...p, [id]: 'saving' }))
@@ -343,7 +367,8 @@ export default function ConfiguracionPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: zone.zone_name, postal_code: zone.postal_code, delivery_fee: zone.fee,
           min_order_amount: zone.min_order_amount, estimated_minutes_min: zone.estimated_minutes_min,
-          estimated_minutes_max: zone.estimated_minutes_max, is_active: zone.is_active }),
+          estimated_minutes_max: zone.estimated_minutes_max, is_active: zone.is_active,
+          lat_center: zone.lat_center, lng_center: zone.lng_center, radius_km: zone.radius_km }),
       })
       if (!res.ok) throw new Error()
       const updated: DeliveryZone = await res.json()
@@ -662,6 +687,59 @@ export default function ConfiguracionPage() {
               </div>
             )}
 
+            {/* ── Mapa de cobertura ────────────────────────────────────── */}
+            <SectionTitle>Cobertura de delivery</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
+              <p className="text-xs text-gray-400">
+                Haz clic en el mapa para fijar la ubicación del local. El círculo representa el radio de cobertura general.
+                Las zonas con coordenadas se dibujan en verde.
+              </p>
+              <ZoneMap
+                lat={restLat}
+                lng={restLng}
+                radiusKm={restRadius}
+                zones={zones.filter((z): z is ZoneMapZone & typeof z =>
+                  z.lat_center != null && z.lng_center != null && z.radius_km != null
+                )}
+                accent={accent}
+                onChange={(lat, lng) => { setRestLat(lat); setRestLng(lng); setGeoState('idle') }}
+              />
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Latitud</label>
+                  <input
+                    type="number" step="any"
+                    value={restLat ?? ''}
+                    onChange={e => { setRestLat(e.target.value ? Number(e.target.value) : null); setGeoState('idle') }}
+                    placeholder="28.0997"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Longitud</label>
+                  <input
+                    type="number" step="any"
+                    value={restLng ?? ''}
+                    onChange={e => { setRestLng(e.target.value ? Number(e.target.value) : null); setGeoState('idle') }}
+                    placeholder="-15.4134"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Radio (km)</label>
+                  <input
+                    type="number" step="0.5" min="0.5" max="500"
+                    value={restRadius}
+                    onChange={e => { setRestRadius(Number(e.target.value) || 5); setGeoState('idle') }}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <SaveButton state={geoState} onClick={saveGeo} disabled={restLat == null || restLng == null} />
+              </div>
+            </div>
+
             {/* ── Zonas de delivery ─────────────────────────────────────── */}
             <div className="flex items-center justify-between mt-6 mb-0 px-1 py-1 border-b border-gray-100">
               <button type="button" onClick={() => setZonasExpanded(v => !v)} className="flex items-center gap-2 text-left">
@@ -690,7 +768,7 @@ export default function ConfiguracionPage() {
                         className="text-sm font-bold text-gray-900 border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent w-full pb-0.5" />
                       <p className="text-xs text-gray-400 mt-0.5">
                         CP:&nbsp;
-                        <input type="text" value={zone.postal_code} onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, postal_code: e.target.value } : z))}
+                        <input type="text" value={zone.postal_code ?? ''} onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, postal_code: e.target.value || null } : z))}
                           className="border-b border-dashed border-gray-200 focus:border-indigo-400 focus:outline-none bg-transparent text-gray-500 w-20" />
                       </p>
                     </div>
@@ -707,6 +785,36 @@ export default function ConfiguracionPage() {
                     <NumberInput label="Monto mínimo" value={zone.min_order_amount} onChange={v => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, min_order_amount: v } : z))} min={0} step="0.01" />
                     <NumberInput label="Tiempo mín. (min)" value={zone.estimated_minutes_min} onChange={v => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, estimated_minutes_min: v } : z))} placeholder="30" />
                     <NumberInput label="Tiempo máx. (min)" value={zone.estimated_minutes_max} onChange={v => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, estimated_minutes_max: v } : z))} placeholder="45" />
+                  </div>
+                  {/* Geo fields for this zone */}
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs font-medium text-gray-500 mb-2">Coordenadas de zona (opcional)</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-0.5">Lat centro</label>
+                        <input type="number" step="any" placeholder="28.09"
+                          value={zone.lat_center ?? ''}
+                          onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id
+                            ? { ...z, lat_center: e.target.value ? Number(e.target.value) : null } : z))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-0.5">Lng centro</label>
+                        <input type="number" step="any" placeholder="-15.41"
+                          value={zone.lng_center ?? ''}
+                          onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id
+                            ? { ...z, lng_center: e.target.value ? Number(e.target.value) : null } : z))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-0.5">Radio (km)</label>
+                        <input type="number" step="0.5" min="0.1" placeholder="3"
+                          value={zone.radius_km ?? ''}
+                          onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id
+                            ? { ...z, radius_km: e.target.value ? Number(e.target.value) : null } : z))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-400" />
+                      </div>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-3">
                     <button onClick={() => deleteZone(zone.delivery_zone_id, zone.zone_name)} disabled={zoneDeleting[zone.delivery_zone_id]}
