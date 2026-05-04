@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { useBranding } from '@/lib/context/branding'
 
-// Design tokens -- Riday-inspired orange accent
-const ACCENT = '#6366F1'
+// Accent context — driven by tenant theme via BrandingProvider
+const AccentCtx = createContext('#6366F1')
+const useAccent = () => useContext(AccentCtx)
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -227,11 +229,12 @@ function SortTh({ label, field, sortField, sortDir, onSort }: {
   label:string; field:SortField; sortField:SortField; sortDir:SortDir
   onSort:(f:SortField)=>void
 }) {
+  const accent = useAccent()
   const active = sortField===field
   return (
     <th
       className="text-left px-3 py-3 text-xs font-semibold uppercase tracking-wide cursor-pointer select-none whitespace-nowrap"
-      style={{ color: active?ACCENT:'#6B7280' }}
+      style={{ color: active?accent:'#6B7280' }}
       onClick={()=>onSort(field)}
     >
       {label}{' '}
@@ -249,6 +252,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
   onStatusChange:(id:number,estado:string)=>void; updatingId:number|null
 }) {
   const authFetch = useAuthFetch()
+  const accent = useAccent()
   const [detail,         setDetail]         = useState<OrderDetail|null>(null)
   const [loadingDetail,  setLoadingDetail]  = useState(true)
   const [estadoPago,     setEstadoPago]     = useState(order.estado_pago??'pendiente')
@@ -334,7 +338,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
                 <div className="flex justify-between text-sm text-gray-500"><span>Subtotal</span><span>{fmt(detail.subtotal)}</span></div>
                 <div className="flex justify-between text-sm text-gray-500"><span>Envío</span><span>{detail.costo_envio>0?fmt(detail.costo_envio):'Sin costo'}</span></div>
                 <div className="flex justify-between text-base font-bold text-gray-900">
-                  <span>Total</span><span style={{color:ACCENT}}>{fmt(detail.total)}</span>
+                  <span>Total</span><span style={{color:accent}}>{fmt(detail.total)}</span>
                 </div>
               </div>
             </div>
@@ -394,7 +398,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
                   onClick={()=>{ if(isNext&&!isCurrent){onStatusChange(order.id,s.key);onClose()} }}
                   className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all border border-transparent disabled:cursor-default"
                   style={{
-                    backgroundColor:isCurrent?ACCENT:'#F3F4F6',
+                    backgroundColor:isCurrent?accent:'#F3F4F6',
                     color:isCurrent?'#fff':isPast?'#9CA3AF':'#374151',
                     opacity:isPast?0.5:1,
                     borderColor:isNext&&!isCurrent?'#E5E7EB':'transparent',
@@ -469,6 +473,8 @@ export default function DashboardPage() {
   const {slug}    = useParams<{slug:string}>()
   const router    = useRouter()
   const authFetch = useAuthFetch()
+  const { theme } = useBranding()
+  const accent    = theme.accent
 
   useEffect(()=>{ localStorage.setItem('easyorder-last-slug', slug) },[slug])
 
@@ -563,6 +569,7 @@ export default function DashboardPage() {
   const hasExtraFilters = !!(filterPago || filterDespacho)
 
   return (
+    <AccentCtx.Provider value={accent}>
     <div className="flex-1 flex flex-col min-w-0">
 
       {/* ── Top bar ── */}
@@ -597,8 +604,8 @@ export default function DashboardPage() {
             </span>
             {newCount>0&&(
               <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-                style={{backgroundColor:'#FFF7ED',color:ACCENT}}>
-                <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{backgroundColor:ACCENT}} />
+                style={{backgroundColor:'#FFF7ED',color:accent}}>
+                <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{backgroundColor:accent}} />
                 {newCount} por confirmar
               </span>
             )}
@@ -616,13 +623,13 @@ export default function DashboardPage() {
             <button key={tab.key} onClick={()=>setFilter(tab.key)}
               className="shrink-0 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-1"
               style={filter===tab.key
-                ?{borderColor:ACCENT,color:ACCENT}
+                ?{borderColor:accent,color:accent}
                 :{borderColor:'transparent',color:'#9CA3AF'}}>
               <span>{tab.emoji}</span>
               <span>{tab.label}</span>
               {tab.key==='recibido'&&newCount>0&&(
                 <span className="rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center text-white font-bold"
-                  style={{fontSize:9,backgroundColor:ACCENT}}>{newCount}</span>
+                  style={{fontSize:9,backgroundColor:accent}}>{newCount}</span>
               )}
             </button>
           ))}
@@ -638,7 +645,7 @@ export default function DashboardPage() {
                 onClick={()=>setDatePreset(datePreset===p.key?null:p.key)}
                 className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors whitespace-nowrap"
                 style={datePreset===p.key
-                  ?{backgroundColor:ACCENT,color:'#fff'}
+                  ?{backgroundColor:accent,color:'#fff'}
                   :{backgroundColor:'#F3F4F6',color:'#6B7280'}}>
                 {p.label}
               </button>
@@ -665,7 +672,7 @@ export default function DashboardPage() {
             <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Pago:</span>
             <select value={filterPago} onChange={e=>setFilterPago(e.target.value)}
               className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
-              style={{borderColor:filterPago?ACCENT:'#E5E7EB',color:filterPago?ACCENT:'#374151'}}>
+              style={{borderColor:filterPago?accent:'#E5E7EB',color:filterPago?accent:'#374151'}}>
               <option value="">Todos</option>
               <option value="pendiente">Pendiente</option>
               <option value="pagado">Pagado</option>
@@ -678,7 +685,7 @@ export default function DashboardPage() {
             <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Despacho:</span>
             <select value={filterDespacho} onChange={e=>setFilterDespacho(e.target.value)}
               className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
-              style={{borderColor:filterDespacho?ACCENT:'#E5E7EB',color:filterDespacho?ACCENT:'#374151'}}>
+              style={{borderColor:filterDespacho?accent:'#E5E7EB',color:filterDespacho?accent:'#374151'}}>
               <option value="">Todos</option>
               <option value="delivery">Delivery</option>
               <option value="retiro">Retiro</option>
@@ -747,7 +754,7 @@ export default function DashboardPage() {
                         style={{
                           backgroundColor:isNew?'#FFFBEB':isEven?'#FFFFFF':'#FAFAFA',
                           borderBottom:'1px solid #F3F4F6',
-                          borderLeft:isNew?`3px solid ${ACCENT}`:'3px solid transparent',
+                          borderLeft:isNew?`3px solid ${accent}`:'3px solid transparent',
                         }}
                         onClick={()=>setSelectedOrder(order)}
                         onMouseEnter={e=>(e.currentTarget as HTMLTableRowElement).style.backgroundColor='#FFF7ED'}
@@ -759,7 +766,7 @@ export default function DashboardPage() {
                             <span className="font-mono text-xs font-semibold text-gray-700">#{order.pedido_codigo}</span>
                             {isNew&&(
                               <span className="rounded-full px-1.5 py-0.5 text-white font-bold leading-none"
-                                style={{backgroundColor:ACCENT,fontSize:9}}>NEW</span>
+                                style={{backgroundColor:accent,fontSize:9}}>NEW</span>
                             )}
                           </div>
                         </td>
@@ -821,7 +828,7 @@ export default function DashboardPage() {
                               <button onClick={()=>handleStatusChange(order.id,primaryNext)}
                                 disabled={updatingId===order.id}
                                 className="rounded-lg px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
-                                style={{backgroundColor:ACCENT}}>
+                                style={{backgroundColor:accent}}>
                                 {updatingId===order.id?'…':STATE_FLOW.find(s=>s.key===primaryNext)?.emoji??'>'}
                               </button>
                             )}
@@ -843,5 +850,6 @@ export default function DashboardPage() {
           onStatusChange={handleStatusChange} updatingId={updatingId} />
       )}
     </div>
+    </AccentCtx.Provider>
   )
 }

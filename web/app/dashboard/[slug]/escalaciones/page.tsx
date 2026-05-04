@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { useBranding } from '@/lib/context/branding'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,6 @@ interface Escalacion {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const PRIMARY = '#6366F1'
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -46,6 +46,8 @@ export default function EscalacionesPage() {
   const { slug }  = useParams<{ slug: string }>()
   const router    = useRouter()
   const authFetch = useAuthFetch()
+  const { theme } = useBranding()
+  const accent    = theme.accent
 
   const [escalaciones, setEscalaciones] = useState<Escalacion[]>([])
   const [total,        setTotal]        = useState(0)
@@ -129,9 +131,10 @@ export default function EscalacionesPage() {
                 onClick={() => setFilter(key)}
                 className={`px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 transition-colors ${
                   filter === key
-                    ? 'border-indigo-500 text-indigo-600'
+                    ? 'border-transparent'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
+                style={filter === key ? { borderColor: accent, color: accent } : undefined}
               >
                 {label}
               </button>
@@ -144,7 +147,7 @@ export default function EscalacionesPage() {
       <main className="max-w-3xl mx-auto px-4 py-5">
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-indigo-500 animate-spin" />
+            <div className="h-8 w-8 rounded-full border-4 border-gray-200 animate-spin" style={{ borderTopColor: accent }} />
           </div>
         ) : error ? (
           <div className="rounded-2xl bg-red-50 border border-red-200 px-5 py-5 text-center">
@@ -244,7 +247,7 @@ export default function EscalacionesPage() {
                         onClick={() => handleResolve(e.id)}
                         disabled={resolvingId === e.id}
                         className="flex-1 rounded-xl py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                        style={{ backgroundColor: PRIMARY }}
+                        style={{ backgroundColor: accent }}
                       >
                         {resolvingId === e.id ? '…' : '✓ Marcar como resuelto'}
                       </button>

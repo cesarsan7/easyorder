@@ -1,8 +1,16 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { useBranding } from '@/lib/context/branding'
+
+const AccentCtx      = createContext('#6366F1')
+const AccentLightCtx = createContext('#EEF2FF')
+const AccentTextCtx  = createContext('#4338CA')
+const useAccent      = () => useContext(AccentCtx)
+const useAccentLight = () => useContext(AccentLightCtx)
+const useAccentText  = () => useContext(AccentTextCtx)
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,7 +45,6 @@ interface ClienteDetalle {
   pedidos: PedidoCliente[]
 }
 
-const PRIMARY = '#6366F1'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,6 +98,9 @@ function ClientePanel({
   authFetch: ReturnType<typeof useAuthFetch>
   onClose: () => void
 }) {
+  const accent      = useAccent()
+  const accentLight = useAccentLight()
+  const accentText  = useAccentText()
   const [data, setData] = useState<ClienteDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -118,8 +128,8 @@ function ClientePanel({
       {/* Panel */}
       <div className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-white shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-indigo-100 bg-indigo-50">
-          <div className="h-10 w-10 rounded-full flex items-center justify-center text-indigo-700 text-sm font-bold shrink-0 bg-indigo-200">
+        <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ backgroundColor: accentLight, borderColor: accentLight }}>
+          <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: accentLight, color: accentText }}>
             {c?.nombre?.charAt(0).toUpperCase() ?? '?'}
           </div>
           <div className="flex-1 min-w-0">
@@ -131,7 +141,7 @@ function ClientePanel({
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="w-6 h-6 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-gray-200 rounded-full animate-spin" style={{ borderTopColor: accent }} />
           </div>
         ) : !data ? (
           <div className="flex-1 flex items-center justify-center text-sm text-gray-400">No se encontró el cliente</div>
@@ -214,7 +224,11 @@ function ClientePanel({
 export default function ClientesPage() {
   const { slug } = useParams<{ slug: string }>()
   const router   = useRouter()
-  const authFetch = useAuthFetch()
+  const authFetch   = useAuthFetch()
+  const { theme }   = useBranding()
+  const accent      = theme.accent
+  const accentLight = theme.accentLight
+  const accentText  = theme.accentText
   const apiBase  = process.env.NEXT_PUBLIC_API_URL ?? ''
 
   const [clientes, setClientes]       = useState<Cliente[]>([])
@@ -258,18 +272,21 @@ export default function ClientesPage() {
   useEffect(() => { load() }, [load])
 
   return (
+    <AccentCtx.Provider value={accent}>
+    <AccentLightCtx.Provider value={accentLight}>
+    <AccentTextCtx.Provider value={accentText}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
         <div className="h-8 w-8 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-          style={{ backgroundColor: PRIMARY }}>
+          style={{ backgroundColor: accent }}>
           E
         </div>
         <div className="flex-1">
           <h1 className="text-sm font-bold text-gray-900 leading-none">Clientes</h1>
           <div className="flex items-center gap-2 mt-0.5">
             <button onClick={() => router.push(`/dashboard/${slug}`)}
-              className="text-xs text-gray-400 hover:text-indigo-500 transition-colors">
+              className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
               ← pedidos
             </button>
             <span className="text-gray-200">|</span>
@@ -314,11 +331,11 @@ export default function ClientesPage() {
               {clientes.map(c => (
                 <div
                   key={c.usuario_id}
-                  className="w-full text-left rounded-2xl border border-gray-200 bg-white px-4 py-3 hover:bg-indigo-50 hover:border-indigo-200 hover:shadow-sm transition-all"
+                  className="w-full text-left rounded-2xl border border-gray-200 bg-white px-4 py-3 hover:bg-gray-50 hover:shadow-sm transition-all"
                 >
                   <div className="flex items-center gap-3">
                     {/* Avatar circular 40x40 con iniciales */}
-                    <div className="h-10 w-10 rounded-full flex items-center justify-center text-indigo-700 text-sm font-bold shrink-0 bg-indigo-100">
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: accentLight, color: accentText }}>
                       {c.nombre?.charAt(0).toUpperCase() ?? c.telefono.charAt(0)}
                     </div>
 
@@ -333,14 +350,14 @@ export default function ClientesPage() {
                             href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`}
                             target="_blank" rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
-                            className="text-xs text-indigo-500 hover:text-indigo-700 shrink-0 underline underline-offset-2"
+                            className="text-xs shrink-0 underline underline-offset-2" style={{ color: accent }}
                           >
                             {c.telefono}
                           </a>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: accentLight, color: accentText }}>
                           {c.total_pedidos} pedido{c.total_pedidos !== 1 ? 's' : ''}
                         </span>
                         <span className="text-xs font-semibold text-gray-700">{fmtPrice(c.total_gastado)}</span>
@@ -350,7 +367,7 @@ export default function ClientesPage() {
 
                     <button
                       onClick={() => setSelected(c.telefono)}
-                      className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                      className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-xl text-white transition-colors" style={{ backgroundColor: accent }}
                     >
                       Ver detalle
                     </button>
@@ -393,5 +410,8 @@ export default function ClientesPage() {
         />
       )}
     </div>
+    </AccentTextCtx.Provider>
+    </AccentLightCtx.Provider>
+    </AccentCtx.Provider>
   )
 }

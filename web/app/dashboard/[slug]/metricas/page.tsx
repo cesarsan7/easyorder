@@ -1,13 +1,18 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { useParams } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { useBranding } from '@/lib/context/branding'
+
+const AccentCtx      = createContext('#6366F1')
+const AccentLightCtx = createContext('#EEF2FF')
+const AccentTextCtx  = createContext('#4338CA')
+const useAccent      = () => useContext(AccentCtx)
+const useAccentLight = () => useContext(AccentLightCtx)
+const useAccentText  = () => useContext(AccentTextCtx)
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-const ACCENT       = '#6366F1'
-const ACCENT_LIGHT = '#EEF2FF'
-const ACCENT_TEXT  = '#4338CA'
 const PAGE_BG      = '#F8FAFC'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -61,11 +66,12 @@ function estadoBadgeColor(estado: string): { bg: string; color: string } {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 function Spinner() {
+  const accent = useAccent()
   return (
     <div className="flex items-center justify-center min-h-[300px]">
       <div
         className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
-        style={{ borderColor: ACCENT, borderTopColor: 'transparent' }}
+        style={{ borderColor: accent, borderTopColor: 'transparent' }}
       />
     </div>
   )
@@ -89,22 +95,25 @@ function StatCard({ label, value }: { label: string; value: string }) {
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  const accentText = useAccentText()
   return (
     <h2 className="text-xs font-semibold uppercase tracking-widest mt-8 mb-3 px-1"
-      style={{ color: ACCENT_TEXT }}>
+      style={{ color: accentText }}>
       {children}
     </h2>
   )
 }
 
 function TableHeader({ cols }: { cols: string[] }) {
+  const accentLight = useAccentLight()
+  const accentText  = useAccentText()
   return (
     <thead>
-      <tr style={{ backgroundColor: ACCENT_LIGHT }}>
+      <tr style={{ backgroundColor: accentLight }}>
         {cols.map(c => (
           <th key={c}
             className="px-3 py-2 text-left text-xs font-semibold"
-            style={{ color: ACCENT_TEXT }}>
+            style={{ color: accentText }}>
             {c}
           </th>
         ))}
@@ -117,7 +126,11 @@ function TableHeader({ cols }: { cols: string[] }) {
 export default function MetricasPage() {
   const params  = useParams()
   const slug    = params?.slug as string
-  const authFetch = useAuthFetch()
+  const authFetch  = useAuthFetch()
+  const { theme }  = useBranding()
+  const accent      = theme.accent
+  const accentLight = theme.accentLight
+  const accentText  = theme.accentText
 
   const [periodo,   setPeriodo]   = useState<Periodo>(30)
   const [data,      setData]      = useState<Analytics | null>(null)
@@ -144,6 +157,9 @@ export default function MetricasPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
+    <AccentCtx.Provider value={accent}>
+    <AccentLightCtx.Provider value={accentLight}>
+    <AccentTextCtx.Provider value={accentText}>
     <div className="min-h-screen px-4 pb-16" style={{ backgroundColor: PAGE_BG }}>
       {/* ── Header + selector de período ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-6 pb-2">
@@ -162,9 +178,9 @@ export default function MetricasPage() {
                 onClick={() => setPeriodo(d)}
                 className="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
                 style={{
-                  backgroundColor: active ? ACCENT : '#FFFFFF',
-                  color:           active ? '#FFFFFF' : ACCENT_TEXT,
-                  border:          `1px solid ${active ? ACCENT : '#E5E7EB'}`,
+                  backgroundColor: active ? accent : '#FFFFFF',
+                  color:           active ? '#FFFFFF' : accentText,
+                  border:          `1px solid ${active ? accent : '#E5E7EB'}`,
                 }}>
                 {d}d
               </button>
@@ -219,8 +235,8 @@ export default function MetricasPage() {
 
             {/* Por estado */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b" style={{ backgroundColor: ACCENT_LIGHT }}>
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: ACCENT_TEXT }}>
+              <div className="px-4 py-3 border-b" style={{ backgroundColor: accentLight }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: accentText }}>
                   Por estado
                 </span>
               </div>
@@ -254,8 +270,8 @@ export default function MetricasPage() {
 
             {/* Por zona */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b" style={{ backgroundColor: ACCENT_LIGHT }}>
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: ACCENT_TEXT }}>
+              <div className="px-4 py-3 border-b" style={{ backgroundColor: accentLight }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: accentText }}>
                   Por zona
                 </span>
               </div>
@@ -286,8 +302,8 @@ export default function MetricasPage() {
 
             {/* Por método de pago */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b" style={{ backgroundColor: ACCENT_LIGHT }}>
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: ACCENT_TEXT }}>
+              <div className="px-4 py-3 border-b" style={{ backgroundColor: accentLight }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: accentText }}>
                   Por método de pago
                 </span>
               </div>
@@ -318,8 +334,8 @@ export default function MetricasPage() {
 
             {/* Por despacho */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b" style={{ backgroundColor: ACCENT_LIGHT }}>
-                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: ACCENT_TEXT }}>
+              <div className="px-4 py-3 border-b" style={{ backgroundColor: accentLight }}>
+                <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: accentText }}>
                   Por despacho
                 </span>
               </div>
@@ -357,7 +373,7 @@ export default function MetricasPage() {
                 className="flex items-center gap-3 px-4 py-3">
                 {/* Avatar */}
                 <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                  style={{ backgroundColor: '#E0E7FF', color: ACCENT_TEXT }}>
+                  style={{ backgroundColor: '#E0E7FF', color: accentText }}>
                   {initials(item.nombre)}
                 </div>
                 {/* Name */}
@@ -366,7 +382,7 @@ export default function MetricasPage() {
                 </div>
                 {/* Qty badge */}
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  style={{ backgroundColor: ACCENT_LIGHT, color: ACCENT_TEXT }}>
+                  style={{ backgroundColor: accentLight, color: accentText }}>
                   {item.cantidad} uds
                 </span>
                 {/* Ventas */}
@@ -399,7 +415,7 @@ export default function MetricasPage() {
                   </div>
                   {/* Pedidos badge */}
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                    style={{ backgroundColor: ACCENT_LIGHT, color: ACCENT_TEXT }}>
+                    style={{ backgroundColor: accentLight, color: accentText }}>
                     {c.pedidos} pedidos
                   </span>
                   {/* Total */}
@@ -427,5 +443,8 @@ export default function MetricasPage() {
         </>
       )}
     </div>
+    </AccentTextCtx.Provider>
+    </AccentLightCtx.Provider>
+    </AccentCtx.Provider>
   )
 }

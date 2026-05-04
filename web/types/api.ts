@@ -260,6 +260,7 @@ export interface UpdateOrderStatusPayload {
   status: OrderStatus
 }
 
+
 // ─── Errores API ─────────────────────────────────────────────────────────────
 
 export interface ApiError {

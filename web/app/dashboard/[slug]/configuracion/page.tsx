@@ -1,8 +1,14 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
+import { useBranding } from '@/lib/context/branding'
+
+// Accent context — propagates theme to sub-components
+const AccentCtx = createContext('#6366F1')
+const useAccent = () => useContext(AccentCtx)
+import { createClient } from '@/lib/supabase/client'
 import { THEME_LIST, type ThemeId } from '@/lib/themes'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -89,7 +95,7 @@ type Tab = 'branding' | 'config' | 'pago'
 function SaveButton({ state, onClick, disabled }: { state: SaveState; onClick: () => void; disabled?: boolean }) {
   const labels: Record<SaveState, string> = { idle: 'Guardar cambios', saving: 'Guardando…', saved: '✓ Guardado', error: 'Error al guardar' }
   const styles: Record<SaveState, string> = {
-    idle:   'bg-indigo-500 hover:bg-indigo-600 text-white',
+    idle:   'text-white',  // bg set via inline style
     saving: 'bg-gray-300 text-gray-500 cursor-not-allowed',
     saved:  'bg-green-500 text-white',
     error:  'bg-red-100 text-red-700 border border-red-300',
@@ -136,13 +142,15 @@ function TimeInput({ value, onChange, disabled, placeholder }: {
 }
 
 function HorarioRow({ horario, onChange }: { horario: HorarioLocal; onChange: (u: HorarioLocal) => void }) {
+  const accent = useAccent()
   const has2nd = horario.apertura_2 !== '' || horario.cierre_2 !== ''
   const up = (fields: Partial<HorarioLocal>) => onChange({ ...horario, ...fields })
   return (
     <div className={`py-3 px-4 border-b border-gray-50 last:border-0 ${!horario.disponible ? 'bg-gray-50/50' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <button onClick={() => up({ disponible: !horario.disponible })} className="flex items-center gap-2.5" type="button">
-          <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${horario.disponible ? 'bg-indigo-500' : 'bg-gray-300'}`}>
+          <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${horario.disponible ? '' : 'bg-gray-300'}`}
+            style={horario.disponible ? { backgroundColor: accent } : undefined}>
             <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${horario.disponible ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </span>
           <span className={`text-sm font-semibold ${horario.disponible ? 'text-gray-800' : 'text-gray-400'}`}>{horario.dia}</span>
@@ -158,7 +166,7 @@ function HorarioRow({ horario, onChange }: { horario: HorarioLocal; onChange: (u
             <TimeInput value={horario.cierre_1} onChange={v => up({ cierre_1: v })} placeholder="15:00" />
             {!has2nd && (
               <button onClick={() => setTimeout(() => onChange({ ...horario, apertura_2: ' ', cierre_2: ' ' }), 0)}
-                type="button" className="ml-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium">+ 2° turno</button>
+                type="button" className="ml-1 text-xs font-medium" style={{ color: accent }}>+ 2° turno</button>
             )}
           </div>
           {has2nd && (
@@ -197,6 +205,9 @@ export default function ConfiguracionPage() {
   const { slug } = useParams<{ slug: string }>()
   const router   = useRouter()
   const authFetch = useAuthFetch()
+  const { theme: brandTheme } = useBranding()
+  const accent      = brandTheme.accent
+  const accentLight = brandTheme.accentLight
   const [tab, setTab] = useState<Tab>('branding')
 
   const [loading,    setLoading]    = useState(true)
@@ -204,6 +215,8 @@ export default function ConfiguracionPage() {
 
   // ── Branding
   const [logoUrl,      setLogoUrl]      = useState('')
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoError,     setLogoError]     = useState<string | null>(null)
   const [brandColor,   setBrandColor]   = useState('#6366F1')
   const [themeId,      setThemeId]      = useState<ThemeId>('indigo')
   const [eslogan,      setEslogan]      = useState('')
@@ -401,6 +414,7 @@ export default function ConfiguracionPage() {
   ]
 
   return (
+    <AccentCtx.Provider value={accent}>
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
@@ -415,7 +429,7 @@ export default function ConfiguracionPage() {
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                tab === t.key ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                tab === t.key ? 'border-transparent' : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}>
               {t.label}
             </button>
@@ -426,7 +440,7 @@ export default function ConfiguracionPage() {
       <main className="max-w-2xl mx-auto px-4 py-5">
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="h-8 w-8 rounded-full border-4 border-gray-200 border-t-indigo-500 animate-spin" />
+            <div className="h-8 w-8 rounded-full border-4 border-gray-200 animate-spin" style={{ borderTopColor: accent }} />
           </div>
         ) : fetchError ? (
           <div className="rounded-2xl bg-red-50 border border-red-200 px-5 py-5 text-center">
@@ -439,17 +453,95 @@ export default function ConfiguracionPage() {
             <SectionTitle>Logo del local</SectionTitle>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
               <div className="flex items-center gap-4">
+                {/* Preview */}
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-16 w-16 rounded-2xl object-cover border border-gray-200 shrink-0" />
+                  <div className="relative shrink-0 group">
+                    <img src={logoUrl} alt="Logo" className="h-16 w-16 rounded-2xl object-cover border border-gray-200" />
+                    <button
+                      onClick={() => { setLogoUrl(''); setLogoError(null); setBrandingState('idle') }}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-gray-700 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Quitar logo"
+                    >×</button>
+                  </div>
                 ) : (
                   <div className="h-16 w-16 rounded-2xl flex items-center justify-center shrink-0 text-white text-2xl font-bold" style={{ backgroundColor: brandColor }}>
                     {nombre.charAt(0).toUpperCase() || 'E'}
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <Field label="URL del logo" value={logoUrl}
-                    onChange={v => { setLogoUrl(v); setBrandingState('idle') }}
-                    placeholder="https://..." hint="PNG, JPG, WEBP. Sube la imagen a tu CDN y pega la URL." />
+
+                {/* Upload area */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  <label className="block">
+                    <span className="text-xs font-medium text-gray-700">Subir imagen</span>
+                    <div className="mt-1 flex items-center gap-2">
+                      <label
+                        className="cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-300 hover:border-gray-400 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                        style={logoUploading ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
+                      >
+                        {logoUploading ? (
+                          <>
+                            <div className="h-3 w-3 rounded-full border-2 border-gray-300 border-t-gray-600 animate-spin" />
+                            Subiendo…
+                          </>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Seleccionar archivo
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                          className="sr-only"
+                          disabled={logoUploading}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            if (file.size > 2 * 1024 * 1024) {
+                              setLogoError('El archivo no puede superar 2 MB.')
+                              return
+                            }
+                            setLogoUploading(true)
+                            setLogoError(null)
+                            try {
+                              const ext = file.name.split('.').pop() ?? 'png'
+                              const filePath = `${slug}/logo.${ext}`
+                              const supabase = createClient()
+                              const { error: upErr } = await supabase.storage
+                                .from('logos')
+                                .upload(filePath, file, { upsert: true, contentType: file.type })
+                              if (upErr) throw new Error(upErr.message)
+                              const { data: { publicUrl } } = supabase.storage
+                                .from('logos')
+                                .getPublicUrl(filePath)
+                              // Add cache-bust so the browser reloads the image
+                              const bustUrl = publicUrl + '?t=' + Date.now()
+                              setLogoUrl(bustUrl)
+                              setBrandingState('idle')
+                            } catch (err) {
+                              setLogoError((err as Error).message ?? 'Error al subir la imagen.')
+                            } finally {
+                              setLogoUploading(false)
+                              // Reset input so same file can be re-uploaded
+                              e.target.value = ''
+                            }
+                          }}
+                        />
+                      </label>
+                      <span className="text-xs text-gray-400">PNG, JPG, WEBP, SVG · máx 2 MB</span>
+                    </div>
+                  </label>
+
+                  {/* Fallback: paste URL */}
+                  <Field label="O pega una URL" value={logoUrl}
+                    onChange={v => { setLogoUrl(v); setLogoError(null); setBrandingState('idle') }}
+                    placeholder="https://..." hint="" />
+
+                  {logoError && (
+                    <p className="text-xs text-red-600">{logoError}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -476,7 +568,8 @@ export default function ConfiguracionPage() {
               <div className="grid grid-cols-3 gap-3">
                 {THEME_LIST.map(theme => (
                   <button key={theme.id} onClick={() => { setThemeId(theme.id); setBrandColor(theme.accent); setBrandingState('idle') }}
-                    className={`rounded-2xl border-2 p-3 text-left transition-all ${themeId === theme.id ? 'border-indigo-500 shadow-sm' : 'border-gray-100 hover:border-gray-300'}`}>
+                    className={`rounded-2xl border-2 p-3 text-left transition-all ${themeId === theme.id ? 'shadow-sm' : 'border-gray-100 hover:border-gray-300'}`}
+                    style={themeId === theme.id ? { borderColor: accent } : undefined}>
                     <div className="flex gap-1.5 mb-2">
                       {theme.swatches.map((sw, i) => (
                         <span key={i} className="h-5 w-5 rounded-full border border-white shadow-sm" style={{ backgroundColor: sw }} />
@@ -578,7 +671,7 @@ export default function ConfiguracionPage() {
               </button>
               <button onClick={addZone} disabled={zoneAdding}
                 className="text-xs font-semibold px-3 py-1.5 rounded-xl text-white disabled:opacity-60"
-                style={{ backgroundColor: '#6366F1' }}>
+                style={{ backgroundColor: accent }}>
                 {zoneAdding ? '…' : '+ Nueva zona'}
               </button>
             </div>
@@ -638,10 +731,11 @@ export default function ConfiguracionPage() {
                   const active = paymentMethods.includes(key)
                   return (
                     <button key={key} onClick={() => { setPaymentMethods(p => p.includes(key) ? p.filter(k => k !== key) : [...p, key]); setPagoState('idle') }}
-                      className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors text-left ${active ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                      className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors text-left ${active ? '' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                      style={active ? { borderColor: accent, backgroundColor: accentLight } : undefined}>
                       <span className="text-xl">{icon}</span>
                       <span className="flex-1 text-sm font-medium text-gray-900">{label}</span>
-                      {active && <span className="text-indigo-500 text-sm font-semibold">✓</span>}
+                      {active && <span className="text-sm font-semibold" style={{ color: accent }}>✓</span>}
                     </button>
                   )
                 })}
@@ -667,5 +761,6 @@ export default function ConfiguracionPage() {
         )}
       </main>
     </div>
+    </AccentCtx.Provider>
   )
 }
