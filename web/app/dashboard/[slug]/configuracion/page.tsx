@@ -104,16 +104,21 @@ type Tab = 'branding' | 'config' | 'pago'
 // ─── Shared components ────────────────────────────────────────────────────────
 
 function SaveButton({ state, onClick, disabled }: { state: SaveState; onClick: () => void; disabled?: boolean }) {
+  const accent = useAccent()
   const labels: Record<SaveState, string> = { idle: 'Guardar cambios', saving: 'Guardando…', saved: '✓ Guardado', error: 'Error al guardar' }
   const styles: Record<SaveState, string> = {
-    idle:   'text-white',  // bg set via inline style
+    idle:   'text-white',
     saving: 'bg-gray-300 text-gray-500 cursor-not-allowed',
     saved:  'bg-green-500 text-white',
     error:  'bg-red-100 text-red-700 border border-red-300',
   }
   return (
-    <button onClick={onClick} disabled={disabled || state === 'saving' || state === 'saved'}
-      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${styles[state]}`}>
+    <button
+      onClick={onClick}
+      disabled={disabled || state === 'saving' || state === 'saved'}
+      className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${styles[state]}`}
+      style={state === 'idle' ? { backgroundColor: accent } : undefined}
+    >
       {labels[state]}
     </button>
   )
@@ -535,11 +540,11 @@ export default function ConfiguracionPage() {
                               const filePath = `${slug}/logo.${ext}`
                               const supabase = createClient()
                               const { error: upErr } = await supabase.storage
-                                .from('logos')
+                                .from('la_isla')
                                 .upload(filePath, file, { upsert: true, contentType: file.type })
                               if (upErr) throw new Error(upErr.message)
                               const { data: { publicUrl } } = supabase.storage
-                                .from('logos')
+                                .from('la_isla')
                                 .getPublicUrl(filePath)
                               // Add cache-bust so the browser reloads the image
                               const bustUrl = publicUrl + '?t=' + Date.now()
