@@ -122,11 +122,14 @@ export default function CheckoutDespachoPage() {
   const shortfall      = minOrder - currentSubtotal
   const belowMin       = selectedType === 'delivery' && selectedZone !== null && shortfall > 0
 
+  // Dirección mínima: al menos un número + texto alrededor (tipo "Calle 12" o "Av. Timanfaya 8")
+  const addressValid = /\S+.*\d+|\d+.*\S+/.test(address.trim()) && address.trim().length >= 6
+
   const canContinue =
     selectedType === 'pickup' ||
     (selectedType === 'delivery' &&
       selectedZone !== null &&
-      address.trim().length > 0 &&
+      addressValid &&
       !belowMin)
 
   function handleContinue() {
@@ -297,12 +300,23 @@ export default function CheckoutDespachoPage() {
                           id="address"
                           type="text"
                           autoComplete="street-address"
-                          placeholder="Calle, número, referencias…"
+                          placeholder="Ej: Calle Mayor 12, 3ºA"
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
-                          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition"
-                          style={{ '--tw-ring-color': accent } as React.CSSProperties}
+                          className="w-full rounded-xl border px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-transparent transition"
+                          style={{
+                            '--tw-ring-color': accent,
+                            borderColor: address.length > 0 && !addressValid ? '#FCA5A5' : '#E5E7EB',
+                          } as React.CSSProperties}
                         />
+                        {address.length > 0 && !addressValid && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Indica calle, número y piso/puerta si aplica. Ej: Calle Mayor 12, 3ºA
+                          </p>
+                        )}
+                        {addressValid && (
+                          <p className="text-xs text-green-600 mt-1">✓ Dirección válida</p>
+                        )}
                       </div>
 
                       {/* Fee + estimated time summary */}
