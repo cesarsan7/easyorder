@@ -87,11 +87,21 @@ export default function CheckoutDatosPage() {
     }
   }
 
+  /** Normaliza a +34XXXXXXXXX si el usuario no puso código de país */
+  function normalizePhone(raw: string): string {
+    const trimmed = raw.trim()
+    if (!trimmed) return trimmed
+    if (trimmed.startsWith('+')) return trimmed
+    // Solo dígitos → prefijo +34 (España)
+    const digits = trimmed.replace(/\D/g, '')
+    return `+34${digits}`
+  }
+
   function handleContinue() {
-    const trimName = name.trim()
+    const trimName  = name.trim()
     const trimPhone = phone.trim()
     if (!trimName || !trimPhone) return
-    setCustomer(trimName, trimPhone)
+    setCustomer(trimName, normalizePhone(trimPhone))
     router.push(`/${slug}/checkout/despacho`)
   }
 

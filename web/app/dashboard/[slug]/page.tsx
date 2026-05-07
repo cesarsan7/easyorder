@@ -51,6 +51,8 @@ interface Order {
   telefono: string
   nombre_cliente: string
   direccion: string | null
+  postal_code: string | null
+  zone_name: string | null
   tiempo_estimado: number | null
   items_count: number
   items: unknown[]
@@ -352,6 +354,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
               <span className="font-medium text-gray-900">{isDelivery?'Delivery':'Retiro en local'}</span>
             </div>
             {order.direccion&&<div className="flex justify-between"><span className="text-gray-500">Dirección</span><span className="font-medium text-gray-900 text-right max-w-[60%]">{order.direccion}</span></div>}
+            {order.zone_name&&<div className="flex justify-between"><span className="text-gray-500">Zona</span><span className="font-medium text-gray-900">{order.zone_name}</span></div>}
             <div className="flex justify-between"><span className="text-gray-500">Pago</span><span className="font-medium text-gray-900">{PAGO_LABEL[order.metodo_pago]??order.metodo_pago}</span></div>
             {order.tiempo_estimado&&<div className="flex justify-between"><span className="text-gray-500">Tiempo est.</span><span className="font-medium text-gray-900">{order.tiempo_estimado} min</span></div>}
           </div>
