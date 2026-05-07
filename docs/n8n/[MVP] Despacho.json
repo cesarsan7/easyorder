@@ -4,7 +4,7 @@
     {
       "parameters": {
         "inputSource": "jsonExample",
-        "jsonExample": "{\n  \"tipo\": \"delivery\",\n  \"direccion_texto\": \"Av. Providencia 1234\",\n  \"codigo_postal\": \"7500000\",\n  \"lat\": null,\n  \"lng\": null,\n  \"telefono\": \"+56912345678\",\n  \"session_id\": \"abc-123-def-456\",\n  \"pedido_id\": 58\n}"
+        "jsonExample": "{\"tipo\": \"delivery\", \"direccion_texto\": \"Av. Providencia 1234\", \"codigo_postal\": \"7500000\", \"lat\": null, \"lng\": null, \"telefono\": \"+56912345678\", \"session_id\": \"abc-123-def-456\", \"pedido_id\": 58, \"zona_confirmada_por_cliente\": false}"
       },
       "id": "a3295141-0350-41bc-8745-f120a09fe426",
       "typeVersion": 1.1,
@@ -75,7 +75,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT delivery_zone_id, zone_name, postal_code, fee, min_order_amount, estimated_minutes_min, estimated_minutes_max, is_active\nFROM public.delivery_zone\nWHERE is_active = true\n  AND (postal_code = '{{ (() => { const t = $('When Executed by Another Workflow').first().json; const src = [t.codigo_postal, t.direccion_texto].filter(Boolean).join(' '); const m = String(src).match(/\\b\\d{5}\\b/); return m ? m[0] : ''; })() }}'\n       OR lower(zone_name) = lower('{{ (() => { const t = $('When Executed by Another Workflow').first().json; const txt = String([t.codigo_postal, t.direccion_texto].filter(Boolean).join(' ')).toLowerCase(); if (txt.includes('arrecife')) return 'Arrecife'; if (txt.includes('playa honda')) return 'Playa Honda'; if (txt.includes('taiche')) return 'Taiche'; return ''; })() }}'))\nLIMIT 1",
+        "query": "SELECT delivery_zone_id, zone_name, postal_code, fee, min_order_amount, estimated_minutes_min, estimated_minutes_max, is_active\nFROM public.delivery_zone\nWHERE is_active = true\n  AND (postal_code = '{{ (() => { const t = $('When Executed by Another Workflow').first().json; const src = [t.codigo_postal, t.direccion_texto].filter(Boolean).join(' '); const m = String(src).match(/\\b\\d{5}\\b/); return m ? m[0] : ''; })() }}'\n       OR (\n         lower(zone_name) = lower('{{ (() => { const t = $('When Executed by Another Workflow').first().json; const txt = String([t.codigo_postal, t.direccion_texto].filter(Boolean).join(' ')).toLowerCase(); if (txt.includes('arrecife')) return 'Arrecife'; if (txt.includes('playa honda')) return 'Playa Honda'; if (txt.includes('taiche')) return 'Taiche'; return ''; })() }}')\n         AND '{{ String($('When Executed by Another Workflow').first().json.zona_confirmada_por_cliente || 'false') }}' = 'true'\n       ))\nLIMIT 1",
         "options": {}
       },
       "id": "66441eb3-2cbf-48e0-b9e7-d9c84855df90",
@@ -180,7 +180,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE pedidos\nSET\n  tipo_despacho = 'delivery',\n  direccion = '{{ String($json.direccion || '').replace(/''/g, \"''\") }}',\n  lat = {{ $json.lat !== null ? $json.lat : 'NULL' }},\n  lng = {{ $json.lng !== null ? $json.lng : 'NULL' }},\n  postal_code = NULLIF('{{ ($json.codigo_postal || '').replace(/'/g, \"'\") }}', ''),\n  costo_envio = {{ Number($json.fee || 0) }},\n  total = {{ Number($json.total || 0) }},\n  tiempo_estimado = COALESCE(\n    NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_text' LIMIT 1), ''),\n    (\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_min_minutes' LIMIT 1), ''), '{{ Number($json.tiempo_min || 30) }}')\n      || '-' ||\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_max_minutes' LIMIT 1), ''), '{{ Number($json.tiempo_max || 45) }}')\n      || ' min'\n    )\n  ),\n  updated_at = NOW()\nWHERE id = {{ $json.pedido_id }}\nRETURNING *,\n  (SELECT datos_bancarios FROM restaurante WHERE id = pedidos.restaurante_id LIMIT 1) AS datos_bancarios",
+        "query": "UPDATE pedidos\nSET\n  tipo_despacho = 'delivery',\n  direccion = '{{ String($json.direccion || '').replace(/''/g, \"''\") }}',\n  lat = {{ $json.lat !== null ? $json.lat : 'NULL' }},\n  lng = {{ $json.lng !== null ? $json.lng : 'NULL' }},\n  postal_code = NULLIF('{{ String($json.codigo_postal || \"\") }}', ''),\n  costo_envio = {{ Number($json.fee || 0) }},\n  total = {{ Number($json.total || 0) }},\n  tiempo_estimado = COALESCE(\n    NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_text' LIMIT 1), ''),\n    (\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_min_minutes' LIMIT 1), ''), '{{ Number($json.tiempo_min || 30) }}')\n      || '-' ||\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_max_minutes' LIMIT 1), ''), '{{ Number($json.tiempo_max || 45) }}')\n      || ' min'\n    )\n  ),\n  updated_at = NOW()\nWHERE id = {{ $json.pedido_id }}\nRETURNING *,\n  (SELECT datos_bancarios FROM restaurante WHERE id = pedidos.restaurante_id LIMIT 1) AS datos_bancarios",
         "options": {}
       },
       "id": "1644432d-08ab-4cf2-b1d9-add53bdf2f78",

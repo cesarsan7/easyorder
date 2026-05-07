@@ -847,12 +847,4 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {selectedOrder&&(
-        <OrderDetailPanel slug={slug} order={selectedOrder}
-          onClose={()=>setSelectedOrder(null)}
-          onStatusChange={handleStatusChange} updatingId={updatingId} />
-      )}
-    </div>
-    </AccentCtx.Provider>
-  )
-}
+      {select
