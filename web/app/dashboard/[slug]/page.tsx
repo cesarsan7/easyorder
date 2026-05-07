@@ -161,6 +161,10 @@ function openWhatsApp(tel:string) { window.open(`https://wa.me/${tel.replace(/\D
 
 function extractZona(order: Order): string {
   if (order.tipo_despacho !== 'delivery') return '—'
+  if (order.zone_name) {
+    const dir = order.direccion?.trim()
+    return dir ? `${order.zone_name} · ${dir.length > 18 ? dir.slice(0, 16) + '…' : dir}` : order.zone_name
+  }
   if (!order.direccion) return 'Delivery'
   const d = order.direccion.trim()
   return d.length > 26 ? d.slice(0, 24) + '…' : d
@@ -493,6 +497,7 @@ export default function DashboardPage() {
   const [filter,         setFilter]         = useState('')
   const [filterPago,     setFilterPago]     = useState('')
   const [filterDespacho, setFilterDespacho] = useState('')
+  const [filterZona,     setFilterZona]     = useState('')
   const [datePreset,     setDatePreset]     = useState<DatePreset>(null)
   const [dateFrom,       setDateFrom]       = useState('')
   const [dateTo,         setDateTo]         = useState('')
@@ -566,10 +571,14 @@ export default function DashboardPage() {
   const filteredOrders = orders
     .filter(o => !filterPago     || o.estado_pago    === filterPago)
     .filter(o => !filterDespacho || o.tipo_despacho  === filterDespacho)
+    .filter(o => !filterZona     || o.zone_name      === filterZona)
 
   const displayOrders   = sortOrders(filteredOrders, sortField, sortDir)
   const activeTab       = FILTER_TABS.find(t=>t.key===filter)??FILTER_TABS[0]
-  const hasExtraFilters = !!(filterPago || filterDespacho)
+  const hasExtraFilters = !!(filterPago || filterDespacho || filterZona)
+
+  // Unique zone names across ALL loaded orders (for dropdown)
+  const zonaOptions = [...new Set(orders.map(o => o.zone_name).filter((z): z is string => !!z))].sort()
 
   return (
     <AccentCtx.Provider value={accent}>
@@ -695,8 +704,21 @@ export default function DashboardPage() {
             </select>
           </div>
 
+          {/* Zona delivery */}
+          {zonaOptions.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Zona:</span>
+              <select value={filterZona} onChange={e=>setFilterZona(e.target.value)}
+                className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
+                style={{borderColor:filterZona?accent:'#E5E7EB',color:filterZona?accent:'#374151'}}>
+                <option value="">Todas</option>
+                {zonaOptions.map(z=><option key={z} value={z}>{z}</option>)}
+              </select>
+            </div>
+          )}
+
           {hasExtraFilters&&(
-            <button onClick={()=>{setFilterPago('');setFilterDespacho('')}}
+            <button onClick={()=>{setFilterPago('');setFilterDespacho('');setFilterZona('')}}
               className="text-xs text-gray-400 hover:text-orange-500 transition-colors">× limpiar</button>
           )}
         </div>
