@@ -186,4 +186,15 @@ export default function CheckoutDatosPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 z-20 shadow-lg">
         <div className="max-w-lg mx-auto">
           <button
-           
+            onClick={handleContinue}
+            disabled={!canContinue}
+            className="w-full rounded-2xl py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: accent }}
+          >
+            Continuar
+          </button>
+        </div>
+      </div>
+    </main>
+  )
+}
