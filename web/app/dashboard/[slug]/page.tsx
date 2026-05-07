@@ -578,7 +578,7 @@ export default function DashboardPage() {
   const hasExtraFilters = !!(filterPago || filterDespacho || filterZona)
 
   // Unique zone names across ALL loaded orders (for dropdown)
-  const zonaOptions = [...new Set(orders.flatMap(o => o.zone_name ? [o.zone_name] : []))].sort()
+  const zonaOptions = Array.from(new Set(orders.flatMap(o => o.zone_name ? [o.zone_name] : []))).sort()
 
   return (
     <AccentCtx.Provider value={accent}>
