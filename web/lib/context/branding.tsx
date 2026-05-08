@@ -9,6 +9,8 @@ interface BrandingData {
   restaurantName: string | null
   eslogan: string | null
   logoUrl: string | null
+  chatwootBaseUrl: string | null
+  chatwootAccountId: string | null
 }
 
 const defaultBranding: BrandingData = {
@@ -16,6 +18,8 @@ const defaultBranding: BrandingData = {
   restaurantName: null,
   eslogan: null,
   logoUrl: null,
+  chatwootBaseUrl: null,
+  chatwootAccountId: null,
 }
 
 const BrandingContext = createContext<BrandingData>(defaultBranding)
@@ -45,12 +49,16 @@ export function BrandingProvider({ slug, authFetch, children }: Props) {
         logo_url?: string | null
         brand_color?: string | null
         theme_id?: string | null
+        chatwoot_base_url?: string | null
+        chatwoot_account_id?: string | null
       }
       setBranding({
-        theme:          getTheme(d.theme_id ?? d.brand_color),
-        restaurantName: d.nombre ?? null,
-        eslogan:        d.eslogan ?? null,
-        logoUrl:        d.logo_url ?? null,
+        theme:             getTheme(d.theme_id ?? d.brand_color),
+        restaurantName:    d.nombre ?? null,
+        eslogan:           d.eslogan ?? null,
+        logoUrl:           d.logo_url ?? null,
+        chatwootBaseUrl:   d.chatwoot_base_url ?? null,
+        chatwootAccountId: d.chatwoot_account_id ?? null,
       })
     } catch {
       // silent — keep default theme

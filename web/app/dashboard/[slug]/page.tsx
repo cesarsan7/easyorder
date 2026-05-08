@@ -157,7 +157,14 @@ function getDateRange(preset:DatePreset, from:string, to:string) {
   return {} as Record<string,string>
 }
 
-function openWhatsApp(tel:string) { window.open(`https://wa.me/${tel.replace(/\D/g,'')}`, '_blank') }
+function openChatwoot(baseUrl: string | null, accountId: string | null, tel: string) {
+  if (baseUrl && accountId) {
+    const phone = tel.replace(/\D/g, '')
+    window.open(`${baseUrl}/app/accounts/${accountId}/contacts?q=${encodeURIComponent(phone)}`, '_blank')
+  } else {
+    window.open(`https://wa.me/${tel.replace(/\D/g, '')}`, '_blank')
+  }
+}
 
 function extractZona(order: Order): string {
   if (order.tipo_despacho !== 'delivery') return '—'
@@ -434,10 +441,10 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
             className="rounded-xl px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">
             🖶 Imprimir
           </button>
-          <button onClick={()=>openWhatsApp(order.telefono)}
+          <button onClick={()=>openChatwoot(chatwootBaseUrl, chatwootAccountId, order.telefono)}
             className="rounded-xl px-4 py-2.5 text-sm font-medium"
-            style={{backgroundColor:'#D1FAE5',color:'#065F46'}}>
-            💬 WhatsApp
+            style={{backgroundColor:'#DBEAFE',color:'#1E40AF'}}>
+            💬 Chatwoot
           </button>
         </div>
       </div>
@@ -480,7 +487,7 @@ export default function DashboardPage() {
   const {slug}    = useParams<{slug:string}>()
   const router    = useRouter()
   const authFetch = useAuthFetch()
-  const { theme } = useBranding()
+  const { theme, chatwootBaseUrl, chatwootAccountId } = useBranding()
   const accent    = theme.accent
 
   useEffect(()=>{ localStorage.setItem('easyorder-last-slug', slug) },[slug])
@@ -844,10 +851,10 @@ export default function DashboardPage() {
                         {/* Acciones */}
                         <td className="px-3 py-3 whitespace-nowrap" onClick={e=>e.stopPropagation()}>
                           <div className="flex items-center gap-1">
-                            <button onClick={()=>openWhatsApp(order.telefono)}
+                            <button onClick={()=>openChatwoot(chatwootBaseUrl, chatwootAccountId, order.telefono)}
                               className="rounded-lg px-2 py-1 text-xs font-medium"
-                              style={{backgroundColor:'#D1FAE5',color:'#065F46'}}>
-                              WA
+                              style={{backgroundColor:'#DBEAFE',color:'#1E40AF'}}>
+                              CH
                             </button>
                             {primaryNext&&(
                               <button onClick={()=>handleStatusChange(order.id,primaryNext)}

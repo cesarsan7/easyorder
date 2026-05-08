@@ -22,6 +22,9 @@
             },
             {
               "name": "contexto_actual"
+            },
+            {
+              "name": "tipo_escalacion"
             }
           ]
         }
@@ -276,7 +279,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepara el payload para INSERT en escalaciones.\n// Tomamos los valores del trigger original para evitar referencias rotas.\nconst trigger = $('When Executed by Another Workflow').first().json;\nconst respuesta = (() => { try { return $('Resuelve Problemas').first().json.output || ''; } catch { return ''; } })();\n\nconst contexto = {\n  contexto_actual: trigger.contexto_actual || null,\n  respuesta_agente: respuesta\n};\n\nreturn [{\n  json: {\n    telefono:        String(trigger.telefono || ''),\n    problema:        String(trigger.problema  || '').substring(0, 1000),\n    contexto_str:    JSON.stringify(contexto),\n    conversation_id: String(trigger.conversation_id || ''),\n    account_id:      String(trigger.account_id      || ''),\n    contact_id:      String(trigger.contact_id      || '')\n  }\n}];"
+        "jsCode": "// Prepara el payload para INSERT en escalaciones.\n// Tomamos los valores del trigger original para evitar referencias rotas.\nconst trigger = $('When Executed by Another Workflow').first().json;\nconst respuesta = (() => { try { return $('Resuelve Problemas').first().json.output || ''; } catch { return ''; } })();\n\nconst contexto = {\n  contexto_actual: trigger.contexto_actual || null,\n  respuesta_agente: respuesta\n};\n\nreturn [{\n  json: {\n    telefono:        String(trigger.telefono || ''),\n    problema:        String(trigger.problema  || '').substring(0, 1000),\n    contexto_str:    JSON.stringify(contexto),\n    conversation_id: String(trigger.conversation_id || ''),\n    account_id:      String(trigger.account_id      || ''),\n    contact_id:      String(trigger.contact_id      || ''),\n    tipo_escalacion: String(trigger.tipo_escalacion || 'derivacion_cliente')\n  }\n}];"
       },
       "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       "name": "Preparar Escalacion",
@@ -290,7 +293,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, estado)\nVALUES (\n  1,\n  '{{ $json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $json.problema.replace(/'/g, \"''\") }}',\n  '{{ $json.contexto_str.replace(/'/g, \"''\") }}'::jsonb,\n  '{{ $json.conversation_id }}',\n  '{{ $json.account_id }}',\n  '{{ $json.contact_id }}',\n  'pendiente'\n)\nRETURNING id, created_at",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $json.problema.replace(/'/g, \"''\") }}',\n  '{{ $json.contexto_str.replace(/'/g, \"''\") }}'::jsonb,\n  '{{ $json.conversation_id }}',\n  '{{ $json.account_id }}',\n  '{{ $json.contact_id }}',\n  '{{ $json.tipo_escalacion }}',\n  'pendiente'\n)\nRETURNING id, created_at",
         "options": {}
       },
       "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",

@@ -176,11 +176,15 @@ function ClientePanel({
                 </div>
               )}
               <a
-                href={`https://wa.me/${c!.telefono.replace(/\D/g, '')}`}
+                href={
+                  chatwootBaseUrl && chatwootAccountId
+                    ? `${chatwootBaseUrl}/app/accounts/${chatwootAccountId}/contacts?q=${encodeURIComponent(c!.telefono.replace(/\D/g, ''))}`
+                    : `https://wa.me/${c!.telefono.replace(/\D/g, '')}`
+                }
                 target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 mt-1 text-xs font-semibold text-green-700 bg-green-50 px-3 py-1.5 rounded-xl hover:bg-green-100 w-fit transition-colors"
+                className="inline-flex items-center gap-1.5 mt-1 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl hover:bg-blue-100 w-fit transition-colors"
               >
-                💬 Abrir WhatsApp
+                💬 {chatwootBaseUrl ? 'Abrir en Chatwoot' : 'Abrir WhatsApp'}
               </a>
             </div>
 
@@ -225,7 +229,7 @@ export default function ClientesPage() {
   const { slug } = useParams<{ slug: string }>()
   const router   = useRouter()
   const authFetch   = useAuthFetch()
-  const { theme }   = useBranding()
+  const { theme, chatwootBaseUrl, chatwootAccountId } = useBranding()
   const accent      = theme.accent
   const accentLight = theme.accentLight
   const accentText  = theme.accentText
@@ -347,7 +351,11 @@ export default function ClientesPage() {
                         </span>
                         {c.nombre && (
                           <a
-                            href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`}
+                            href={
+                              chatwootBaseUrl && chatwootAccountId
+                                ? `${chatwootBaseUrl}/app/accounts/${chatwootAccountId}/contacts?q=${encodeURIComponent(c.telefono.replace(/\D/g, ''))}`
+                                : `https://wa.me/${c.telefono.replace(/\D/g, '')}`
+                            }
                             target="_blank" rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
                             className="text-xs shrink-0 underline underline-offset-2" style={{ color: accent }}

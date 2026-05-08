@@ -1124,7 +1124,7 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
   const restaurante_id = c.get('restaurante_id');
 
   try {
-    const [rows, brandingRows] = await Promise.all([
+    const [rows, brandingRows, chatwootRows] = await Promise.all([
       sql<RestauranteFullRow[]>`
         SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
                datos_bancarios, moneda, payment_methods, brand_color, logo_url,
@@ -1140,6 +1140,14 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
         WHERE  id = ${restaurante_id}
         LIMIT  1
       `.catch(() => [] as { eslogan: null; texto_banner: null; redes_sociales: null; theme_id: null }[]),
+      // Chatwoot account_id — read first non-null from escalaciones for this restaurant
+      sql<{ account_id: string }[]>`
+        SELECT account_id
+        FROM   escalaciones
+        WHERE  restaurante_id = ${restaurante_id}
+          AND  account_id IS NOT NULL
+        LIMIT  1
+      `.catch(() => [] as { account_id: string }[]),
     ]);
 
     if (rows.length === 0) {
@@ -1166,6 +1174,8 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
       lat:                (r as unknown as Record<string, unknown>)['lat']                 ?? null,
       lng:                (r as unknown as Record<string, unknown>)['long']                ?? null,
       radio_cobertura_km: (r as unknown as Record<string, unknown>)['radio_cobertura_km'] ?? null,
+      chatwoot_base_url:  CHATWOOT_BASE_URL || null,
+      chatwoot_account_id: chatwootRows[0]?.account_id ?? null,
     });
 
   } catch (err) {
@@ -2158,9 +2168,10 @@ dashboardRoutes.get('/:slug/notifications', async (c) => {
       account_id: string | null;
       contact_id: string | null;
       conversation_id: string | null;
+      tipo_escalacion: string | null;
       created_at: string;
     }[]>`
-      SELECT id, telefono, problema, account_id, contact_id, conversation_id, created_at
+      SELECT id, telefono, problema, account_id, contact_id, conversation_id, tipo_escalacion, created_at
       FROM   escalaciones
       WHERE  restaurante_id = ${restaurante_id}
         AND  estado = 'pendiente'
@@ -2182,6 +2193,7 @@ dashboardRoutes.get('/:slug/notifications', async (c) => {
       escalaciones: rows.map((e) => ({
         id:              Number(e.id),
         tipo:            'derivacion_humano' as const,
+        tipo_escalacion: e.tipo_escalacion ?? 'derivacion_cliente',
         telefono:        e.telefono,
         problema:        e.problema ?? null,
         account_id:      e.account_id ?? null,
@@ -2233,7 +2245,7 @@ dashboardRoutes.get('/:slug/escalaciones', async (c) => {
         SELECT
           e.id, e.telefono, e.problema, e.contexto,
           e.conversation_id, e.account_id, e.contact_id,
-          e.estado, e.created_at, e.resolved_at, e.resolved_by
+          e.tipo_escalacion, e.estado, e.created_at, e.resolved_at, e.resolved_by
         FROM   escalaciones e
         WHERE  e.restaurante_id = ${restaurante_id}
           ${estadoFilter}
@@ -2248,17 +2260,18 @@ dashboardRoutes.get('/:slug/escalaciones', async (c) => {
       page,
       limit,
       escalaciones: rows.map((e) => ({
-        id:              Number(e.id),
-        telefono:        e.telefono,
-        problema:        e.problema ?? null,
-        contexto:        e.contexto ?? null,
-        conversation_id: e.conversation_id ?? null,
-        account_id:      e.account_id ?? null,
-        contact_id:      e.contact_id ?? null,
-        estado:          e.estado,
-        created_at:      e.created_at,
-        resolved_at:     e.resolved_at ?? null,
-        resolved_by:     e.resolved_by ?? null,
+        id:               Number(e.id),
+        telefono:         e.telefono,
+        problema:         e.problema ?? null,
+        contexto:         e.contexto ?? null,
+        conversation_id:  e.conversation_id ?? null,
+        account_id:       e.account_id ?? null,
+        contact_id:       e.contact_id ?? null,
+        tipo_escalacion:  e.tipo_escalacion ?? 'derivacion_cliente',
+        estado:           e.estado,
+        created_at:       e.created_at,
+        resolved_at:      e.resolved_at ?? null,
+        resolved_by:      e.resolved_by ?? null,
       })),
     });
   } catch (err) {
@@ -2334,17 +2347,18 @@ dashboardRoutes.patch('/:slug/escalaciones/:id', async (c) => {
 // Row type — escalaciones
 // ---------------------------------------------------------------------------
 interface EscalacionRow {
-  id:              number | string;
-  telefono:        string;
-  problema:        string | null;
-  contexto:        Record<string, unknown> | null;
-  conversation_id: string | null;
-  account_id:      string | null;
-  contact_id:      string | null;
-  estado:          string;
-  created_at:      string;
-  resolved_at:     string | null;
-  resolved_by:     string | null;
+  id:               number | string;
+  telefono:         string;
+  problema:         string | null;
+  contexto:         Record<string, unknown> | null;
+  conversation_id:  string | null;
+  account_id:       string | null;
+  contact_id:       string | null;
+  tipo_escalacion:  string | null;
+  estado:           string;
+  created_at:       string;
+  resolved_at:      string | null;
+  resolved_by:      string | null;
 }
 
 // ----------------------------------------------------------------------------

@@ -18,6 +18,7 @@ interface Escalacion {
   conversation_id: string | null
   account_id: string | null
   contact_id: string | null
+  tipo_escalacion: string | null
   estado: 'pendiente' | 'resuelto'
   created_at: string
   resolved_at: string | null
@@ -25,7 +26,6 @@ interface Escalacion {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -35,9 +35,43 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString('es-ES', { timeZone: 'Atlantic/Canary' })
 }
 
-function openWhatsApp(telefono: string) {
-  const clean = telefono.replace(/\D/g, '')
-  window.open(`https://wa.me/${clean}`, '_blank')
+const TIPO_LABELS: Record<string, { label: string; bg: string; color: string }> = {
+  derivacion_cliente:     { label: 'Cliente',       bg: '#DBEAFE', color: '#1E40AF' },
+  error_sistema:          { label: 'Error sistema',  bg: '#FEE2E2', color: '#991B1B' },
+  ventana_expirada:       { label: 'Ventana exp.',   bg: '#FEF3C7', color: '#92400E' },
+  pedido_en_preparacion:  { label: 'En preparación', bg: '#E0E7FF', color: '#3730A3' },
+  carrito_expirado:       { label: 'Carrito exp.',   bg: '#F3F4F6', color: '#374151' },
+}
+
+function TipoBadge({ tipo }: { tipo: string | null }) {
+  const key = tipo ?? 'derivacion_cliente'
+  const cfg = TIPO_LABELS[key] ?? { label: key, bg: '#F3F4F6', color: '#374151' }
+  return (
+    <span
+      className="rounded-full px-2 py-0.5 text-xs font-medium"
+      style={{ backgroundColor: cfg.bg, color: cfg.color }}
+    >
+      {cfg.label}
+    </span>
+  )
+}
+
+function openChatwoot(
+  baseUrl: string | null,
+  accountId: string | null,
+  conversationId: string | null,
+  telefono: string,
+) {
+  if (baseUrl && accountId && conversationId) {
+    window.open(`${baseUrl}/app/accounts/${accountId}/conversations/${conversationId}`, '_blank')
+  } else if (baseUrl && accountId) {
+    // No conversation_id — open contact search
+    const phone = telefono.replace(/\D/g, '')
+    window.open(`${baseUrl}/app/accounts/${accountId}/contacts?q=${encodeURIComponent(phone)}`, '_blank')
+  } else {
+    // Fallback: WhatsApp
+    window.open(`https://wa.me/${telefono.replace(/\D/g, '')}`, '_blank')
+  }
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -46,7 +80,7 @@ export default function EscalacionesPage() {
   const { slug }  = useParams<{ slug: string }>()
   const router    = useRouter()
   const authFetch = useAuthFetch()
-  const { theme } = useBranding()
+  const { theme, chatwootBaseUrl } = useBranding()
   const accent    = theme.accent
 
   const [escalaciones, setEscalaciones] = useState<Escalacion[]>([])
@@ -187,6 +221,7 @@ export default function EscalacionesPage() {
                       >
                         {e.estado === 'pendiente' ? '⚠ Pendiente' : '✓ Resuelto'}
                       </span>
+                      <TipoBadge tipo={e.tipo_escalacion} />
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">{timeAgo(e.created_at)}</span>
@@ -235,11 +270,11 @@ export default function EscalacionesPage() {
                   {/* Actions */}
                   <div className="flex gap-2 px-4 pb-3">
                     <button
-                      onClick={() => openWhatsApp(e.telefono)}
+                      onClick={() => openChatwoot(chatwootBaseUrl, e.account_id, e.conversation_id, e.telefono)}
                       className="rounded-xl px-3 py-2 text-xs font-medium transition-colors"
-                      style={{ backgroundColor: '#D1FAE5', color: '#065F46' }}
+                      style={{ backgroundColor: '#DBEAFE', color: '#1E40AF' }}
                     >
-                      💬 WhatsApp
+                      💬 {e.conversation_id ? 'Ver en Chatwoot' : 'Buscar en Chatwoot'}
                     </button>
 
                     {e.estado === 'pendiente' && (
