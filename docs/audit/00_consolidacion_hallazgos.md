@@ -29,7 +29,8 @@ Lo que le falta al sistema actual para convertirse en un SaaS multi-tenant.
 | `Derivar Humano` → URL Chatwoot | URL de instancia Chatwoot hardcodeada |
 | `Pizzeria` → `Validacion` (nodo JS) | Timezone `Atlantic/Canary` hardcodeada |
 | `Pizzeria` → Redis buffer | Key `{telefono}_buffer` sin namespace de restaurante |
-| `Pizzeria` → Memoria LangChain | `session_key = conversation_id` — aislado solo si cada local tiene su propia cuenta Chatwoot |
+| `Pizzeria` → Memoria LangChain (`n8n_chat_histories`) | `session_key = conversation_id` — tabla **sin `restaurante_id`**, cruce de historial garantizado si dos tenants comparten instancia n8n |
+| `Preguntas` → Memoria LangChain (`n8n_chat_histories`) | Mismo problema — nodo Memory usa `session_id` sin namespace de restaurante |
 | `Pizzeria` → System prompt Director | Nombre `"La Isla Pizzería"` hardcodeado |
 | `Pizzeria` → Horarios (DataTable n8n) | Horarios en DataTable interna de n8n, no parametrizable por tenant |
 
@@ -242,6 +243,6 @@ Lo que no puede responderse sin acceso al sistema real o al equipo operativo.
 ### Modelo de datos y negocio
 10. **¿`fn_menu_lookup(NULL)` filtra internamente por `restaurante_id`?** El DDL auditado muestra la función sin ese filtro, pero requiere ejecutarla para confirmar el comportamiento real.
 11. **¿El cliente es global o por tenant?** ¿Un mismo número de teléfono debe tener un perfil unificado entre todos los locales, o perfiles independientes por local? Esto determina si `usuarios` se mantiene con UNIQUE `(telefono)` o cambia a `(telefono, restaurante_id)`.
-12. **¿`n8n_chat_histories` es global o por cuenta Chatwoot?** El aislamiento depende de si cada restaurante usa su propia cuenta de Chatwoot.
+12. **`n8n_chat_histories` NO tiene `restaurante_id` — CONFIRMADO GAP.** ✅ La tabla es global. El aislamiento no existe a nivel de schema. Fix: M-17 (columna `restaurante_id` + índice) + prefijo `{restaurante_id}_{session_id}` en nodos Memory de Pizzeria y Preguntas.
 13. **¿El proyecto `learningliz` tiene dependencia operativa activa con `n8learning`?** Comparten VPS — ¿comparten también base de datos o configuración?
 14. **¿Hay algún proceso de codificación de `restaurante_id` en el `session_id` de Chatwoot?** Podría ser la fuente de aislamiento implícita que falta documentar.

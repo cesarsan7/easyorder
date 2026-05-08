@@ -202,6 +202,19 @@ CREATE INDEX ix_menu_variant_item_active ON public.menu_variant USING btree (men
 
 
 -- public.n8n_chat_histories definition
+-- GAP MULTI-TENANT: esta tabla NO tiene restaurante_id.
+-- Es usada por la memoria LangChain (PostgresChatMessageHistory) en dos workflows:
+--   - [MVP] Pizzeria  → nodo "Memory" (Director)
+--   - [MVP] Preguntas → nodo "Memory" (Agente Preguntas)
+-- session_id actualmente = conversation_id de Chatwoot, sin namespace de restaurante.
+-- Riesgo: si dos restaurantes comparten la misma instancia n8n, el historial
+--   conversacional puede cruzarse entre tenants si coincide el conversation_id.
+-- Acción pendiente (Tier 2 multi-tenant):
+--   1. Agregar columna restaurante_id integer NOT NULL REFERENCES restaurante(id)
+--   2. Crear índice: CREATE INDEX ix_n8n_chat_histories_tenant ON public.n8n_chat_histories (restaurante_id, session_id)
+--   3. Actualizar session_key en nodos Memory de Pizzeria y Preguntas para incluir restaurante_id
+--      como prefijo: '{restaurante_id}_{session_id}'
+--   4. Migration: M-17_n8n_chat_histories_tenant.sql (pendiente de crear)
 
 -- Drop table
 
@@ -212,6 +225,7 @@ CREATE TABLE public.n8n_chat_histories (
 	session_id varchar(255) NOT NULL,
 	message jsonb NOT NULL,
 	"timestamp" timestamp NULL,
+	-- PENDIENTE MULTI-TENANT: agregar restaurante_id integer NOT NULL REFERENCES restaurante(id)
 	CONSTRAINT n8n_chat_histories_pkey PRIMARY KEY (id)
 );
 
