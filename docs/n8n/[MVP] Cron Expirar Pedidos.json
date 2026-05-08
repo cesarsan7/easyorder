@@ -16,7 +16,10 @@
       "name": "Cada 5 minutos",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -28,7 +31,10 @@
       "name": "Expirar Carritos en_curso",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [480, 300]
+      "position": [
+        480,
+        300
+      ]
     },
     {
       "parameters": {
@@ -58,7 +64,10 @@
       "name": "¿Hubo expiraciones?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [720, 300]
+      "position": [
+        720,
+        300
+      ]
     },
     {
       "parameters": {
@@ -68,7 +77,10 @@
       "name": "Log Expiraciones",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 220]
+      "position": [
+        960,
+        220
+      ]
     },
     {
       "parameters": {
@@ -78,24 +90,357 @@
       "name": "Sin Cambios",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 400]
+      "position": [
+        960,
+        400
+      ]
+    },
+    {
+      "id": "eee2e026-5e13-4527-9aa9-d53821caed1f",
+      "name": "Loop Pedidos Expirados",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1200,
+        220
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "58a7ea96-5c06-4618-bf3d-c28e7ab112b9",
+      "name": "Buscar Contacto Chatwoot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        140
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      },
+      "parameters": {
+        "method": "GET",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/search?q={{$json.telefono}}&include_contacts=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5f748886-f4c7-470f-be60-6709d8fe1f88",
+      "name": "Extraer Contact ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        140
+      ],
+      "parameters": {
+        "jsCode": "const searchResult = $input.first().json || {};\nconst loopItem = $('Loop Pedidos Expirados').first().json || {};\n\nlet contacts = [];\ntry {\n  const p = searchResult.payload;\n  if (Array.isArray(p)) contacts = p;\n  else if (p && Array.isArray(p.contacts)) contacts = p.contacts;\n} catch (e) {}\n\nconst contact = contacts.find(c => c && c.id) || null;\nconst contact_id = contact ? contact.id : null;\n\nreturn [{\n  json: {\n    contact_id,\n    tiene_contacto: contact_id !== null,\n    pedido_codigo: String(loopItem.pedido_codigo || ''),\n    pedido_id: loopItem.id,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
+      }
+    },
+    {
+      "id": "18dbd6de-f3a2-4e46-b59c-b19bac47a9d5",
+      "name": "¿Contacto Encontrado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        140
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "81c677cd-5a1a-4af5-a857-df532197ed10",
+              "leftValue": "={{ $json.tiene_contacto }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4a57328c-2ea2-49a1-b9f1-541d880c1978",
+      "name": "Obtener Conversaciones Contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        60
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      },
+      "parameters": {
+        "method": "GET",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/{{$json.contact_id}}/conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "34136136-5e25-413d-9065-cfd0cdce90e6",
+      "name": "Preparar Mensaje Expiracion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        60
+      ],
+      "parameters": {
+        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Pedidos Expirados').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) {\n    conversaciones = convsResult.data.payload;\n  } else if (Array.isArray(convsResult.payload)) {\n    conversaciones = convsResult.payload;\n  } else if (Array.isArray(convsResult)) {\n    conversaciones = convsResult;\n  }\n} catch (e) {}\n\n// Conversación abierta o pendiente más reciente\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\nconst mensaje = `Tu pedido ${pedido_codigo} ha expirado por inactividad. Cuando quieras hacer un nuevo pedido, escr\\u00edbenos y te ayudamos.`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
+      }
+    },
+    {
+      "id": "c7146792-a7fd-4382-8331-ca172d2a69d4",
+      "name": "¿Enviar Notificacion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        60
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "95dbf0cb-2e1b-4001-a170-62ed24a5aee6",
+              "leftValue": "={{ $json.tiene_conversacion }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "578c44d4-c84c-4a00-bd51-07976ca0368b",
+      "name": "Enviar Notificacion Expiracion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2880,
+        60
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      },
+      "parameters": {
+        "method": "POST",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/conversations/{{$json.conversation_id}}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.mensaje }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
     "Cada 5 minutos": {
       "main": [
-        [{ "node": "Expirar Carritos en_curso", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Expirar Carritos en_curso",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Expirar Carritos en_curso": {
       "main": [
-        [{ "node": "¿Hubo expiraciones?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "¿Hubo expiraciones?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "¿Hubo expiraciones?": {
       "main": [
-        [{ "node": "Log Expiraciones", "type": "main", "index": 0 }],
-        [{ "node": "Sin Cambios",      "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Log Expiraciones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin Cambios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Expiraciones": {
+      "main": [
+        [
+          {
+            "node": "Loop Pedidos Expirados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Pedidos Expirados": {
+      "main": [
+        [
+          {
+            "node": "Buscar Contacto Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Contacto Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Extraer Contact ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Contact ID": {
+      "main": [
+        [
+          {
+            "node": "¿Contacto Encontrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Contacto Encontrado?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Conversaciones Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Pedidos Expirados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Conversaciones Contacto": {
+      "main": [
+        [
+          {
+            "node": "Preparar Mensaje Expiracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Mensaje Expiracion": {
+      "main": [
+        [
+          {
+            "node": "¿Enviar Notificacion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Enviar Notificacion?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Notificacion Expiracion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Pedidos Expirados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Notificacion Expiracion": {
+      "main": [
+        [
+          {
+            "node": "Loop Pedidos Expirados",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
