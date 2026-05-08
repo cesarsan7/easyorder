@@ -101,6 +101,7 @@ function ClientePanel({
   const accent      = useAccent()
   const accentLight = useAccentLight()
   const accentText  = useAccentText()
+  const { chatwootBaseUrl, chatwootAccountId } = useBranding()
   const [data, setData] = useState<ClienteDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
