@@ -266,6 +266,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
 }) {
   const authFetch = useAuthFetch()
   const accent = useAccent()
+  const { chatwootBaseUrl, chatwootAccountId } = useBranding()
   const [detail,         setDetail]         = useState<OrderDetail|null>(null)
   const [loadingDetail,  setLoadingDetail]  = useState(true)
   const [estadoPago,     setEstadoPago]     = useState(order.estado_pago??'pendiente')
