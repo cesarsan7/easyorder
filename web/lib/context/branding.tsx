@@ -11,6 +11,7 @@ interface BrandingData {
   logoUrl: string | null
   chatwootBaseUrl: string | null
   chatwootAccountId: string | null
+  zonaHoraria: string
 }
 
 const defaultBranding: BrandingData = {
@@ -20,6 +21,7 @@ const defaultBranding: BrandingData = {
   logoUrl: null,
   chatwootBaseUrl: null,
   chatwootAccountId: null,
+  zonaHoraria: 'UTC',
 }
 
 const BrandingContext = createContext<BrandingData>(defaultBranding)
@@ -51,6 +53,7 @@ export function BrandingProvider({ slug, authFetch, children }: Props) {
         theme_id?: string | null
         chatwoot_base_url?: string | null
         chatwoot_account_id?: string | null
+        zona_horaria?: string | null
       }
       setBranding({
         theme:             getTheme(d.theme_id ?? d.brand_color),
@@ -59,6 +62,7 @@ export function BrandingProvider({ slug, authFetch, children }: Props) {
         logoUrl:           d.logo_url ?? null,
         chatwootBaseUrl:   d.chatwoot_base_url ?? null,
         chatwootAccountId: d.chatwoot_account_id ?? null,
+        zonaHoraria:       d.zona_horaria ?? 'UTC',
       })
     } catch {
       // silent — keep default theme

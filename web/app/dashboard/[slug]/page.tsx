@@ -132,14 +132,13 @@ function timeAgo(iso:string) {
   return `${Math.floor(s/3600)}h`
 }
 
-function formatTime(iso:string) {
-  return new Date(iso).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Atlantic/Canary'})
+function formatTime(iso:string, tz:string) {
+  return new Date(iso).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:tz})
 }
 
 // Merged datetime: YYYY-MM-DD HH:MM (Swedish locale = ISO date naturally)
-function formatDateTime(iso:string) {
+function formatDateTime(iso:string, tz:string) {
   const d = new Date(iso)
-  const tz = 'Atlantic/Canary'
   const date = d.toLocaleDateString('sv-SE',{timeZone:tz})
   const time = d.toLocaleTimeString('sv-SE',{timeZone:tz,hour:'2-digit',minute:'2-digit'})
   return `${date} ${time}`
@@ -230,14 +229,14 @@ function sortOrders(orders: Order[], field: SortField, dir: SortDir): Order[] {
 
 // ── Print comanda ─────────────────────────────────────────────────────────────
 
-function printComanda(order:Order, detail:OrderDetail|null) {
+function printComanda(order:Order, detail:OrderDetail|null, tz:string) {
   const items = detail?.items??[]
   const html = `<html><head><title>Comanda #${order.pedido_codigo}</title>
   <style>body{font-family:monospace;font-size:13px;max-width:280px;margin:0 auto;padding:8px}
   h2{text-align:center;font-size:15px;border-bottom:1px dashed #000;padding-bottom:6px}
   .row{display:flex;justify-content:space-between;margin:4px 0}.sep{border-top:1px dashed #000;margin:6px 0}.bold{font-weight:bold}</style></head><body>
   <h2>COMANDA</h2>
-  <div class="row"><span>${order.pedido_codigo}</span><span>${formatTime(order.created_at)}</span></div>
+  <div class="row"><span>${order.pedido_codigo}</span><span>${formatTime(order.created_at,tz)}</span></div>
   <div class="row bold"><span>${order.nombre_cliente}</span><span>${order.telefono}</span></div>
   <div class="sep"></div>
   ${items.map(i=>`<div class="row"><span>${i.quantity}x ${i.item_name}</span><span>€${(i.unit_price*i.quantity).toFixed(2)}</span></div>`).join('')}
@@ -279,7 +278,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
 }) {
   const authFetch = useAuthFetch()
   const accent = useAccent()
-  const { chatwootBaseUrl, chatwootAccountId } = useBranding()
+  const { chatwootBaseUrl, chatwootAccountId, zonaHoraria } = useBranding()
   const [detail,         setDetail]         = useState<OrderDetail|null>(null)
   const [loadingDetail,  setLoadingDetail]  = useState(true)
   const [estadoPago,     setEstadoPago]     = useState(order.estado_pago??'pendiente')
@@ -322,7 +321,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
           <div>
             <p className="font-mono text-xs text-gray-400">#{order.pedido_codigo}</p>
             <p className="text-base font-bold text-gray-900 mt-0.5">{order.nombre_cliente}</p>
-            <p className="text-xs text-gray-500">{order.telefono} · {formatTime(order.created_at)}</p>
+            <p className="text-xs text-gray-500">{order.telefono} · {formatTime(order.created_at,zonaHoraria)}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -452,7 +451,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
         </div>
 
         <div className="flex gap-2 px-5 pb-8 pt-3">
-          <button onClick={()=>printComanda(order,detail)}
+          <button onClick={()=>printComanda(order,detail,zonaHoraria)}
             className="rounded-xl px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">
             🖶 Imprimir
           </button>
@@ -503,7 +502,7 @@ export default function DashboardPage() {
   const {slug}    = useParams<{slug:string}>()
   const router    = useRouter()
   const authFetch = useAuthFetch()
-  const { theme, chatwootBaseUrl, chatwootAccountId } = useBranding()
+  const { theme, chatwootBaseUrl, chatwootAccountId, zonaHoraria } = useBranding()
   const accent    = theme.accent
 
   useEffect(()=>{ localStorage.setItem('easyorder-last-slug', slug) },[slug])
@@ -838,7 +837,7 @@ export default function DashboardPage() {
 
                         {/* Fecha/Hora -- merged, sortable */}
                         <td className="px-3 py-3 whitespace-nowrap">
-                          <span className="font-mono text-xs text-gray-700">{formatDateTime(order.created_at)}</span>
+                          <span className="font-mono text-xs text-gray-700">{formatDateTime(order.created_at,zonaHoraria)}</span>
                         </td>
 
                         {/* Cliente */}

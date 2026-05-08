@@ -52,7 +52,7 @@ function fmtPrice(n: number) {
   return '€' + n.toFixed(2).replace('.', ',')
 }
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, tz: string) {
   const diff = Date.now() - new Date(iso).getTime()
   const mins  = Math.floor(diff / 60_000)
   const hours = Math.floor(mins / 60)
@@ -61,11 +61,11 @@ function timeAgo(iso: string) {
   if (mins < 60)  return `hace ${mins}m`
   if (hours < 24) return `hace ${hours}h`
   if (days < 30)  return `hace ${days}d`
-  return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+  return new Date(iso).toLocaleDateString('es-ES', { timeZone: tz, day: '2-digit', month: 'short' })
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+function fmtDate(iso: string, tz: string) {
+  return new Date(iso).toLocaleDateString('es-ES', { timeZone: tz, day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const ESTADO_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -101,7 +101,7 @@ function ClientePanel({
   const accent      = useAccent()
   const accentLight = useAccentLight()
   const accentText  = useAccentText()
-  const { chatwootBaseUrl, chatwootAccountId } = useBranding()
+  const { chatwootBaseUrl, chatwootAccountId, zonaHoraria } = useBranding()
   const [data, setData] = useState<ClienteDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
@@ -153,7 +153,7 @@ function ClientePanel({
               {[
                 { label: 'Pedidos', value: String(c!.total_pedidos) },
                 { label: 'Gastado', value: fmtPrice(c!.total_gastado) },
-                { label: 'Último', value: c!.ultimo_pedido ? timeAgo(c!.ultimo_pedido) : '—' },
+                { label: 'Último', value: c!.ultimo_pedido ? timeAgo(c!.ultimo_pedido, zonaHoraria) : '—' },
               ].map(stat => (
                 <div key={stat.label} className="flex flex-col items-center py-4 gap-0.5 border-r border-gray-100 last:border-0">
                   <span className="text-base font-bold text-gray-900">{stat.value}</span>
@@ -173,7 +173,7 @@ function ClientePanel({
               {c!.cliente_desde && (
                 <div className="flex gap-2">
                   <span className="text-xs text-gray-400 shrink-0">📅 Cliente desde:</span>
-                  <span className="text-xs text-gray-700">{fmtDate(c!.cliente_desde)}</span>
+                  <span className="text-xs text-gray-700">{fmtDate(c!.cliente_desde, zonaHoraria)}</span>
                 </div>
               )}
               <a
@@ -212,7 +212,7 @@ function ClientePanel({
                         </span>
                         <span className="font-semibold text-gray-800">{fmtPrice(p.total)}</span>
                       </div>
-                      <p className="text-[10px] text-gray-300 mt-1">{fmtDate(p.created_at)}</p>
+                      <p className="text-[10px] text-gray-300 mt-1">{fmtDate(p.created_at, zonaHoraria)}</p>
                     </div>
                   ))}
                 </div>
@@ -231,7 +231,7 @@ export default function ClientesPage() {
   const { slug } = useParams<{ slug: string }>()
   const router   = useRouter()
   const authFetch   = useAuthFetch()
-  const { theme, chatwootBaseUrl, chatwootAccountId } = useBranding()
+  const { theme, chatwootBaseUrl, chatwootAccountId, zonaHoraria } = useBranding()
   const accent      = theme.accent
   const accentLight = theme.accentLight
   const accentText  = theme.accentText
@@ -371,7 +371,7 @@ export default function ClientesPage() {
                           {c.total_pedidos} pedido{c.total_pedidos !== 1 ? 's' : ''}
                         </span>
                         <span className="text-xs font-semibold text-gray-700">{fmtPrice(c.total_gastado)}</span>
-                        {c.ultimo_pedido && <span className="text-xs text-gray-400">{timeAgo(c.ultimo_pedido)}</span>}
+                        {c.ultimo_pedido && <span className="text-xs text-gray-400">{timeAgo(c.ultimo_pedido, zonaHoraria)}</span>}
                       </div>
                     </div>
 

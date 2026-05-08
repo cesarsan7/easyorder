@@ -27,12 +27,12 @@ interface Escalacion {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function timeAgo(iso: string) {
+function timeAgo(iso: string, tz: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (diff < 60)    return `hace ${diff}s`
   if (diff < 3600)  return `hace ${Math.floor(diff / 60)}m`
   if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`
-  return new Date(iso).toLocaleDateString('es-ES', { timeZone: 'Atlantic/Canary' })
+  return new Date(iso).toLocaleDateString('es-ES', { timeZone: tz })
 }
 
 const TIPO_LABELS: Record<string, { label: string; bg: string; color: string }> = {
@@ -80,7 +80,7 @@ export default function EscalacionesPage() {
   const { slug }  = useParams<{ slug: string }>()
   const router    = useRouter()
   const authFetch = useAuthFetch()
-  const { theme, chatwootBaseUrl } = useBranding()
+  const { theme, chatwootBaseUrl, zonaHoraria } = useBranding()
   const accent    = theme.accent
 
   const [escalaciones, setEscalaciones] = useState<Escalacion[]>([])
@@ -224,7 +224,7 @@ export default function EscalacionesPage() {
                       <TipoBadge tipo={e.tipo_escalacion} />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{timeAgo(e.created_at)}</span>
+                      <span className="text-xs text-gray-400">{timeAgo(e.created_at, zonaHoraria)}</span>
                       <span className="text-gray-300">{expanded === e.id ? '▲' : '▼'}</span>
                     </div>
                   </div>
@@ -261,7 +261,7 @@ export default function EscalacionesPage() {
                       )}
                       {e.resolved_by && (
                         <p className="text-xs text-gray-400">
-                          Resuelto por {e.resolved_by} · {e.resolved_at ? timeAgo(e.resolved_at) : ''}
+                          Resuelto por {e.resolved_by} · {e.resolved_at ? timeAgo(e.resolved_at, zonaHoraria) : ''}
                         </p>
                       )}
                     </div>

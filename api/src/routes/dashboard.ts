@@ -1144,7 +1144,7 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
       sql<RestauranteFullRow[]>`
         SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
                datos_bancarios, moneda, payment_methods, brand_color, logo_url,
-               lat, long, radio_cobertura_km
+               lat, long, radio_cobertura_km, zona_horaria
         FROM   restaurante
         WHERE  id = ${restaurante_id}
         LIMIT  1
@@ -1192,6 +1192,7 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
       radio_cobertura_km: (r as unknown as Record<string, unknown>)['radio_cobertura_km'] ?? null,
       chatwoot_base_url:  CHATWOOT_BASE_URL || null,
       chatwoot_account_id: chatwootRows[0]?.account_id ?? null,
+      zona_horaria:       (r as unknown as Record<string, unknown>)['zona_horaria'] as string ?? 'UTC',
     });
 
   } catch (err) {
