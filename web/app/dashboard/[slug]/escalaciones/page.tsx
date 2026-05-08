@@ -56,6 +56,8 @@ function TipoBadge({ tipo }: { tipo: string | null }) {
   )
 }
 
+const POPUP = 'width=960,height=700,left=120,top=80,resizable=yes,scrollbars=yes'
+
 function openChatwoot(
   baseUrl: string | null,
   accountId: string | null,
@@ -63,13 +65,11 @@ function openChatwoot(
   telefono: string,
 ) {
   if (baseUrl && accountId && conversationId) {
-    window.open(`${baseUrl}/app/accounts/${accountId}/conversations/${conversationId}`, '_blank')
+    window.open(`${baseUrl}/app/accounts/${accountId}/conversations/${conversationId}`, 'chatwoot_panel', POPUP)
   } else if (baseUrl && accountId) {
-    // No conversation_id — open contact search
     const phone = telefono.replace(/\D/g, '')
-    window.open(`${baseUrl}/app/accounts/${accountId}/contacts?q=${encodeURIComponent(phone)}`, '_blank')
+    window.open(`${baseUrl}/app/accounts/${accountId}/contacts?q=${encodeURIComponent(phone)}`, 'chatwoot_panel', POPUP)
   } else {
-    // Fallback: WhatsApp
     window.open(`https://wa.me/${telefono.replace(/\D/g, '')}`, '_blank')
   }
 }
@@ -271,10 +271,11 @@ export default function EscalacionesPage() {
                   <div className="flex gap-2 px-4 pb-3">
                     <button
                       onClick={() => openChatwoot(chatwootBaseUrl, e.account_id, e.conversation_id, e.telefono)}
-                      className="rounded-xl px-3 py-2 text-xs font-medium transition-colors"
+                      className="rounded-xl px-3 py-2 text-xs font-medium transition-colors flex items-center gap-1.5"
                       style={{ backgroundColor: '#DBEAFE', color: '#1E40AF' }}
                     >
-                      💬 {e.conversation_id ? 'Ver en Chatwoot' : 'Buscar en Chatwoot'}
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                      {e.conversation_id ? 'Ver chat' : 'Buscar'}
                     </button>
 
                     {e.estado === 'pendiente' && (

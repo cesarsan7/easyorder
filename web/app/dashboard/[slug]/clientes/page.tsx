@@ -182,10 +182,11 @@ function ClientePanel({
                     ? `${chatwootBaseUrl}/app/accounts/${chatwootAccountId}/contacts?q=${encodeURIComponent(c!.telefono.replace(/\D/g, ''))}`
                     : `https://wa.me/${c!.telefono.replace(/\D/g, '')}`
                 }
-                target="_blank" rel="noopener noreferrer"
+                target="chatwoot_panel" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 mt-1 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl hover:bg-blue-100 w-fit transition-colors"
               >
-                💬 {chatwootBaseUrl ? 'Abrir en Chatwoot' : 'Abrir WhatsApp'}
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                {chatwootBaseUrl ? 'Ver en Chatwoot' : 'Abrir WhatsApp'}
               </a>
             </div>
 
@@ -357,7 +358,7 @@ export default function ClientesPage() {
                                 ? `${chatwootBaseUrl}/app/accounts/${chatwootAccountId}/contacts?q=${encodeURIComponent(c.telefono.replace(/\D/g, ''))}`
                                 : `https://wa.me/${c.telefono.replace(/\D/g, '')}`
                             }
-                            target="_blank" rel="noopener noreferrer"
+                            target="chatwoot_panel" rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
                             className="text-xs shrink-0 underline underline-offset-2" style={{ color: accent }}
                           >

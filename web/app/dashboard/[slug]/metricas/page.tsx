@@ -365,7 +365,34 @@ export default function MetricasPage() {
             </div>
           </div>
 
-          {/* ── 4. Best Sellers ── */}
+          {/* ── 4. Por canal ── */}
+          {data.por_canal && data.por_canal.length > 0 && (
+            <>
+              <SectionTitle>Por canal</SectionTitle>
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs text-gray-400">Canal</th>
+                      <th className="px-3 py-2 text-left text-xs text-gray-400">Pedidos</th>
+                      <th className="px-3 py-2 text-left text-xs text-gray-400">Ventas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.por_canal.map((row, i) => (
+                      <tr key={row.canal} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-3 py-2 text-gray-700 capitalize">{row.canal}</td>
+                        <td className="px-3 py-2 tabular-nums text-gray-700">{row.pedidos}</td>
+                        <td className="px-3 py-2 tabular-nums text-gray-700">{fmt(row.ventas)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* ── 5. Best Sellers ── */}
           <SectionTitle>Best Sellers</SectionTitle>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
             {data.top_items.slice(0, 10).map((item) => (

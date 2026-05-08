@@ -56,6 +56,8 @@ interface Order {
   tiempo_estimado: number | null
   items_count: number
   items: unknown[]
+  canal: string | null
+  chatwoot_conversation_id: string | null
   created_at: string
   updated_at: string
 }
@@ -157,13 +159,24 @@ function getDateRange(preset:DatePreset, from:string, to:string) {
   return {} as Record<string,string>
 }
 
-function openChatwoot(baseUrl: string | null, accountId: string | null, tel: string) {
-  if (baseUrl && accountId) {
+const POPUP = 'width=960,height=700,left=120,top=80,resizable=yes,scrollbars=yes'
+
+function openChatwootConversation(baseUrl: string | null, accountId: string | null, conversationId: string | null, tel: string) {
+  if (baseUrl && accountId && conversationId) {
+    window.open(`${baseUrl}/app/accounts/${accountId}/conversations/${conversationId}`, 'chatwoot_panel', POPUP)
+  } else if (baseUrl && accountId) {
     const phone = tel.replace(/\D/g, '')
-    window.open(`${baseUrl}/app/accounts/${accountId}/contacts?q=${encodeURIComponent(phone)}`, '_blank')
+    window.open(`${baseUrl}/app/accounts/${accountId}/contacts?q=${encodeURIComponent(phone)}`, 'chatwoot_panel', POPUP)
   } else {
     window.open(`https://wa.me/${tel.replace(/\D/g, '')}`, '_blank')
   }
+}
+
+const CANAL_LABELS: Record<string, string> = {
+  whatsapp: '💬 WhatsApp',
+  web:      '🌐 Web',
+  instagram:'📸 Instagram',
+  telefono: '📞 Teléfono',
 }
 
 function extractZona(order: Order): string {
@@ -369,6 +382,7 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
             {order.zone_name&&<div className="flex justify-between"><span className="text-gray-500">Zona</span><span className="font-medium text-gray-900">{order.zone_name}</span></div>}
             <div className="flex justify-between"><span className="text-gray-500">Pago</span><span className="font-medium text-gray-900">{PAGO_LABEL[order.metodo_pago]??order.metodo_pago}</span></div>
             {order.tiempo_estimado&&<div className="flex justify-between"><span className="text-gray-500">Tiempo est.</span><span className="font-medium text-gray-900">{order.tiempo_estimado} min</span></div>}
+            {order.canal&&<div className="flex justify-between"><span className="text-gray-500">Canal</span><span className="font-medium text-gray-900">{CANAL_LABELS[order.canal]??order.canal}</span></div>}
           </div>
 
           {Array.isArray(order.notas)&&order.notas.length>0&&(
@@ -442,10 +456,11 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
             className="rounded-xl px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">
             🖶 Imprimir
           </button>
-          <button onClick={()=>openChatwoot(chatwootBaseUrl, chatwootAccountId, order.telefono)}
+          <button onClick={()=>openChatwootConversation(chatwootBaseUrl, chatwootAccountId, order.chatwoot_conversation_id, order.telefono)}
             className="rounded-xl px-4 py-2.5 text-sm font-medium"
             style={{backgroundColor:'#DBEAFE',color:'#1E40AF'}}>
-            💬 Chatwoot
+            <svg className="inline w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            {order.chatwoot_conversation_id ? 'Ver chat' : 'Buscar'}
           </button>
         </div>
       </div>
@@ -506,6 +521,7 @@ export default function DashboardPage() {
   const [filterPago,     setFilterPago]     = useState('')
   const [filterDespacho, setFilterDespacho] = useState('')
   const [filterZona,     setFilterZona]     = useState('')
+  const [filterCanal,    setFilterCanal]    = useState('')
   const [datePreset,     setDatePreset]     = useState<DatePreset>(null)
   const [dateFrom,       setDateFrom]       = useState('')
   const [dateTo,         setDateTo]         = useState('')
@@ -580,10 +596,12 @@ export default function DashboardPage() {
     .filter(o => !filterPago     || o.estado_pago    === filterPago)
     .filter(o => !filterDespacho || o.tipo_despacho  === filterDespacho)
     .filter(o => !filterZona     || o.zone_name      === filterZona)
+    .filter(o => !filterCanal    || (o.canal ?? 'whatsapp') === filterCanal)
 
   const displayOrders   = sortOrders(filteredOrders, sortField, sortDir)
   const activeTab       = FILTER_TABS.find(t=>t.key===filter)??FILTER_TABS[0]
-  const hasExtraFilters = !!(filterPago || filterDespacho || filterZona)
+  const hasExtraFilters = !!(filterPago || filterDespacho || filterZona || filterCanal)
+  const canalOptions    = Array.from(new Set(orders.map(o => o.canal ?? 'whatsapp'))).sort()
 
   // Unique zone names across ALL loaded orders (for dropdown)
   const zonaOptions = Array.from(new Set(orders.flatMap(o => o.zone_name ? [o.zone_name] : []))).sort()
@@ -712,6 +730,19 @@ export default function DashboardPage() {
             </select>
           </div>
 
+          {/* Canal */}
+          {canalOptions.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Canal:</span>
+              <select value={filterCanal} onChange={e=>setFilterCanal(e.target.value)}
+                className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
+                style={{borderColor:filterCanal?accent:'#E5E7EB',color:filterCanal?accent:'#374151'}}>
+                <option value="">Todos</option>
+                {canalOptions.map(c=><option key={c} value={c}>{CANAL_LABELS[c]??c}</option>)}
+              </select>
+            </div>
+          )}
+
           {/* Zona delivery */}
           {zonaOptions.length > 0 && (
             <div className="flex items-center gap-1.5">
@@ -726,7 +757,7 @@ export default function DashboardPage() {
           )}
 
           {hasExtraFilters&&(
-            <button onClick={()=>{setFilterPago('');setFilterDespacho('');setFilterZona('')}}
+            <button onClick={()=>{setFilterPago('');setFilterDespacho('');setFilterZona('');setFilterCanal('')}}
               className="text-xs text-gray-400 hover:text-orange-500 transition-colors">× limpiar</button>
           )}
         </div>
@@ -826,12 +857,15 @@ export default function DashboardPage() {
                           )}
                         </td>
 
-                        {/* Despacho + metodo pago */}
+                        {/* Despacho + metodo pago + canal */}
                         <td className="px-3 py-3 whitespace-nowrap">
                           <p className="text-xs font-medium text-gray-700">
                             {order.tipo_despacho==='delivery'?'🛵 Delivery':'🏪 Retiro'}
                           </p>
                           <p className="text-xs text-gray-400">{PAGO_LABEL[order.metodo_pago]??order.metodo_pago}</p>
+                          {order.canal&&order.canal!=='whatsapp'&&(
+                            <p className="text-xs text-gray-400">{CANAL_LABELS[order.canal]??order.canal}</p>
+                          )}
                         </td>
 
                         {/* Zona / Direccion */}
@@ -852,10 +886,11 @@ export default function DashboardPage() {
                         {/* Acciones */}
                         <td className="px-3 py-3 whitespace-nowrap" onClick={e=>e.stopPropagation()}>
                           <div className="flex items-center gap-1">
-                            <button onClick={()=>openChatwoot(chatwootBaseUrl, chatwootAccountId, order.telefono)}
-                              className="rounded-lg px-2 py-1 text-xs font-medium"
-                              style={{backgroundColor:'#DBEAFE',color:'#1E40AF'}}>
-                              CH
+                            <button onClick={()=>openChatwootConversation(chatwootBaseUrl, chatwootAccountId, order.chatwoot_conversation_id, order.telefono)}
+                              className="rounded-lg p-1.5 text-xs font-medium"
+                              style={{backgroundColor:'#DBEAFE',color:'#1E40AF'}}
+                              title={order.chatwoot_conversation_id ? 'Ver conversación' : 'Buscar contacto'}>
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
                             </button>
                             {primaryNext&&(
                               <button onClick={()=>handleStatusChange(order.id,primaryNext)}

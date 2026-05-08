@@ -32,7 +32,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        480,
+        960,
         300
       ]
     },
@@ -65,7 +65,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        720,
+        1200,
         300
       ]
     },
@@ -78,7 +78,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        960,
+        1440,
         220
       ]
     },
@@ -91,7 +91,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        960,
+        1440,
         400
       ]
     },
@@ -101,7 +101,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        1200,
+        1680,
         220
       ],
       "parameters": {
@@ -115,7 +115,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1440,
+        1920,
         140
       ],
       "credentials": {
@@ -139,7 +139,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1680,
+        2160,
         140
       ],
       "parameters": {
@@ -152,7 +152,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1920,
+        2400,
         140
       ],
       "parameters": {
@@ -184,7 +184,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2160,
+        2640,
         60
       ],
       "credentials": {
@@ -208,7 +208,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2400,
+        2880,
         60
       ],
       "parameters": {
@@ -221,7 +221,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2640,
+        3120,
         60
       ],
       "parameters": {
@@ -253,7 +253,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2880,
+        3360,
         60
       ],
       "credentials": {
@@ -287,6 +287,220 @@
         "options": {}
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "adv-sql-001",
+      "name": "Advertir Carritos Próximos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        480,
+        180
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Encuentra carritos a punto de expirar (dentro de cart_warning_minutes)\n-- y los marca como advertidos para no notificar dos veces.\nWITH cfg AS (\n  SELECT\n    p.id AS pedido_id,\n    p.restaurante_id,\n    COALESCE(\n      (SELECT rc.config_value::int FROM public.restaurante_config rc\n       WHERE rc.config_key = 'cart_expiry_minutes' AND rc.restaurante_id = p.restaurante_id LIMIT 1), 60\n    ) AS cart_expiry_minutes,\n    COALESCE(\n      (SELECT rc.config_value::int FROM public.restaurante_config rc\n       WHERE rc.config_key = 'cart_warning_minutes' AND rc.restaurante_id = p.restaurante_id LIMIT 1), 5\n    ) AS cart_warning_minutes\n  FROM public.pedidos p\n  WHERE p.estado IN ('en_curso', 'recibido') AND p.cart_warned_at IS NULL\n),\ncandidatos AS (\n  SELECT c.pedido_id\n  FROM cfg c JOIN public.pedidos p ON p.id = c.pedido_id\n  WHERE COALESCE(p.updated_at, p.created_at) <\n        NOW() - ((c.cart_expiry_minutes - c.cart_warning_minutes) * INTERVAL '1 minute')\n    AND COALESCE(p.updated_at, p.created_at) >=\n        NOW() - (c.cart_expiry_minutes * INTERVAL '1 minute')\n)\nUPDATE public.pedidos\nSET cart_warned_at = NOW()\nWHERE id IN (SELECT pedido_id FROM candidatos)\nRETURNING id, pedido_codigo, telefono, restaurante_id",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "adv-loop-001",
+      "name": "Loop Advertencias",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        720,
+        180
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "adv-http-search",
+      "name": "Buscar Contacto Adv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        80
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/search?q={{$json.telefono}}&include_contacts=true",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "adv-code-contact",
+      "name": "Extraer Contact ID Adv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const searchResult = $input.first().json || {};\nconst loopItem = $('Loop Advertencias').first().json || {};\n\nlet contacts = [];\ntry {\n  const p = searchResult.payload;\n  if (Array.isArray(p)) contacts = p;\n  else if (p && Array.isArray(p.contacts)) contacts = p.contacts;\n} catch (e) {}\n\nconst contact = contacts.find(c => c && c.id) || null;\nconst contact_id = contact ? contact.id : null;\n\nreturn [{\n  json: {\n    contact_id,\n    tiene_contacto: contact_id !== null,\n    pedido_codigo: String(loopItem.pedido_codigo || ''),\n    pedido_id: loopItem.id,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
+      }
+    },
+    {
+      "id": "adv-if-contact",
+      "name": "¿Contacto Adv?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "adv-cond-01",
+              "leftValue": "={{ $json.tiene_contacto }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "adv-http-convs",
+      "name": "Obtener Conv Adv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        80
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/{{$json.contact_id}}/conversations",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "adv-code-msg",
+      "name": "Preparar Mensaje Adv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        80
+      ],
+      "parameters": {
+        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Advertencias').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) conversaciones = convsResult.data.payload;\n  else if (Array.isArray(convsResult.payload)) conversaciones = convsResult.payload;\n  else if (Array.isArray(convsResult)) conversaciones = convsResult;\n} catch (e) {}\n\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\n\nconst mensaje = `⏰ ¡Hola! Tu pedido *${pedido_codigo}* está esperándote 🛍️\\n`\n  + `Tienes pocos minutos antes de que se cancele por inactividad.\\n`\n  + `¡Escríbenos ahora y lo completamos juntos! 😊`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo\n  }\n}];"
+      }
+    },
+    {
+      "id": "adv-if-send",
+      "name": "¿Enviar Adv?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "adv-cond-02",
+              "leftValue": "={{ $json.tiene_conversacion }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "adv-http-send",
+      "name": "Enviar Advertencia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        80
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/conversations/{{$json.conversation_id}}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.mensaje }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -294,7 +508,7 @@
       "main": [
         [
           {
-            "node": "Expirar Carritos en_curso",
+            "node": "Advertir Carritos Próximos",
             "type": "main",
             "index": 0
           }
@@ -437,6 +651,126 @@
         [
           {
             "node": "Loop Pedidos Expirados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advertir Carritos Próximos": {
+      "main": [
+        [
+          {
+            "node": "Loop Advertencias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Advertencias": {
+      "main": [
+        [
+          {
+            "node": "Buscar Contacto Adv",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Expirar Carritos en_curso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Contacto Adv": {
+      "main": [
+        [
+          {
+            "node": "Extraer Contact ID Adv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Contact ID Adv": {
+      "main": [
+        [
+          {
+            "node": "¿Contacto Adv?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Contacto Adv?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Conv Adv",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Advertencias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Conv Adv": {
+      "main": [
+        [
+          {
+            "node": "Preparar Mensaje Adv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Mensaje Adv": {
+      "main": [
+        [
+          {
+            "node": "¿Enviar Adv?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Enviar Adv?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Advertencia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Advertencias",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Advertencia": {
+      "main": [
+        [
+          {
+            "node": "Loop Advertencias",
             "type": "main",
             "index": 0
           }

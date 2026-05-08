@@ -338,6 +338,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           jsonb_array_length(p.items)     AS items_count,
           p.estado_pago,
           p.items,
+          COALESCE(p.canal, 'whatsapp')   AS canal,
+          p.chatwoot_conversation_id,
           p.created_at,
           p.updated_at
         FROM   pedidos  p
@@ -373,10 +375,12 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         zone_name:       o.zone_name ?? null,
         tiempo_estimado: o.tiempo_estimado ?? null,
         items_count:     Number(o.items_count ?? 0),
-        items:           o.items ?? [],
-        estado_pago:     o.estado_pago ?? 'pendiente',
-        created_at:      o.created_at,
-        updated_at:      o.updated_at,
+        items:                    o.items ?? [],
+        estado_pago:              o.estado_pago ?? 'pendiente',
+        canal:                    o.canal ?? 'whatsapp',
+        chatwoot_conversation_id: o.chatwoot_conversation_id ?? null,
+        created_at:               o.created_at,
+        updated_at:               o.updated_at,
       })),
     });
 
@@ -2040,26 +2044,28 @@ function getLocalIsoDate(zona_horaria: string): string {
 // ---------------------------------------------------------------------------
 
 interface OrderListRow {
-  id:              number;
-  pedido_codigo:   string | null;
-  estado:          string;
-  estado_pago:     string | null;
-  tipo_despacho:   string;
-  total:           number;
-  subtotal:        number;
-  costo_envio:     number;
-  metodo_pago:     string | null;
-  notas:           string | null;
-  telefono:        string;
-  nombre_cliente:  string | null;
-  direccion:       string | null;
-  postal_code:     string | null;
-  zone_name:       string | null;
-  tiempo_estimado: string | null;
-  items_count:     number | null;
-  items:           unknown[] | null;
-  created_at:      string;
-  updated_at:      string | null;
+  id:                        number;
+  pedido_codigo:             string | null;
+  estado:                    string;
+  estado_pago:               string | null;
+  tipo_despacho:             string;
+  total:                     number;
+  subtotal:                  number;
+  costo_envio:               number;
+  metodo_pago:               string | null;
+  notas:                     string | null;
+  telefono:                  string;
+  nombre_cliente:            string | null;
+  direccion:                 string | null;
+  postal_code:               string | null;
+  zone_name:                 string | null;
+  tiempo_estimado:           string | null;
+  items_count:               number | null;
+  items:                     unknown[] | null;
+  canal:                     string | null;
+  chatwoot_conversation_id:  string | null;
+  created_at:                string;
+  updated_at:                string | null;
 }
 
 interface TodayMetricsRow {
