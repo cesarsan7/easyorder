@@ -339,12 +339,24 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.estado_pago,
           p.items,
           COALESCE(p.canal, 'whatsapp')   AS canal,
-          p.chatwoot_conversation_id,
+          COALESCE(
+            NULLIF(p.chatwoot_conversation_id, ''),
+            ctx_latest.conversation_id
+          )                               AS chatwoot_conversation_id,
           p.created_at,
           p.updated_at
         FROM   pedidos  p
         LEFT JOIN usuarios       u  ON u.id             = p.usuario_id
         LEFT JOIN delivery_zone  dz ON dz.postal_code   = p.postal_code
+        LEFT JOIN LATERAL (
+          SELECT session_id AS conversation_id
+          FROM   contexto
+          WHERE  telefono        = p.telefono
+            AND  restaurante_id  = p.restaurante_id
+            AND  session_id IS NOT NULL
+          ORDER BY "timestamp" DESC
+          LIMIT 1
+        ) ctx_latest ON TRUE
         WHERE  p.restaurante_id = ${restaurante_id}
           ${dateFilter}
           ${estadoFilter}

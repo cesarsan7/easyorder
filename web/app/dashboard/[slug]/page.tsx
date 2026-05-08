@@ -731,17 +731,18 @@ export default function DashboardPage() {
           </div>
 
           {/* Canal */}
-          {canalOptions.length > 1 && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Canal:</span>
-              <select value={filterCanal} onChange={e=>setFilterCanal(e.target.value)}
-                className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
-                style={{borderColor:filterCanal?accent:'#E5E7EB',color:filterCanal?accent:'#374151'}}>
-                <option value="">Todos</option>
-                {canalOptions.map(c=><option key={c} value={c}>{CANAL_LABELS[c]??c}</option>)}
-              </select>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Canal:</span>
+            <select value={filterCanal} onChange={e=>setFilterCanal(e.target.value)}
+              className="rounded-lg border text-xs px-2 py-0.5 bg-white text-gray-700 focus:outline-none cursor-pointer"
+              style={{borderColor:filterCanal?accent:'#E5E7EB',color:filterCanal?accent:'#374151'}}>
+              <option value="">Todos</option>
+              <option value="whatsapp">💬 WhatsApp</option>
+              <option value="web">🌐 Web</option>
+              <option value="instagram">📸 Instagram</option>
+              <option value="telefono">📞 Teléfono</option>
+            </select>
+          </div>
 
           {/* Zona delivery */}
           {zonaOptions.length > 0 && (
@@ -863,9 +864,7 @@ export default function DashboardPage() {
                             {order.tipo_despacho==='delivery'?'🛵 Delivery':'🏪 Retiro'}
                           </p>
                           <p className="text-xs text-gray-400">{PAGO_LABEL[order.metodo_pago]??order.metodo_pago}</p>
-                          {order.canal&&order.canal!=='whatsapp'&&(
-                            <p className="text-xs text-gray-400">{CANAL_LABELS[order.canal]??order.canal}</p>
-                          )}
+                          <p className="text-xs text-gray-400">{CANAL_LABELS[order.canal??'whatsapp']??order.canal}</p>
                         </td>
 
                         {/* Zona / Direccion */}
