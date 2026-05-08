@@ -95,3 +95,22 @@
 - No cambiar a **retiro** si el cliente venía en **delivery** sin confirmación explícita.
 - No confirmar un pedido sin haber pasado correctamente por el paso de **Pago**.
 - Si hay reclamo, caso sensible o solicitud explícita, se debe **derivar a humano**.
+
+## 11. Expiración de pedidos (carrito abandonado)
+- Un pedido en estado **`en_curso`** expira por inactividad según la configuración del local.
+- Valores actuales en `restaurante_config`:
+  - `cart_expiry_minutes = 30` → el pedido pasa a **`expirado`** tras 30 min de inactividad.
+  - `cart_warning_minutes = 5` → se envía un mensaje de persuasión 5 min **antes** de la expiración (a los 25 min de inactividad).
+- La inactividad se mide sobre `COALESCE(updated_at, created_at)` del pedido.
+- El cron `[MVP] Cron Expirar Pedidos` corre cada 5 minutos y:
+  1. **Advierte** pedidos en la ventana `[expiry - warning, expiry)` con `cart_warned_at IS NULL`.
+  2. **Expira** pedidos con inactividad ≥ `cart_expiry_minutes`.
+- Si `cart_warning_minutes = cart_expiry_minutes` la advertencia se dispara de inmediato y pierde utilidad; deben configurarse con diferencia significativa.
+- Todas las comparaciones de tiempo usan UTC explícito (`AT TIME ZONE 'UTC'`) para evitar el desfase del servidor PostgreSQL (-0400).
+
+## 12. Zona horaria del sistema
+- Fuente única de verdad: columna `restaurante.zona_horaria` (valor: `Atlantic/Canary`).
+- La conexión postgres.js de la API fuerza `TimeZone='UTC'` en todas las sesiones para que `NOW()` y las comparaciones sean siempre UTC.
+- Los timestamps se almacenan como UTC en columnas `timestamp without time zone`.
+- El frontend convierte a `zona_horaria` del restaurante únicamente para visualización (via `useBranding().zonaHoraria`).
+- Nunca hardcodear `'Atlantic/Canary'` en código — siempre leer de `restaurante.zona_horaria`.

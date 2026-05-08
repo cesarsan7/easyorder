@@ -59,6 +59,15 @@ Existe un agente operativo de pedidos por WhatsApp implementado en n8n, sin emba
 10. No cambiar delivery a retiro sin confirmación explícita.
 11. No confirmar un pedido sin pasar por Pago.
 12. Si hay reclamo o caso sensible, derivar a humano.
+13. Pedido `en_curso` expira tras **30 min** de inactividad (`cart_expiry_minutes=30`).
+14. Advertencia de carrito enviada **5 min antes** de expirar (`cart_warning_minutes=5`), a los 25 min de inactividad.
+
+## Zona horaria — regla técnica obligatoria
+- Fuente única de verdad: `restaurante.zona_horaria` (La Isla = `Atlantic/Canary`).
+- La API fuerza `TimeZone='UTC'` en postgres.js para que `NOW()` y comparaciones sean siempre UTC.
+- Timestamps almacenados como UTC en columnas `timestamp without time zone`.
+- El frontend usa `useBranding().zonaHoraria` para formatear fechas — NUNCA hardcodear `'Atlantic/Canary'`.
+- n8n usa `AT TIME ZONE 'UTC'` en comparaciones de expiración.
 
 ## Meta del SaaS EasyOrder
 Evolucionar el sistema actual a un SaaS multi-tenant para múltiples locales con:
