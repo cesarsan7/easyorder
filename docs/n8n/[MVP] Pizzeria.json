@@ -13,7 +13,7 @@
         -48,
         1024
       ],
-      "id": "7aae37da-4db0-473d-9c36-c7ee800b89d1",
+      "id": "5890f330-b1cf-439d-8355-eff98e70ab04",
       "name": "Webhook",
       "webhookId": "4e670c56-c403-465b-9052-a744af040529"
     },
@@ -108,7 +108,7 @@
         896,
         976
       ],
-      "id": "67bfdf01-22f3-489b-99f2-84b8dbf1ed47",
+      "id": "b6e0e218-c550-4de2-bb01-b8e343cc2015",
       "name": "Switch"
     },
     {
@@ -125,7 +125,7 @@
         1344,
         928
       ],
-      "id": "9bf04df6-04ca-4805-b6d7-6af3bba22e9b",
+      "id": "f7e3ec6f-5c71-434f-bba7-4d11212b54e3",
       "name": "OpenAI1",
       "credentials": {
         "openAiApi": {
@@ -154,7 +154,7 @@
         1264,
         784
       ],
-      "id": "95451150-bb7b-48c2-96c1-3b4df7af7529",
+      "id": "ac6f889e-3096-430f-8b4d-2bbd32ed048f",
       "name": "Ubicación"
     },
     {
@@ -165,7 +165,7 @@
         2432,
         816
       ],
-      "id": "1982c42c-11da-468c-928f-208a11086d32",
+      "id": "aafcd20d-a4f9-43b3-bc5d-7f754ce7421d",
       "name": "No Operation, do nothing"
     },
     {
@@ -179,7 +179,7 @@
         2432,
         992
       ],
-      "id": "34e961dd-d4b8-4771-bdb0-f0025639db46",
+      "id": "19ced288-eac4-473a-9013-92d26b912d5f",
       "name": "Redis2",
       "credentials": {
         "redis": {
@@ -253,7 +253,7 @@
         2240,
         976
       ],
-      "id": "fa351eb4-2c22-4926-a17c-ce94318184b3",
+      "id": "0649a072-b461-46b3-9188-d2edcea17321",
       "name": "Switch2"
     },
     {
@@ -266,7 +266,7 @@
         2432,
         1152
       ],
-      "id": "777b9981-8207-4c65-9933-3f0efc42faba",
+      "id": "bd767223-7845-4c08-b33a-4b3f73c273e6",
       "name": "Wait7",
       "webhookId": "8838bbfa-9e88-4516-8ad6-49f10c91d0b0"
     },
@@ -283,7 +283,7 @@
         1168,
         1072
       ],
-      "id": "3fc7863c-743b-48c5-8c3d-e1acb9acb3bf",
+      "id": "8e6bcdf8-d9ce-4aea-8647-8892b1e2d98f",
       "name": "Descargar Imagen",
       "credentials": {
         "httpHeaderAuth": {
@@ -305,7 +305,7 @@
         1168,
         928
       ],
-      "id": "a48d8899-b653-4344-8bb3-5ddaec9f5407",
+      "id": "59ce7ebe-3deb-4fa3-a126-e8635ecd3b24",
       "name": "Descargar Audio",
       "credentials": {
         "httpHeaderAuth": {
@@ -377,7 +377,7 @@
         576,
         1024
       ],
-      "id": "62347dd9-3b13-45e9-a969-342073940adf",
+      "id": "c2baa5d3-f184-4f05-b870-1e73a02bbbcc",
       "name": "Bot"
     },
     {
@@ -400,7 +400,7 @@
         1344,
         1072
       ],
-      "id": "6a31737a-fd39-4e01-a7b2-72d785282100",
+      "id": "06cbfc02-11a3-47d3-ac47-c38cf22e8dc4",
       "name": "Analyze an image",
       "disabled": true
     },
@@ -424,7 +424,7 @@
         1264,
         1248
       ],
-      "id": "bb38cc6c-691c-4c99-9776-435d54e13ad6",
+      "id": "295a7112-05ec-4bfa-88b8-434e2db59919",
       "name": "Texto"
     },
     {
@@ -501,7 +501,7 @@
         416,
         1024
       ],
-      "id": "12648f43-5231-4ba4-b78a-ada63aea98e3",
+      "id": "95d6bdf0-6283-4d2e-b557-bd4efe659569",
       "name": "Variables"
     },
     {
@@ -530,7 +530,7 @@
         1616,
         992
       ],
-      "id": "68426071-a499-4b09-8909-3089dab2747d",
+      "id": "0a72f0d0-87ec-4b26-a6fc-724e619f7a94",
       "name": "Input"
     },
     {
@@ -553,7 +553,7 @@
         2640,
         992
       ],
-      "id": "00e4c07b-cbb7-4c52-bcc1-567e414a6162",
+      "id": "8784309a-0a15-4dcd-84a6-120abf5eff0e",
       "name": "Input Agente"
     },
     {
@@ -568,7 +568,7 @@
         960
       ],
       "typeVersion": 1,
-      "id": "a100d663-ccce-4630-a66d-507d2d01e5b3",
+      "id": "d6590cd2-3b84-45e8-bb61-3b1137c90acc",
       "name": "Sticky Note"
     },
     {
@@ -584,7 +584,7 @@
         768
       ],
       "typeVersion": 1,
-      "id": "f280acf2-0b84-4d89-bcdc-86d4692838d3",
+      "id": "a6ff6ff8-e6f5-4f51-b6a8-3d136449323f",
       "name": "Sticky Note1"
     },
     {
@@ -600,7 +600,7 @@
         784
       ],
       "typeVersion": 1,
-      "id": "201d70c6-df6c-46d8-9de9-44d8c90262c2",
+      "id": "a3141a43-cf5d-4c78-bace-71fe4ffda096",
       "name": "Sticky Note2"
     },
     {
@@ -616,7 +616,7 @@
         752
       ],
       "typeVersion": 1,
-      "id": "c8517568-b712-4f14-bf54-6090d9cc727e",
+      "id": "5d8da5f3-6f10-4a1a-8ff9-43d1900d2239",
       "name": "Sticky Note3"
     },
     {
@@ -631,7 +631,7 @@
         2880,
         992
       ],
-      "id": "7c6979df-ab5e-4559-9e63-781bb88719ff",
+      "id": "109c7e7f-c95a-4e76-a164-564990d67efe",
       "name": "Obtener registros",
       "alwaysOutputData": true,
       "credentials": {
@@ -654,7 +654,7 @@
         2048,
         992
       ],
-      "id": "d13ba45a-9b7d-470e-ac97-4eb19a24e8b9",
+      "id": "a81661e1-4cee-4d3c-a5fe-bda0029ab768",
       "name": "Redis1",
       "credentials": {
         "redis": {
@@ -676,7 +676,7 @@
         1872,
         992
       ],
-      "id": "76a13119-4cdd-42e6-9adc-7a631511efa3",
+      "id": "581e0f90-d64f-4ca5-9833-2a345ad863f7",
       "name": "Redis",
       "credentials": {
         "redis": {
@@ -716,7 +716,7 @@
         3056,
         992
       ],
-      "id": "db0af92f-4d98-4c59-bf8d-81ef0115f87d",
+      "id": "6a162af5-8f76-4375-b665-882e243b0eea",
       "name": "If"
     },
     {
@@ -790,7 +790,7 @@
         3264,
         1120
       ],
-      "id": "8a368ac0-f5fb-4657-8896-20538f7ad651",
+      "id": "f900aaa4-a227-4882-9077-3d10b07755d4",
       "name": "Nuevo usuario",
       "credentials": {
         "postgres": {
@@ -809,7 +809,7 @@
         3344,
         880
       ],
-      "id": "b878c08a-7565-4cfb-8be0-9e7a028a363b",
+      "id": "a176dad7-3e3e-4189-9e8d-94ef0ab27c0e",
       "name": "Preparar contexto"
     },
     {
@@ -832,7 +832,7 @@
         3424,
         1120
       ],
-      "id": "3fa10e5c-85fa-472b-8a20-379a956f0b76",
+      "id": "7c5ce021-00cd-429f-b964-9a5c77546453",
       "name": "Sin contexto"
     },
     {
@@ -885,7 +885,7 @@
         3824,
         944
       ],
-      "id": "5fcd5bd9-56f7-4ff7-9832-c82c77a145c8",
+      "id": "c488beb0-a0bf-4a6c-ac3b-1d11e3a38515",
       "name": "Input Agente1"
     },
     {
@@ -901,7 +901,7 @@
         752
       ],
       "typeVersion": 1,
-      "id": "d6050638-e0e0-478a-bcc3-71a406a1a4c5",
+      "id": "4342b22c-05a1-45e0-a824-66b5f50b1590",
       "name": "Sticky Note5"
     },
     {
@@ -914,7 +914,7 @@
         4576,
         944
       ],
-      "id": "eb65c523-1165-444f-9f2a-44078d41239c",
+      "id": "db6673bf-bcfa-4c63-a308-f1f07404a790",
       "name": "Validacion"
     },
     {
@@ -947,7 +947,7 @@
         4736,
         944
       ],
-      "id": "c8499a53-bb41-4f75-99ed-820521390c45",
+      "id": "60e5514e-d003-4b74-ad78-8bdab0b97759",
       "name": "Disponible"
     },
     {
@@ -964,7 +964,7 @@
         4528,
         1392
       ],
-      "id": "553d2133-927a-444c-b0a1-c081be3e9374",
+      "id": "09993c76-e55b-432a-b2a0-5db776f74cb6",
       "name": "Agente Cerrado"
     },
     {
@@ -980,7 +980,7 @@
         1280
       ],
       "typeVersion": 1,
-      "id": "fb05eb4c-1425-4387-98cf-ef303e769e0f",
+      "id": "19a5346f-cd42-4713-8dbf-2e78241186b4",
       "name": "Sticky Note6"
     },
     {
@@ -993,7 +993,7 @@
         5952,
         1360
       ],
-      "id": "613164f1-b5b5-435b-b8b7-9aa57bf0ae96",
+      "id": "984a8afd-efee-4182-b458-1d3eb35fbe6a",
       "name": "Loop Over Items"
     },
     {
@@ -1006,7 +1006,7 @@
         5792,
         1360
       ],
-      "id": "1d107fb3-c22f-42d5-a566-79742111d760",
+      "id": "4d47bea8-ff31-461a-8365-f5588ff8e6fb",
       "name": "Seteo respuesta"
     },
     {
@@ -1014,7 +1014,7 @@
         "promptType": "define",
         "text": "={{ $('Input Agente1').item.json.input }}",
         "options": {
-          "systemMessage": "=Eres el asistente virtual de La Isla Pizzería por WhatsApp.\n\nCONTEXTO DEL CLIENTE:\n{{ $json.contexto }}\n\nDATOS DIRECTOS DEL CLIENTE:\n- Nombre guardado: {{ $json.cliente_nombre || 'no definido' }}\n- Dirección frecuente: {{ $json.direccion_frecuente || 'no definida' }}\n\nESTADO DEL LOCAL:\n{{ $json.estado }}\n\nOBJETIVO:\n- ayudar al cliente con información y pedidos cuando el local está abierto\n- avanzar por fases: Apertura -> Despacho -> Pago\n- usar las tools cuando corresponda\n- responder en un solo mensaje breve, natural y claro\n\nREGLAS CRÍTICAS:\n1. Español neutro, tuteo, texto plano.\n2. Máximo 2 frases o 1 párrafo corto.\n3. No inventes productos, precios, horarios, direcciones ni coberturas.\n4. Si el cliente pregunta algo del negocio, usa Preguntas.\n5. Usa Apertura SOLO para acciones estándar sobre el pedido: agregar | quitar | modificar | consultar.\n6. NUNCA uses Apertura con acciones como pedido_cliente, listar_modificables, resolver, referencia_pedido ni variantes parecidas.\n7. Solo usa Despacho cuando ya haya al menos un producto en el pedido.\n8. Solo usa Pago cuando ya esté definido delivery o retiro.\n9. Si el cliente pide humano, reclama, está molesto o hay un caso sensible, usa Derivar Humano.\n10. Basa tu respuesta EXCLUSIVAMENTE en la salida de las tools llamadas en este turno. Usa el campo respuesta_agente que devuelva la tool como base de tu respuesta. Para totales, moneda, montos e ítems del pedido usa exactamente los valores que devolvió la tool. No sintetices confirmaciones ni estados del pedido a partir de turnos anteriores de la conversación.\n11. Si el pedido ya está armado, ayúdale a continuarlo sin reiniciar la conversación.\n12. Si el cliente pregunta por su pedido actual sin código, usa Apertura con acción \"consultar\".\n13. Si hay nombre guardado, saluda por nombre en próximas conversaciones.\n14. NOMBRE OBLIGATORIO: Si cliente_nombre está vacío o es \"no definido\", DEBES pedir el nombre ANTES de procesar despacho o pago. Pregunta: \"¿A nombre de quién hago el pedido?\" No llames a Despacho ni a Pago hasta recibir el nombre. Tan pronto el cliente lo dé, llama Perfil Cliente con accion=actualizar y nombre=<nombre dado>. No confirmes ni finalices el pedido sin nombre guardado.\n15. Si ya existe nombre guardado, NO vuelvas a pedirlo salvo que el cliente lo cambie explícitamente.\n16. Si el cliente entrega su nombre y estaba pendiente, usa Perfil Cliente para guardarlo.\n17. Si el pedido es delivery/domicilio y el cliente envía dirección nueva, usa Perfil Cliente para guardar direccion_frecuente.\n18. Para retiro/local/para llevar: NUNCA pidas dirección de retiro. Usa Despacho con tipo='retiro'.\n19. Para delivery/domicilio: DEBES tener dirección CON ZONA EXPLÍCITA O CÓDIGO POSTAL antes de llamar Despacho. Si hay dirección frecuente guardada, pregunta si la usamos o prefiere otra. Si la dirección contiene un número de 5 dígitos (código postal, ej: 35500), es zona válida: extráelo como codigo_postal, inclúyelo también en direccion_texto, y llama Despacho con zona_confirmada_por_cliente='true' — el sistema resolverá la zona automáticamente desde la BD. Si el cliente da zona explícita (Arrecife/Playa Honda/Taiche), llama Despacho con zona_confirmada_por_cliente='true'. Si el cliente da dirección sin zona ni código postal, pide la zona antes de llamar Despacho. NUNCA llames Despacho con zona_confirmada_por_cliente=false cuando ya hay zona o CP válido en la dirección.\n20. Si el cliente acaba de confirmar un pedido y luego dice \"agrega\", \"también\", \"suma\", \"quita\" o \"cambia\", usa Apertura directamente sobre el pedido vigente. No pidas qué pedido quiere modificar salvo que realmente haya ambigüedad.\n21. Usa Pedidos Cliente cuando el cliente mencione un pedido por código, use referencias como 1001 / 260418-1001 o cuando realmente necesites desambiguar entre varios pedidos.\n22. Si el cliente quiere CAMBIAR un pedido por código, usa Pedidos Cliente con acción \"resolver\".\n23. Si el cliente quiere CONSULTAR un pedido por código, usa Pedidos Cliente con acción \"consultar\".\n24. Después de que Pedidos Cliente devuelva un pedido, reutiliza ese mismo pedido_id en las siguientes llamadas a Apertura, Despacho o Pago. No lo omitas ni lo inventes.\n25. Si Pedidos Cliente devuelve varios pedidos, pregunta cuál quiere modificar usando el pedido_codigo.\n26. Para cualquier parámetro opcional de tipo string en una tool, si no tienes valor usa cadena vacía. Nunca envíes null.\n27. Si Pedidos Cliente devuelve `derivar_humano: true` en su respuesta, llama INMEDIATAMENTE a Derivar Humano — no llames a ninguna otra tool. Usa como `problema` el texto del campo `respuesta_agente` que devolvió Pedidos Cliente. Esto ocurre cuando la ventana de modificación expiró o el pedido ya está en preparación. NO inicies un pedido nuevo en ese caso, el equipo humano decidirá cómo continuar.\n28. Solo crea un pedido separado cuando el cliente lo diga de forma explícita con frases como \"pedido nuevo\", \"otro pedido\" o \"separado\". En ese caso usa Apertura con forzar_pedido_nuevo=true.\n29. No cambies tipo de despacho, dirección ni costo de envío salvo confirmación explícita del cliente.\n29. Cuando el cliente exprese intención de pedir o modificar productos con frases como \"quiero\", \"agrega\", \"añade\", \"suma\", \"quita\" o \"cambia\" + productos, usa Apertura; no uses Preguntas para eso.\n30. Cuando uses Apertura, envía un objeto por producto. Nunca combines dos productos distintos en un mismo item. Conserva tamaño o variante dentro del nombre de cada producto.\n31. Si Apertura confirma algunos productos y deja otros pendientes, responde indicando qué se agregó y pregunta solo por lo faltante; no digas que todo falló.\n32. Si el pedido ya tiene tipo_despacho definido, no vuelvas a preguntar delivery o retiro salvo que el cliente pida cambiarlo.\n33. Si el pedido ya tiene tipo_despacho='retiro', nunca pidas dirección.\n34. Si el pedido ya tiene tipo_despacho='delivery' y dirección definida, no vuelvas a pedir dirección salvo cambio explícito.\n35. Si el cliente dice \"confirmar y pagar\" y el pedido ya tiene delivery/retiro definido, usa Pago directamente.\n36. Si el cliente consulta un pedido, no lo reinicies ni cambies su estado solo por consultarlo.\n\nGUÍA OPERATIVA:\n- Productos, cantidades, quitar, modificar: Apertura.\n- Si el cliente terminó de elegir productos y aún no hay despacho definido: pregunta si prefiere delivery o retiro.\n- Si el pedido ya está en delivery y cambian los productos, vuelve a usar Despacho con el mismo pedido para recalcular mínimo, envío, total y tiempo antes de pasar a pago.\n- Si el cliente dice retiro: si falta nombre pídelo; si ya hay nombre, usa Despacho.\n- Si el cliente dice delivery o domicilio: si falta nombre pídelo; luego confirma o solicita dirección y usa Perfil Cliente si la dirección cambia; después usa Despacho.\n- Si el cliente dice efectivo, tarjeta, transferencia, bizum u online: Pago.\n- Si el cliente quiere cambiar el nombre del pedido o actualizar dirección, usa Perfil Cliente.\n- Después de usar una tool, responde apoyándote en su salida y avanza solo el siguiente paso lógico.\n\nNo expliques las tools. No uses listas salvo que Preguntas o Pedidos Cliente devuelvan varias opciones.\n37. Nunca confirmes un pedido final ni digas que quedó confirmado si no acabas de usar Pago en este turno.\n38. Si el cliente dice solo \"confirmar\" o \"sí\" y todavía no indicó el método de pago, NO asumas efectivo ni ningún otro método: pregunta cómo quiere pagar.\n39. Si el pedido venía como delivery y estaba pendiente por mínimo, y luego el cliente agrega/quita/modifica productos, conserva delivery y revalida con Despacho antes de hablar de pago.\n40. Si un pedido ya está en delivery, nunca lo cambies a retiro salvo instrucción explícita del cliente.\n41. Si Despacho responde mínimo no alcanzado, no cierres el pedido ni pases a Pago; solo ayuda a agregar más productos o a cambiar a retiro si el cliente lo pide.\n42. Si el cliente quiere cancelar o anular su pedido (frases como \"cancelar\", \"anular\", \"ya no quiero el pedido\", \"no quiero nada\"), usa Derivar Humano de inmediato con un mensaje claro indicando la intención de cancelación. No intentes modificar ni eliminar el pedido directamente. El equipo lo gestionará desde el dashboard.\n43. Cuando Pago devuelva su resultado, SIEMPRE incluye el código del pedido en tu respuesta (ejemplo: \"Tu código de pedido es *260419-1005*.\"). Nunca omitas el código si Pago lo devolvió.\n44. Si el método de pago es transferencia, NUNCA digas que el pedido está \"confirmado\", \"listo\" ni \"listo para retirar\". Di siempre que el pedido fue REGISTRADO y que está PENDIENTE DE CONFIRMACIÓN por el restaurante hasta que verifiquen el comprobante.\n45. Si Pedidos Cliente devuelve `derivar_humano: true` (motivo: ventana_modificacion_expirada), usa Derivar Humano de inmediato. Indica al operador que el cliente quería modificar el pedido pero la ventana ya expiró e incluye el código del pedido. No intentes crear un pedido nuevo ni modificar nada.\n46. Cuando Apertura devuelva su resultado, el campo pedido_id es un número entero; ese es el valor que debes pasar a Despacho y Pago. NUNCA uses pedido_codigo (formato 260430-NNNN) donde se espera pedido_id. Si Apertura devolvió pedido_id, guárdalo y úsalo en las tools siguientes.\n47. Si el cliente expresa una preferencia o instrucción sobre un ítem específico (ej: \"sin queso\", \"bien cocido\", \"término medio\", \"sin cebolla\", \"no muy picante\", \"sin tomate\", \"sin mantequilla\"), trátala como una NOTA del ítem. Llama Apertura con acción=\"modificar\", el ítem correspondiente y el campo \"notas\" con la instrucción textual del cliente. NUNCA digas que no puedes anotar esa instrucción; siempre recíbela como nota visible para el equipo del restaurante.\n48. NUNCA digas \"agregué X\", \"añadí X\" ni \"quedó X en el pedido\" salvo que hayas llamado Apertura en ESTE turno y la tool haya devuelto ese ítem en su respuesta. Si un ítem ya estaba en el pedido desde un turno anterior, no lo reconfirmes como recién agregado. Tu respuesta debe basarse solo en lo que la tool devolvió en este turno.\n49. Cuando todos los ítems estén confirmados y aún no hayas preguntado por despacho, puedes hacer una pregunta combinada natural: \"¿Lo quieres para delivery o retiro? ¿Tienes alguna nota para el pedido?\" — solo una vez, solo si el cliente no ha expresado preferencias o notas antes.\n50. Si cualquier herramienta (Apertura, Despacho, Pago, Preguntas, Pedidos Cliente, Perfil Cliente u otra) devuelve un objeto con `error: true` y `tipo: \"sistema\"`, deriva INMEDIATAMENTE a humano usando Derivar Humano con motivo=\"error_sistema\". No reintentes la misma herramienta. No improvises ni inventes una respuesta. El mensaje al operador debe indicar brevemente qué subflujo falló y cuál era la acción que se intentaba. El mensaje al cliente debe ser: \"Ocurrió un problema técnico. Un operador te atenderá enseguida.\" \n51. Cuando el cliente pida agregar un extra del menú (jalapeños, queso extra, bacon, salsa, etc.), inclúyelo en el campo `nombre` del ítem al llamar Apertura — no en `notas`. Ejemplo: {nombre: \"Hamburguesa Pollo Crispy con extra jalapeños\", cantidad: 2, notas: null}. El campo `notas` es exclusivamente para preferencias de cocina que no son extras del menú (ej: \"término medio\", \"bien cocido\", \"sin sal\"). Si el cliente pide un extra Y tiene una nota de cocina, envía ambos: el extra en el `nombre` y la nota de cocina en `notas`.\n52. Cuando Pago devuelva `datos_bancarios` (para transferencia u online), incluye en tu respuesta TODOS los campos presentes: Banco, Titular, Cuenta y Alias, con el formato exacto que trae Pago. NUNCA abrevies ni omitas datos bancarios. El cliente necesita esos datos para poder realizar la transferencia. Copia el bloque de datos bancarios tal como aparece en `respuesta_agente` de Pago.\n53. Si el cliente pregunta por zonas de delivery, cobertura o frases como \"¿a dónde llegáis?\", \"¿hacéis delivery aquí?\", responde sin llamar a ninguna herramienta: \"Hacemos delivery a Arrecife, Playa Honda y Taiche.\"\n54. Si Despacho responde con motivo=sin_direccion, NO repitas el mensaje de error al cliente. Pide la dirección directamente: \"¿A qué dirección te lo enviamos? Nuestras zonas son Arrecife, Playa Honda y Taiche.\" Espera la respuesta antes de volver a llamar Despacho.\n55. Si en el contexto del mensaje del cliente aparece lat y lng (pin de ubicación de WhatsApp), extrae esos valores y pásalos a Despacho como lat y lng numéricos. Esto reemplaza la necesidad de que el cliente escriba la dirección a mano. Aun así confirma verbalmente la dirección resuelta.\n56. CHECKLIST OBLIGATORIO antes de llamar Despacho para delivery — verifica cada punto:\n   a) ¿El cliente dijo EXPLÍCITAMENTE una zona (Arrecife/Playa Honda/Taiche) o CP de 5 dígitos en este turno o uno anterior? → zona_confirmada_por_cliente=true\n   b) Si NO dijo zona → zona_confirmada_por_cliente=false → NO llames Despacho → pregunta: \"¿En qué zona está esa dirección? Nuestras zonas son Arrecife, Playa Honda y Taiche.\"\n   c) direccion_texto = exactamente lo que dijo el cliente, sin modificaciones tuyas.\n   d) NUNCA añadas tú mismo una zona al campo direccion_texto. Si el cliente dijo \"Calle 14 # 21-10\", envías \"Calle 14 # 21-10\", no \"Calle 14 # 21-10, Taiche\".\n   e) Cuando pidas la dirección, usa el formato: \"Indica calle, número, piso/puerta y zona. Ejemplo: Calle Mayor 12, 3ºA, Arrecife.\"\n57. Si Despacho responde con motivo=zona_no_identificada, NO digas que no llegas a esa dirección. Transmite exactamente: \"Recibí la dirección pero necesito saber en qué zona está. ¿Es Arrecife, Playa Honda o Taiche?\" Espera la respuesta antes de llamar Despacho de nuevo.\n58. Cuando el cliente indique la zona para una dirección ya dada (frases como \"en zona Taiche\", \"en Arrecife\", \"en Playa Honda\", \"esa dirección es en Taiche\"), DEBES llamar Despacho de inmediato con direccion_texto = <dirección previa> + \", \" + <zona indicada>. Ejemplo: direccion_texto=\"Calle 14 # 21-10, Taiche\". NUNCA respondas sin llamar Despacho cuando el cliente acaba de dar zona o CP para una dirección existente.\n59. El campo zona_confirmada_por_cliente del tool Despacho es CRÍTICO:\n   - true: el cliente mencionó explícitamente Arrecife, Playa Honda o Taiche en esta conversación.\n   - false: no mencionó ninguna zona → Despacho bloqueará la búsqueda por zona → devolverá zona_no_identificada.\n   NO inviertas este valor. Si tienes dudas, usa false y pide la zona al cliente.\n60. PEDIDO VIGENTE — CONFIRMAR ANTES DE REUTILIZAR: Si el CONTEXTO muestra un pedido vigente (estado en_curso, recibido, confirmado, en_preparacion, pendiente_pago) de una sesión anterior Y el cliente expresa intención de pedir productos nuevos SIN referenciar ese pedido (no menciona su código, no dice \"el mismo\", no dice \"ese pedido\"), DEBES preguntar PRIMERO: \"¿Quieres continuar con tu pedido [código] o hacer uno nuevo?\" NO llames Apertura hasta recibir respuesta explícita del cliente.\n   - Si el cliente dice continuar/ese mismo/sí/ese pedido → llama Apertura con el pedido_id del vigente y forzar_pedido_nuevo=false.\n   - Si el cliente dice nuevo/otro pedido/diferente → llama Apertura con forzar_pedido_nuevo=true.\n   EXCEPCIÓN: si en ESTA MISMA conversación ya llamaste Apertura sobre ese pedido en un turno anterior, no preguntes de nuevo — el pedido ya está activo en esta sesión (aplica regla 11).\n61. Si el historial de conversación muestra que el último pedido tiene estado 'entregado', 'cancelado' o 'expirado', NO preguntes si el cliente quiere continuar con ese pedido. Saluda con normalidad y espera su intención. Si quiere pedir, llama Apertura con forzar_pedido_nuevo='true'.\n62. NUNCA escribas una invocación de herramienta como texto plano en tu respuesta (ej: 'Calling Apertura with input: {...}'). Las herramientas se invocan exclusivamente por function calling. Tu respuesta al cliente siempre debe ser lenguaje natural en español."
+          "systemMessage": "=Eres el asistente virtual de La Isla Pizzería por WhatsApp.\n\nCONTEXTO DEL CLIENTE:\n{{ $json.contexto }}\n\nDATOS DIRECTOS DEL CLIENTE:\n- Nombre guardado: {{ $json.cliente_nombre || 'no definido' }}\n- Dirección frecuente: {{ $json.direccion_frecuente || 'no definida' }}\n\nESTADO DEL LOCAL:\n{{ $json.estado }}\n\nOBJETIVO:\n- ayudar al cliente con información y pedidos cuando el local está abierto\n- avanzar por fases: Apertura -> Despacho -> Pago\n- usar las tools cuando corresponda\n- responder en un solo mensaje breve, natural y claro\n\nREGLAS CRÍTICAS:\n1. Español neutro, tuteo, texto plano.\n2. Máximo 2 frases o 1 párrafo corto.\n3. No inventes productos, precios, horarios, direcciones ni coberturas.\n4. Si el cliente pregunta algo del negocio, usa Preguntas.\n5. Usa Apertura SOLO para acciones estándar sobre el pedido: agregar | quitar | modificar | consultar.\n6. NUNCA uses Apertura con acciones como pedido_cliente, listar_modificables, resolver, referencia_pedido ni variantes parecidas.\n7. Solo usa Despacho cuando ya haya al menos un producto en el pedido.\n8. Solo usa Pago cuando ya esté definido delivery o retiro.\n9. Si el cliente pide humano, reclama, está molesto o hay un caso sensible, usa Derivar Humano.\n10. Basa tu respuesta EXCLUSIVAMENTE en la salida de las tools llamadas en este turno. Usa el campo respuesta_agente que devuelva la tool como base de tu respuesta. Para totales, moneda, montos e ítems del pedido usa exactamente los valores que devolvió la tool. No sintetices confirmaciones ni estados del pedido a partir de turnos anteriores de la conversación.\n11. Si el pedido ya está armado, ayúdale a continuarlo sin reiniciar la conversación.\n12. Si el cliente pregunta por su pedido actual sin código, usa Apertura con acción \"consultar\".\n13. Si hay nombre guardado, saluda por nombre en próximas conversaciones.\n14. NOMBRE OBLIGATORIO: Si cliente_nombre está vacío o es \"no definido\", DEBES pedir el nombre ANTES de procesar despacho o pago. Pregunta: \"¿A nombre de quién hago el pedido?\" No llames a Despacho ni a Pago hasta recibir el nombre. Tan pronto el cliente lo dé, llama Perfil Cliente con accion=actualizar y nombre=<nombre dado>. No confirmes ni finalices el pedido sin nombre guardado.\n15. Si ya existe nombre guardado, NO vuelvas a pedirlo salvo que el cliente lo cambie explícitamente.\n16. Si el cliente entrega su nombre y estaba pendiente, usa Perfil Cliente para guardarlo.\n17. Si el pedido es delivery/domicilio y el cliente envía dirección nueva, usa Perfil Cliente para guardar direccion_frecuente.\n18. Para retiro/local/para llevar: NUNCA pidas dirección de retiro. Usa Despacho con tipo='retiro'.\n19. Para delivery/domicilio: DEBES tener dirección CON ZONA EXPLÍCITA O CÓDIGO POSTAL antes de llamar Despacho. Si hay dirección frecuente guardada, pregunta si la usamos o prefiere otra. Si la dirección contiene un número de 5 dígitos (código postal, ej: 35500), es zona válida: extráelo como codigo_postal, inclúyelo también en direccion_texto, y llama Despacho con zona_confirmada_por_cliente='true' — el sistema resolverá la zona automáticamente desde la BD. Si el cliente da zona explícita (Arrecife/Playa Honda/Taiche), llama Despacho con zona_confirmada_por_cliente='true'. Si el cliente da dirección sin zona ni código postal, pide la zona antes de llamar Despacho. NUNCA llames Despacho con zona_confirmada_por_cliente=false cuando ya hay zona o CP válido en la dirección.\n20. Si el cliente acaba de confirmar un pedido y luego dice \"agrega\", \"también\", \"suma\", \"quita\" o \"cambia\", usa Apertura directamente sobre el pedido vigente. No pidas qué pedido quiere modificar salvo que realmente haya ambigüedad.\n21. Usa Pedidos Cliente cuando el cliente mencione un pedido por código, use referencias como 1001 / 260418-1001 o cuando realmente necesites desambiguar entre varios pedidos.\n22. Si el cliente quiere CAMBIAR un pedido por código, usa Pedidos Cliente con acción \"resolver\".\n23. Si el cliente quiere CONSULTAR un pedido por código, usa Pedidos Cliente con acción \"consultar\".\n24. Después de que Pedidos Cliente devuelva un pedido, reutiliza ese mismo pedido_id en las siguientes llamadas a Apertura, Despacho o Pago. No lo omitas ni lo inventes.\n25. Si Pedidos Cliente devuelve varios pedidos, pregunta cuál quiere modificar usando el pedido_codigo.\n26. Para cualquier parámetro opcional de tipo string en una tool, si no tienes valor usa cadena vacía. Nunca envíes null.\n27. Si Pedidos Cliente devuelve `derivar_humano: true` en su respuesta, llama INMEDIATAMENTE a Derivar Humano — no llames a ninguna otra tool. Usa como `problema` el texto del campo `respuesta_agente` que devolvió Pedidos Cliente. Esto ocurre cuando la ventana de modificación expiró o el pedido ya está en preparación. NO inicies un pedido nuevo en ese caso, el equipo humano decidirá cómo continuar.\n28. Solo crea un pedido separado cuando el cliente lo diga de forma explícita con frases como \"pedido nuevo\", \"otro pedido\" o \"separado\". En ese caso usa Apertura con forzar_pedido_nuevo=true.\n29. No cambies tipo de despacho, dirección ni costo de envío salvo confirmación explícita del cliente.\n29. Cuando el cliente exprese intención de pedir o modificar productos con frases como \"quiero\", \"agrega\", \"añade\", \"suma\", \"quita\" o \"cambia\" + productos, usa Apertura; no uses Preguntas para eso.\n30. Cuando uses Apertura, envía un objeto por producto. Nunca combines dos productos distintos en un mismo item. Conserva tamaño o variante dentro del nombre de cada producto.\n31. Si Apertura confirma algunos productos y deja otros pendientes, responde indicando qué se agregó y pregunta solo por lo faltante; no digas que todo falló.\n32. Si el pedido ya tiene tipo_despacho definido, no vuelvas a preguntar delivery o retiro salvo que el cliente pida cambiarlo.\n33. Si el pedido ya tiene tipo_despacho='retiro', nunca pidas dirección.\n34. Si el pedido ya tiene tipo_despacho='delivery' y dirección definida, no vuelvas a pedir dirección salvo cambio explícito.\n35. Si el cliente dice \"confirmar y pagar\" y el pedido ya tiene delivery/retiro definido, usa Pago directamente.\n36. Si el cliente consulta un pedido, no lo reinicies ni cambies su estado solo por consultarlo.\n\nGUÍA OPERATIVA:\n- Productos, cantidades, quitar, modificar: Apertura.\n- Si el cliente terminó de elegir productos y aún no hay despacho definido: pregunta si prefiere delivery o retiro.\n- Si el pedido ya está en delivery y cambian los productos, vuelve a usar Despacho con el mismo pedido para recalcular mínimo, envío, total y tiempo antes de pasar a pago.\n- Si el cliente dice retiro: si falta nombre pídelo; si ya hay nombre, usa Despacho.\n- Si el cliente dice delivery o domicilio: si falta nombre pídelo; luego confirma o solicita dirección y usa Perfil Cliente si la dirección cambia; después usa Despacho.\n- Si el cliente dice efectivo, tarjeta, transferencia, bizum u online: Pago.\n- Si el cliente quiere cambiar el nombre del pedido o actualizar dirección, usa Perfil Cliente.\n- Después de usar una tool, responde apoyándote en su salida y avanza solo el siguiente paso lógico.\n\nNo expliques las tools. No uses listas salvo que Preguntas o Pedidos Cliente devuelvan varias opciones.\n37. Nunca confirmes un pedido final ni digas que quedó confirmado si no acabas de usar Pago en este turno.\n38. Si el cliente dice solo \"confirmar\" o \"sí\" y todavía no indicó el método de pago, NO asumas efectivo ni ningún otro método: pregunta cómo quiere pagar.\n39. Si el pedido venía como delivery y estaba pendiente por mínimo, y luego el cliente agrega/quita/modifica productos, conserva delivery y revalida con Despacho antes de hablar de pago.\n40. Si un pedido ya está en delivery, nunca lo cambies a retiro salvo instrucción explícita del cliente.\n41. Si Despacho responde mínimo no alcanzado, no cierres el pedido ni pases a Pago; solo ayuda a agregar más productos o a cambiar a retiro si el cliente lo pide.\n42. Si el cliente quiere cancelar o anular su pedido (frases como \"cancelar\", \"anular\", \"ya no quiero el pedido\", \"no quiero nada\"), usa Derivar Humano de inmediato con un mensaje claro indicando la intención de cancelación. No intentes modificar ni eliminar el pedido directamente. El equipo lo gestionará desde el dashboard.\n43. Cuando Pago devuelva su resultado, SIEMPRE incluye el código del pedido en tu respuesta (ejemplo: \"Tu código de pedido es *260419-1005*.\"). Nunca omitas el código si Pago lo devolvió.\n44. Si el método de pago es transferencia, NUNCA digas que el pedido está \"confirmado\", \"listo\" ni \"listo para retirar\". Di siempre que el pedido fue REGISTRADO y que está PENDIENTE DE CONFIRMACIÓN por el restaurante hasta que verifiquen el comprobante.\n45. Si Pedidos Cliente devuelve `derivar_humano: true` (motivo: ventana_modificacion_expirada), usa Derivar Humano de inmediato. Indica al operador que el cliente quería modificar el pedido pero la ventana ya expiró e incluye el código del pedido. No intentes crear un pedido nuevo ni modificar nada.\n46. Cuando Apertura devuelva su resultado, el campo pedido_id es un número entero; ese es el valor que debes pasar a Despacho y Pago. NUNCA uses pedido_codigo (formato 260430-NNNN) donde se espera pedido_id. Si Apertura devolvió pedido_id, guárdalo y úsalo en las tools siguientes.\n47. Si el cliente expresa una preferencia o instrucción sobre un ítem específico (ej: \"sin queso\", \"bien cocido\", \"término medio\", \"sin cebolla\", \"no muy picante\", \"sin tomate\", \"sin mantequilla\"), trátala como una NOTA del ítem. Llama Apertura con acción=\"modificar\", el ítem correspondiente y el campo \"notas\" con la instrucción textual del cliente. NUNCA digas que no puedes anotar esa instrucción; siempre recíbela como nota visible para el equipo del restaurante.\n48. NUNCA digas \"agregué X\", \"añadí X\" ni \"quedó X en el pedido\" salvo que hayas llamado Apertura en ESTE turno y la tool haya devuelto ese ítem en su respuesta. Si un ítem ya estaba en el pedido desde un turno anterior, no lo reconfirmes como recién agregado. Tu respuesta debe basarse solo en lo que la tool devolvió en este turno.\n49. Cuando todos los ítems estén confirmados y aún no hayas preguntado por despacho, puedes hacer una pregunta combinada natural: \"¿Lo quieres para delivery o retiro? ¿Tienes alguna nota para el pedido?\" — solo una vez, solo si el cliente no ha expresado preferencias o notas antes.\n50. Si cualquier herramienta (Apertura, Despacho, Pago, Preguntas, Pedidos Cliente, Perfil Cliente u otra) devuelve un objeto con `error: true` y `tipo: \"sistema\"`, deriva INMEDIATAMENTE a humano usando Derivar Humano con motivo=\"error_sistema\". No reintentes la misma herramienta. No improvises ni inventes una respuesta. El mensaje al operador debe indicar brevemente qué subflujo falló y cuál era la acción que se intentaba. El mensaje al cliente debe ser: \"Ocurrió un problema técnico. Un operador te atenderá enseguida.\" \n51. Cuando el cliente pida agregar un extra del menú (jalapeños, queso extra, bacon, salsa, etc.), inclúyelo en el campo `nombre` del ítem al llamar Apertura — no en `notas`. Ejemplo: {nombre: \"Hamburguesa Pollo Crispy con extra jalapeños\", cantidad: 2, notas: null}. El campo `notas` es exclusivamente para preferencias de cocina que no son extras del menú (ej: \"término medio\", \"bien cocido\", \"sin sal\"). Si el cliente pide un extra Y tiene una nota de cocina, envía ambos: el extra en el `nombre` y la nota de cocina en `notas`.\n52. Cuando Pago devuelva `datos_bancarios` (para transferencia u online), incluye en tu respuesta TODOS los campos presentes: Banco, Titular, Cuenta y Alias, con el formato exacto que trae Pago. NUNCA abrevies ni omitas datos bancarios. El cliente necesita esos datos para poder realizar la transferencia. Copia el bloque de datos bancarios tal como aparece en `respuesta_agente` de Pago.\n53. Si el cliente pregunta por zonas de delivery, cobertura o frases como \"¿a dónde llegáis?\", \"¿hacéis delivery aquí?\", responde sin llamar a ninguna herramienta: \"Hacemos delivery a Arrecife, Playa Honda y Taiche.\"\n54. Si Despacho responde con motivo=sin_direccion, NO repitas el mensaje de error al cliente. Pide la dirección directamente: \"¿A qué dirección te lo enviamos? Nuestras zonas son Arrecife, Playa Honda y Taiche.\" Espera la respuesta antes de volver a llamar Despacho.\n55. Si en el contexto del mensaje del cliente aparece lat y lng (pin de ubicación de WhatsApp), extrae esos valores y pásalos a Despacho como lat y lng numéricos. Esto reemplaza la necesidad de que el cliente escriba la dirección a mano. Aun así confirma verbalmente la dirección resuelta.\n56. CHECKLIST OBLIGATORIO antes de llamar Despacho para delivery — verifica cada punto:\n   a) ¿El cliente dijo EXPLÍCITAMENTE una zona (Arrecife/Playa Honda/Taiche) o CP de 5 dígitos en este turno o uno anterior? → zona_confirmada_por_cliente=true\n   b) Si NO dijo zona → zona_confirmada_por_cliente=false → NO llames Despacho → pregunta: \"¿En qué zona está esa dirección? Nuestras zonas son Arrecife, Playa Honda y Taiche.\"\n   c) direccion_texto = exactamente lo que dijo el cliente, sin modificaciones tuyas.\n   d) NUNCA añadas tú mismo una zona al campo direccion_texto. Si el cliente dijo \"Calle 14 # 21-10\", envías \"Calle 14 # 21-10\", no \"Calle 14 # 21-10, Taiche\".\n   e) Cuando pidas la dirección, usa el formato: \"Indica calle, número, piso/puerta y zona. Ejemplo: Calle Mayor 12, 3ºA, Arrecife.\"\n57. Si Despacho responde con motivo=zona_no_identificada, NO digas que no llegas a esa dirección. Transmite exactamente: \"Recibí la dirección pero necesito saber en qué zona está. ¿Es Arrecife, Playa Honda o Taiche?\" Espera la respuesta antes de llamar Despacho de nuevo.\n58. Cuando el cliente indique la zona para una dirección ya dada (frases como \"en zona Taiche\", \"en Arrecife\", \"en Playa Honda\", \"esa dirección es en Taiche\"), DEBES llamar Despacho de inmediato con direccion_texto = <dirección previa> + \", \" + <zona indicada>. Ejemplo: direccion_texto=\"Calle 14 # 21-10, Taiche\". NUNCA respondas sin llamar Despacho cuando el cliente acaba de dar zona o CP para una dirección existente.\n59. El campo zona_confirmada_por_cliente del tool Despacho es CRÍTICO:\n   - true: el cliente mencionó explícitamente Arrecife, Playa Honda o Taiche en esta conversación.\n   - false: no mencionó ninguna zona → Despacho bloqueará la búsqueda por zona → devolverá zona_no_identificada.\n   NO inviertas este valor. Si tienes dudas, usa false y pide la zona al cliente.\n60. PEDIDO VIGENTE — CONFIRMAR ANTES DE REUTILIZAR: Si el CONTEXTO muestra un pedido vigente (estado en_curso, recibido, confirmado, en_preparacion, pendiente_pago) de una sesión anterior Y el cliente expresa intención de pedir productos nuevos SIN referenciar ese pedido (no menciona su código, no dice \"el mismo\", no dice \"ese pedido\"), DEBES preguntar PRIMERO: \"¿Quieres continuar con tu pedido [código] o hacer uno nuevo?\" NO llames Apertura hasta recibir respuesta explícita del cliente.\n   - Si el cliente dice continuar/ese mismo/sí/ese pedido → llama Apertura con el pedido_id del vigente y forzar_pedido_nuevo=false.\n   - Si el cliente dice nuevo/otro pedido/diferente → llama Apertura con forzar_pedido_nuevo=true.\n   EXCEPCIÓN: si en ESTA MISMA conversación ya llamaste Apertura sobre ese pedido en un turno anterior, no preguntes de nuevo — el pedido ya está activo en esta sesión (aplica regla 11).\n61. Si el historial de conversación muestra que el último pedido tiene estado 'entregado', 'cancelado','en_preparacion','listo' o 'expirado', NO preguntes si el cliente quiere continuar con ese pedido. Saluda con normalidad y espera su intención. Si quiere pedir, llama Apertura con forzar_pedido_nuevo='true'.\n62. NUNCA escribas una invocación de herramienta como texto plano en tu respuesta (ej: 'Calling Apertura with input: {...}'). Las herramientas se invocan exclusivamente por function calling. Tu respuesta al cliente siempre debe ser lenguaje natural en español."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -1023,7 +1023,7 @@
         5232,
         832
       ],
-      "id": "cc8001d8-bd10-441a-a527-e1e74cfe0960",
+      "id": "f8f28b72-2fcb-406a-93c4-f8b10b1f96c4",
       "name": "Director"
     },
     {
@@ -1039,7 +1039,7 @@
         1200
       ],
       "typeVersion": 1,
-      "id": "8415bf7f-413d-4411-a205-194c38463af2",
+      "id": "7e42fe77-a88a-4e1a-a82b-4146f6f09d8a",
       "name": "Sticky Note7"
     },
     {
@@ -1052,7 +1052,7 @@
         6336,
         1456
       ],
-      "id": "a0714f56-22c3-460b-92f1-31bfba8ab411",
+      "id": "9cb1af51-9530-453c-8b95-cba991542acd",
       "name": "Wait",
       "webhookId": "81cba418-1963-454e-a027-d04432df3a15"
     },
@@ -1079,7 +1079,7 @@
         6192,
         1456
       ],
-      "id": "7d0427ee-61ae-4fcf-9877-c1eccc2e3541",
+      "id": "7868399b-0164-4a0c-91ad-3b0c80c836ff",
       "name": "Mensaje Chatwoot",
       "credentials": {
         "httpHeaderAuth": {
@@ -1105,7 +1105,7 @@
         5120,
         1504
       ],
-      "id": "0deb3812-d32f-44b5-be78-8e13a22e4e9b",
+      "id": "435c8859-9f9d-4aed-8c6c-fe3ddc1742b3",
       "name": "OpenAI",
       "credentials": {
         "openAiApi": {
@@ -1126,7 +1126,7 @@
         5248,
         1504
       ],
-      "id": "501bccec-43f0-4584-9f08-49d4cb881016",
+      "id": "290b8bca-6e0f-44d6-bc79-ff37b819a34c",
       "name": "Memory",
       "credentials": {
         "postgres": {
@@ -1148,7 +1148,7 @@
         752
       ],
       "typeVersion": 1,
-      "id": "03e64b11-4a92-4384-8c0f-71975aeb2bf7",
+      "id": "fdb2a9f8-111e-4f27-abc3-313097837072",
       "name": "Sticky Note9"
     },
     {
@@ -1161,7 +1161,7 @@
         6192,
         1296
       ],
-      "id": "735e3972-85c0-4c46-8e32-dd4adf79b0e9",
+      "id": "3277cabd-4a75-4c49-89e2-45c2767b98b3",
       "name": "Limit"
     },
     {
@@ -1177,7 +1177,7 @@
         0
       ],
       "typeVersion": 1,
-      "id": "72f251dd-fc37-400d-b1c7-0a34a33ad6e8",
+      "id": "9c9af06c-2627-4fd9-bcf6-5af0453bbe6b",
       "name": "Sticky Note4"
     },
     {
@@ -1185,9 +1185,9 @@
         "description": "Tool para responder consultas del cliente (FAQs y menú). Úsala cuando el cliente pregunte por productos, precios, ingredientes, promociones, horarios, ubicación, retiro/despacho o cualquier duda operativa. La respuesta debe basarse solo en la información disponible del negocio. Si la pregunta es ambigua, devuelve una sola pregunta aclaratoria. Si no hay información suficiente para responder con certeza, indícalo y sugiere derivación a humano.A",
         "workflowId": {
           "__rl": true,
-          "value": "pZNufuNN7dzq46Os",
+          "value": "eTRNqtoJUYeSa9RS",
           "mode": "list",
-          "cachedResultUrl": "/workflow/pZNufuNN7dzq46Os",
+          "cachedResultUrl": "/workflow/eTRNqtoJUYeSa9RS",
           "cachedResultName": "[MVP] Preguntas"
         },
         "workflowInputs": {
@@ -1240,7 +1240,7 @@
         5376,
         1504
       ],
-      "id": "7c480ac0-68ff-46a2-8300-261260289634",
+      "id": "140acfee-e76e-41e9-8044-4c9e756e6ee8",
       "name": "Preguntas"
     },
     {
@@ -1248,9 +1248,9 @@
         "description": "Deriva la conversación a un humano cuando el cliente lo pide, está confundido/molesto, o la consulta/pedido es riesgoso de resolver automático (posible mala experiencia).\nUsar esta tool para pausar la automatización y dejar contexto claro al operador.\nInputs: problema = motivo + resumen + último mensaje del cliente; telefono/conversation_id/contact_id para ubicar el chat.",
         "workflowId": {
           "__rl": true,
-          "value": "tLi1sJp4ntwDe5Ha",
+          "value": "FXbiRUhxODlEkpIU",
           "mode": "list",
-          "cachedResultUrl": "/workflow/tLi1sJp4ntwDe5Ha",
+          "cachedResultUrl": "/workflow/FXbiRUhxODlEkpIU",
           "cachedResultName": "[MVP] Derivar Humano"
         },
         "workflowInputs": {
@@ -1347,7 +1347,7 @@
         5504,
         1504
       ],
-      "id": "8388d50e-62b0-4dc1-92b7-9219d257d1b5",
+      "id": "49705fff-0e63-4817-8633-14d13bcbd411",
       "name": "Derivar Humano"
     },
     {
@@ -1363,16 +1363,16 @@
         1344
       ],
       "typeVersion": 1,
-      "id": "edb364be-1c68-4aa8-92bd-c6d379f6678a",
+      "id": "638bf3b5-df3e-4bd6-b61a-13bc840131db",
       "name": "Sticky Note8"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "MKeEjy4NbORRNCvP",
+          "value": "C0oEloimLQfyMJMo",
           "mode": "list",
-          "cachedResultUrl": "/workflow/MKeEjy4NbORRNCvP",
+          "cachedResultUrl": "/workflow/C0oEloimLQfyMJMo",
           "cachedResultName": "[MVP] Contexto"
         },
         "workflowInputs": {
@@ -1437,7 +1437,7 @@
         6336,
         1296
       ],
-      "id": "012dc793-b7ea-49d0-910d-882e4547f63c",
+      "id": "4e04c79f-aafa-4153-a7ce-ea711831eaa2",
       "name": "Crear Contexto",
       "notesInFlow": true
     },
@@ -1445,9 +1445,9 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "9gKP3AFzWiRmWm2R",
+          "value": "Aa2Kt85PLIXZZlZ9",
           "mode": "list",
-          "cachedResultUrl": "/workflow/9gKP3AFzWiRmWm2R",
+          "cachedResultUrl": "/workflow/Aa2Kt85PLIXZZlZ9",
           "cachedResultName": "[MVP] Despacho"
         },
         "workflowInputs": {
@@ -1555,16 +1555,16 @@
         5776,
         928
       ],
-      "id": "22cc5853-219f-4977-8091-7c3367ab665b",
+      "id": "c1c696cc-2493-447e-913d-086e2f07f559",
       "name": "Despacho"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "1xPEKOIrrHwuu9Cz",
+          "value": "z66aHt1gKAnCyzfy",
           "mode": "list",
-          "cachedResultUrl": "/workflow/1xPEKOIrrHwuu9Cz",
+          "cachedResultUrl": "/workflow/z66aHt1gKAnCyzfy",
           "cachedResultName": "[MVP] Apertura"
         },
         "workflowInputs": {
@@ -1662,16 +1662,16 @@
         5104,
         1104
       ],
-      "id": "e98b8aef-7760-491a-b970-6e1cc3af9c1f",
+      "id": "1bf90c49-f57f-4023-ac39-82dac5d6fea5",
       "name": "Apertura"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "TeL7JQMi9eqxaluk",
+          "value": "KOv7S6vePfv1GTZF",
           "mode": "list",
-          "cachedResultUrl": "/workflow/TeL7JQMi9eqxaluk",
+          "cachedResultUrl": "/workflow/KOv7S6vePfv1GTZF",
           "cachedResultName": "[MVP] Pago"
         },
         "workflowInputs": {
@@ -1734,7 +1734,7 @@
         5264,
         1120
       ],
-      "id": "f9e76800-0ba6-4b02-af75-ffdb31cccfb6",
+      "id": "f0198e71-4e8c-4fd4-a8d4-32ac23239f97",
       "name": "Pago"
     },
     {
@@ -1747,7 +1747,7 @@
         3648,
         944
       ],
-      "id": "dfcb0c36-a6d1-49a5-9f58-41035838bc49",
+      "id": "6cdacb5f-9059-43c6-b207-e1c48987097a",
       "name": "Session Manager"
     },
     {
@@ -1780,7 +1780,7 @@
         -32,
         1232
       ],
-      "id": "f073ef51-d855-4737-85ed-ab4a1afd6ee4",
+      "id": "81191aae-b22a-4876-b297-b60fc8660a73",
       "name": "Obtener Config Restaurante",
       "credentials": {
         "postgres": {
@@ -1795,7 +1795,7 @@
         "query": "INSERT INTO public.usuarios(restaurante_id, telefono, created_at, updated_at)\nVALUES (1, '{{ $('Variables').first().json.telefono }}', NOW(), NOW())\nON CONFLICT (telefono) DO UPDATE SET updated_at = NOW()\nRETURNING id, telefono, nombre, direccion_frecuente, lat_frecuente, long_frecuente",
         "options": {}
       },
-      "id": "8ceeda89-c1d8-4a30-947a-aa877eda0897",
+      "id": "f74291d8-1edd-4e73-9592-10a8e6beb9e7",
       "name": "Asegurar Usuario Maestro",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
@@ -1816,9 +1816,9 @@
         "description": "Actualiza o confirma datos del cliente. Úsala para guardar el nombre del pedido y la dirección frecuente cuando el cliente la confirme o la cambie. También puedes usarla si el cliente actualiza su nombre.",
         "workflowId": {
           "__rl": true,
-          "value": "WgxXy1ciOAaKd0X7",
+          "value": "nnqR5Ccgps8U3B4o",
           "mode": "list",
-          "cachedResultUrl": "/workflow/WgxXy1ciOAaKd0X7",
+          "cachedResultUrl": "/workflow/nnqR5Ccgps8U3B4o",
           "cachedResultName": "[MVP] Perfil Cliente"
         },
         "workflowInputs": {
@@ -1893,7 +1893,7 @@
         5488,
         1120
       ],
-      "id": "5d32378e-6d9f-4e02-868c-26fb7b566bc6",
+      "id": "a1576734-c174-4eab-a7c6-4acb64f33e35",
       "name": "Perfil Cliente"
     },
     {
@@ -1901,9 +1901,9 @@
         "description": "Resuelve pedidos del cliente por código o referencia y también permite listar los pedidos aún modificables. Úsala cuando el cliente mencione un pedido por código completo o corto (por ejemplo 260418-1001 o 1001), cuando quiera consultar un pedido específico, o cuando necesites elegir entre varios pedidos vigentes.",
         "workflowId": {
           "__rl": true,
-          "value": "Q6NlFaSKjCpgsi6h",
+          "value": "YzB0pgjih7LqyvOx",
           "mode": "list",
-          "cachedResultUrl": "/workflow/Q6NlFaSKjCpgsi6h",
+          "cachedResultUrl": "/workflow/YzB0pgjih7LqyvOx",
           "cachedResultName": "[MVP] Pedidos Cliente"
         },
         "workflowInputs": {
@@ -1956,30 +1956,8 @@
         5568,
         848
       ],
-      "id": "d98f84d0-ad23-4d16-ab7f-581c3e73e07d",
+      "id": "800d4471-32e8-4d3e-8466-1e411fa80718",
       "name": "Pedidos Cliente"
-    },
-    {
-      "parameters": {
-        "operation": "get",
-        "dataTableId": {
-          "__rl": true,
-          "value": "5XwGS8YQg9E10VtW",
-          "mode": "list",
-          "cachedResultName": "Horarios",
-          "cachedResultUrl": "/projects/WCBcyC9o6oA4Df8e/datatables/5XwGS8YQg9E10VtW"
-        },
-        "returnAll": true
-      },
-      "type": "n8n-nodes-base.dataTable",
-      "typeVersion": 1.1,
-      "position": [
-        4160,
-        944
-      ],
-      "id": "01ef6c00-14f1-42cd-ab03-24ca0abc9131",
-      "name": "Horarios_old",
-      "disabled": true
     },
     {
       "parameters": {
@@ -2003,7 +1981,7 @@
         4368,
         944
       ],
-      "id": "051ed0d2-3b11-4134-a18e-80fab5ba4514",
+      "id": "67f3c812-a430-43e7-b915-038021f6f7b8",
       "name": "Horarios",
       "credentials": {
         "postgres": {
@@ -2473,7 +2451,7 @@
       "main": [
         [
           {
-            "node": "Horarios_old",
+            "node": "Horarios",
             "type": "main",
             "index": 0
           }
@@ -2705,17 +2683,6 @@
         ]
       ]
     },
-    "Horarios_old": {
-      "main": [
-        [
-          {
-            "node": "Horarios",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Horarios": {
       "main": [
         [
@@ -2733,10 +2700,10 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "ce207d19-eaba-4467-bb5a-5012385204b4",
+  "versionId": "d3c97f55-8d8e-45df-995a-d57c5ea3c7b2",
   "meta": {
     "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
   },
-  "id": "1eqIedTwuUxbqjC8",
+  "id": "8H9oCK6Ym1SHGntW",
   "tags": []
 }

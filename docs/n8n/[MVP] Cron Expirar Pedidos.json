@@ -212,7 +212,7 @@
         60
       ],
       "parameters": {
-        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Pedidos Expirados').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) {\n    conversaciones = convsResult.data.payload;\n  } else if (Array.isArray(convsResult.payload)) {\n    conversaciones = convsResult.payload;\n  } else if (Array.isArray(convsResult)) {\n    conversaciones = convsResult;\n  }\n} catch (e) {}\n\n// Conversación abierta o pendiente más reciente\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\nconst mensaje = `Tu pedido ${pedido_codigo} ha expirado por inactividad. Cuando quieras hacer un nuevo pedido, escr\\u00edbenos y te ayudamos.`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
+        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Pedidos Expirados').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) {\n    conversaciones = convsResult.data.payload;\n  } else if (Array.isArray(convsResult.payload)) {\n    conversaciones = convsResult.payload;\n  } else if (Array.isArray(convsResult)) {\n    conversaciones = convsResult;\n  }\n} catch (e) {}\n\n// Conversación abierta o pendiente más reciente\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending', 'resolved'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\nconst mensaje = `Tu pedido ${pedido_codigo} ha expirado por inactividad. Cuando quieras hacer un nuevo pedido, escr\\u00edbenos y te ayudamos.`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
       }
     },
     {
@@ -426,7 +426,7 @@
         80
       ],
       "parameters": {
-        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Advertencias').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) conversaciones = convsResult.data.payload;\n  else if (Array.isArray(convsResult.payload)) conversaciones = convsResult.payload;\n  else if (Array.isArray(convsResult)) conversaciones = convsResult;\n} catch (e) {}\n\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\n\nconst mensaje = `⏰ ¡Hola! Tu pedido *${pedido_codigo}* está esperándote 🛍️\\n`\n  + `Tienes pocos minutos antes de que se cancele por inactividad.\\n`\n  + `¡Escríbenos ahora y lo completamos juntos! 😊`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo\n  }\n}];"
+        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Advertencias').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) conversaciones = convsResult.data.payload;\n  else if (Array.isArray(convsResult.payload)) conversaciones = convsResult.payload;\n  else if (Array.isArray(convsResult)) conversaciones = convsResult;\n} catch (e) {}\n\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending', 'resolved'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\n\nconst mensaje = `⏰ ¡Hola! Tu pedido *${pedido_codigo}* está esperándote 🛍️\\n`\n  + `Tienes pocos minutos antes de que se cancele por inactividad.\\n`\n  + `¡Escríbenos ahora y lo completamos juntos! 😊`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo\n  }\n}];"
       }
     },
     {
@@ -664,6 +664,11 @@
             "node": "Loop Advertencias",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Expirar Carritos en_curso",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -677,13 +682,7 @@
             "index": 0
           }
         ],
-        [
-          {
-            "node": "Expirar Carritos en_curso",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Buscar Contacto Adv": {
