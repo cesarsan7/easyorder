@@ -25,6 +25,9 @@
             },
             {
               "name": "forzar_pedido_nuevo"
+            },
+            {
+              "name": "conversation_id"
             }
           ]
         }
