@@ -2,6 +2,14 @@
   "name": "[MVP] Cron Expirar Pedidos",
   "nodes": [
     {
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        300
+      ],
       "parameters": {
         "rule": {
           "interval": [
@@ -11,282 +19,7 @@
             }
           ]
         }
-      },
-      "id": "a1b2c3d4-0001-4000-8000-000000000001",
-      "name": "Cada 5 minutos",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        240,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "-- Expira carritos en_curso cuyo updated_at superó cart_expiry_minutes.\n-- Solo afecta estado 'en_curso' (no 'recibido' — ese se expira manualmente desde el dashboard).\n-- El trigger trg_log_estado_pedido registra automáticamente la transición en pedido_estado_log\n-- con origen='trigger'. Para sobrescribir el origen a 'cron', usamos SET LOCAL.\nWITH cfg AS (\n  SELECT\n    p.id                                           AS pedido_id,\n    p.restaurante_id,\n    COALESCE(\n      (SELECT config_value::int\n       FROM   public.restaurante_config rc\n       WHERE  rc.config_key     = 'cart_expiry_minutes'\n         AND  rc.restaurante_id = p.restaurante_id\n       LIMIT 1),\n      60\n    ) AS cart_expiry_minutes\n  FROM public.pedidos p\n  WHERE p.estado = 'en_curso'\n),\ncandidatos AS (\n  SELECT c.pedido_id\n  FROM   cfg c\n  JOIN   public.pedidos p ON p.id = c.pedido_id\n  WHERE  COALESCE(p.updated_at, p.created_at) AT TIME ZONE 'UTC' < NOW() - (c.cart_expiry_minutes * INTERVAL '1 minute')\n)\nUPDATE public.pedidos\nSET\n  estado     = 'expirado',\n  updated_at = NOW()\nWHERE id IN (SELECT pedido_id FROM candidatos)\nRETURNING id, pedido_codigo, telefono, restaurante_id, updated_at",
-        "options": {}
-      },
-      "id": "a1b2c3d4-0002-4000-8000-000000000002",
-      "name": "Expirar Carritos en_curso",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.4,
-      "position": [
-        960,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "check-rows",
-              "leftValue": "={{ $input.all().length }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "a1b2c3d4-0003-4000-8000-000000000003",
-      "name": "¿Hubo expiraciones?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1200,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Prepara el log de lo que se expiró para debugging y auditoría\nconst rows = $input.all().map(i => i.json);\nconst resumen = rows.map(r =>\n  `#${r.id} ${r.pedido_codigo || 'sin-codigo'} (rest:${r.restaurante_id})`\n).join(', ');\n\nconsole.log(`[Cron Expirar Pedidos] ${rows.length} pedido(s) expirado(s): ${resumen}`);\n\nreturn [{\n  json: {\n    total_expirados: rows.length,\n    pedidos:         rows.map(r => ({\n      id:             r.id,\n      pedido_codigo:  r.pedido_codigo,\n      restaurante_id: r.restaurante_id,\n      telefono:       r.telefono,\n      expirado_at:    r.updated_at\n    }))\n  }\n}];"
-      },
-      "id": "a1b2c3d4-0004-4000-8000-000000000004",
-      "name": "Log Expiraciones",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1440,
-        220
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// No hubo pedidos expirados en esta ejecución — noop silencioso\nconsole.log('[Cron Expirar Pedidos] Sin pedidos que expirar.');\nreturn [{ json: { total_expirados: 0 } }];"
-      },
-      "id": "a1b2c3d4-0005-4000-8000-000000000005",
-      "name": "Sin Cambios",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1440,
-        400
-      ]
-    },
-    {
-      "id": "eee2e026-5e13-4527-9aa9-d53821caed1f",
-      "name": "Loop Pedidos Expirados",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        1680,
-        220
-      ],
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
       }
-    },
-    {
-      "id": "58a7ea96-5c06-4618-bf3d-c28e7ab112b9",
-      "name": "Buscar Contacto Chatwoot",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1920,
-        140
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "GQGObUBKIPim8MDs",
-          "name": "Header Auth account"
-        }
-      },
-      "parameters": {
-        "method": "GET",
-        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/search?q={{$json.telefono}}&include_contacts=true",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "5f748886-f4c7-470f-be60-6709d8fe1f88",
-      "name": "Extraer Contact ID",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2160,
-        140
-      ],
-      "parameters": {
-        "jsCode": "const searchResult = $input.first().json || {};\nconst loopItem = $('Loop Pedidos Expirados').first().json || {};\n\nlet contacts = [];\ntry {\n  const p = searchResult.payload;\n  if (Array.isArray(p)) contacts = p;\n  else if (p && Array.isArray(p.contacts)) contacts = p.contacts;\n} catch (e) {}\n\nconst contact = contacts.find(c => c && c.id) || null;\nconst contact_id = contact ? contact.id : null;\n\nreturn [{\n  json: {\n    contact_id,\n    tiene_contacto: contact_id !== null,\n    pedido_codigo: String(loopItem.pedido_codigo || ''),\n    pedido_id: loopItem.id,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
-      }
-    },
-    {
-      "id": "18dbd6de-f3a2-4e46-b59c-b19bac47a9d5",
-      "name": "¿Contacto Encontrado?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        2400,
-        140
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "81c677cd-5a1a-4af5-a857-df532197ed10",
-              "leftValue": "={{ $json.tiene_contacto }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "4a57328c-2ea2-49a1-b9f1-541d880c1978",
-      "name": "Obtener Conversaciones Contacto",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2640,
-        60
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "GQGObUBKIPim8MDs",
-          "name": "Header Auth account"
-        }
-      },
-      "parameters": {
-        "method": "GET",
-        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/{{$json.contact_id}}/conversations",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "34136136-5e25-413d-9065-cfd0cdce90e6",
-      "name": "Preparar Mensaje Expiracion",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2880,
-        60
-      ],
-      "parameters": {
-        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Pedidos Expirados').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) {\n    conversaciones = convsResult.data.payload;\n  } else if (Array.isArray(convsResult.payload)) {\n    conversaciones = convsResult.payload;\n  } else if (Array.isArray(convsResult)) {\n    conversaciones = convsResult;\n  }\n} catch (e) {}\n\n// Conversación abierta o pendiente más reciente\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending', 'resolved'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\nconst mensaje = `Tu pedido ${pedido_codigo} ha expirado por inactividad. Cuando quieras hacer un nuevo pedido, escr\\u00edbenos y te ayudamos.`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
-      }
-    },
-    {
-      "id": "c7146792-a7fd-4382-8331-ca172d2a69d4",
-      "name": "¿Enviar Notificacion?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        3120,
-        60
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "95dbf0cb-2e1b-4001-a170-62ed24a5aee6",
-              "leftValue": "={{ $json.tiene_conversacion }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "578c44d4-c84c-4a00-bd51-07976ca0368b",
-      "name": "Enviar Notificacion Expiracion",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3360,
-        60
-      ],
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "GQGObUBKIPim8MDs",
-          "name": "Header Auth account"
-        }
-      },
-      "parameters": {
-        "method": "POST",
-        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/conversations/{{$json.conversation_id}}/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "content",
-              "value": "={{ $json.mensaje }}"
-            },
-            {
-              "name": "message_type",
-              "value": "outgoing"
-            },
-            {
-              "name": "private",
-              "value": "false"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "onError": "continueRegularOutput"
     },
     {
       "id": "adv-sql-001",
@@ -294,127 +27,19 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        480,
-        180
+        520,
+        160
       ],
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "-- Encuentra carritos a punto de expirar (dentro de cart_warning_minutes)\n-- y los marca como advertidos para no notificar dos veces.\nWITH cfg AS (\n  SELECT\n    p.id AS pedido_id,\n    p.restaurante_id,\n    COALESCE(\n      (SELECT rc.config_value::int FROM public.restaurante_config rc\n       WHERE rc.config_key = 'cart_expiry_minutes' AND rc.restaurante_id = p.restaurante_id LIMIT 1), 60\n    ) AS cart_expiry_minutes,\n    COALESCE(\n      (SELECT rc.config_value::int FROM public.restaurante_config rc\n       WHERE rc.config_key = 'cart_warning_minutes' AND rc.restaurante_id = p.restaurante_id LIMIT 1), 5\n    ) AS cart_warning_minutes\n  FROM public.pedidos p\n  WHERE p.estado IN ('en_curso', 'recibido') AND p.cart_warned_at IS NULL\n),\ncandidatos AS (\n  SELECT c.pedido_id\n  FROM cfg c JOIN public.pedidos p ON p.id = c.pedido_id\n  WHERE COALESCE(p.updated_at, p.created_at) AT TIME ZONE 'UTC' <\n        NOW() - ((c.cart_expiry_minutes - c.cart_warning_minutes) * INTERVAL '1 minute')\n    AND COALESCE(p.updated_at, p.created_at) AT TIME ZONE 'UTC' >=\n        NOW() - (c.cart_expiry_minutes * INTERVAL '1 minute')\n)\nUPDATE public.pedidos\nSET cart_warned_at = NOW()\nWHERE id IN (SELECT pedido_id FROM candidatos)\nRETURNING id, pedido_codigo, telefono, restaurante_id",
-        "options": {}
-      },
       "credentials": {
         "postgres": {
           "id": "1",
           "name": "Postgres account"
         }
-      }
-    },
-    {
-      "id": "adv-loop-001",
-      "name": "Loop Advertencias",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        720,
-        180
-      ],
-      "parameters": {
-        "batchSize": 1,
-        "options": {}
-      }
-    },
-    {
-      "id": "adv-http-search",
-      "name": "Buscar Contacto Adv",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        960,
-        80
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/search?q={{$json.telefono}}&include_contacts=true",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
       },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "GQGObUBKIPim8MDs",
-          "name": "Header Auth account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "adv-code-contact",
-      "name": "Extraer Contact ID Adv",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1200,
-        80
-      ],
       "parameters": {
-        "jsCode": "const searchResult = $input.first().json || {};\nconst loopItem = $('Loop Advertencias').first().json || {};\n\nlet contacts = [];\ntry {\n  const p = searchResult.payload;\n  if (Array.isArray(p)) contacts = p;\n  else if (p && Array.isArray(p.contacts)) contacts = p.contacts;\n} catch (e) {}\n\nconst contact = contacts.find(c => c && c.id) || null;\nconst contact_id = contact ? contact.id : null;\n\nreturn [{\n  json: {\n    contact_id,\n    tiene_contacto: contact_id !== null,\n    pedido_codigo: String(loopItem.pedido_codigo || ''),\n    pedido_id: loopItem.id,\n    telefono: String(loopItem.telefono || '')\n  }\n}];"
+        "operation": "executeQuery",
+        "query": "-- Encuentra carritos a punto de expirar (dentro de cart_warning_minutes)\n-- y los marca como advertidos para no notificar dos veces.\nWITH cfg AS (\n  SELECT\n    p.id AS pedido_id,\n    p.restaurante_id,\n    COALESCE(\n      (SELECT rc.config_value::int FROM public.restaurante_config rc\n       WHERE rc.config_key = 'cart_expiry_minutes' AND rc.restaurante_id = p.restaurante_id LIMIT 1), 60\n    ) AS cart_expiry_minutes,\n    COALESCE(\n      (SELECT rc.config_value::int FROM public.restaurante_config rc\n       WHERE rc.config_key = 'cart_warning_minutes' AND rc.restaurante_id = p.restaurante_id LIMIT 1), 5\n    ) AS cart_warning_minutes\n  FROM public.pedidos p\n  WHERE p.estado IN ('en_curso', 'recibido') AND p.cart_warned_at IS NULL\n),\ncandidatos AS (\n  SELECT c.pedido_id\n  FROM cfg c JOIN public.pedidos p ON p.id = c.pedido_id\n  WHERE COALESCE(p.updated_at, p.created_at) AT TIME ZONE 'UTC' <\n        NOW() - ((c.cart_expiry_minutes - c.cart_warning_minutes) * INTERVAL '1 minute')\n    AND COALESCE(p.updated_at, p.created_at) AT TIME ZONE 'UTC' >=\n        NOW() - (c.cart_expiry_minutes * INTERVAL '1 minute')\n)\nUPDATE public.pedidos\nSET cart_warned_at = NOW()\nWHERE id IN (SELECT pedido_id FROM candidatos)\nRETURNING id, pedido_codigo, telefono, restaurante_id, chatwoot_conversation_id, items, subtotal, total"
       }
-    },
-    {
-      "id": "adv-if-contact",
-      "name": "¿Contacto Adv?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1440,
-        80
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "adv-cond-01",
-              "leftValue": "={{ $json.tiene_contacto }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      }
-    },
-    {
-      "id": "adv-http-convs",
-      "name": "Obtener Conv Adv",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1680,
-        80
-      ],
-      "parameters": {
-        "method": "GET",
-        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/contacts/{{$json.contact_id}}/conversations",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {}
-      },
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "GQGObUBKIPim8MDs",
-          "name": "Header Auth account"
-        }
-      },
-      "onError": "continueRegularOutput"
     },
     {
       "id": "adv-code-msg",
@@ -422,11 +47,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1920,
-        80
+        800,
+        160
       ],
       "parameters": {
-        "jsCode": "const convsResult = $input.first().json || {};\nconst loopItem = $('Loop Advertencias').first().json || {};\n\nlet conversaciones = [];\ntry {\n  if (convsResult.data && convsResult.data.payload) conversaciones = convsResult.data.payload;\n  else if (Array.isArray(convsResult.payload)) conversaciones = convsResult.payload;\n  else if (Array.isArray(convsResult)) conversaciones = convsResult;\n} catch (e) {}\n\nconst abierta = conversaciones\n  .filter(c => c && ['open', 'pending', 'resolved'].includes(c.status))\n  .sort((a, b) => (b.id || 0) - (a.id || 0))[0] || null;\n\nconst conversation_id = abierta ? abierta.id : null;\nconst pedido_codigo = String(loopItem.pedido_codigo || ('#' + loopItem.id));\n\nconst mensaje = `⏰ ¡Hola! Tu pedido *${pedido_codigo}* está esperándote 🛍️\\n`\n  + `Tienes pocos minutos antes de que se cancele por inactividad.\\n`\n  + `¡Escríbenos ahora y lo completamos juntos! 😊`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo\n  }\n}];"
+        "jsCode": "const item = $input.first().json;\n\nconst storedConvId = item.chatwoot_conversation_id\n  ? parseInt(String(item.chatwoot_conversation_id), 10)\n  : null;\n\nconst conversation_id = storedConvId;\nconst pedido_codigo = String(item.pedido_codigo || ('#' + item.id));\n\n// Formatear productos del carrito\nlet itemsText = '';\ntry {\n  const items = typeof item.items === 'string'\n    ? JSON.parse(item.items)\n    : (Array.isArray(item.items) ? item.items : []);\n  if (items.length > 0) {\n    itemsText = items\n      .map(i => `  • ${i.cantidad}x ${i.nombre}`)\n      .join('\\n');\n  }\n} catch(e) {}\n\nlet mensaje = `⏰ ¡Hola! Tu pedido *${pedido_codigo}* está esperándote 🛒\\n`;\n\nif (itemsText) {\n  mensaje += `Llevas en tu carrito:\\n${itemsText}\\n\\n`;\n  mensaje += `¿Lo dejamos así o aprovechamos para agregarle algo más? 😊\\n`;\n  mensaje += `Cuéntanos qué se te antoja y te mostramos todo lo que tenemos disponible.`;\n} else {\n  mensaje += `¿Qué se te antoja hoy? Escríbenos y te contamos todas las opciones que tenemos para ti 😊`;\n}\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo\n  }\n}];"
       }
     },
     {
@@ -435,8 +60,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        2160,
-        80
+        1080,
+        160
       ],
       "parameters": {
         "conditions": {
@@ -467,9 +92,16 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2400,
-        80
+        1360,
+        160
       ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput",
       "parameters": {
         "method": "POST",
         "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/conversations/{{$json.conversation_id}}/messages",
@@ -493,14 +125,159 @@
           ]
         },
         "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Expirar Carritos en_curso",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        520,
+        420
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
       },
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Expira carritos en_curso cuyo updated_at superó cart_expiry_minutes.\n-- Solo afecta estado 'en_curso' (no 'recibido' — ese se expira manualmente desde el dashboard).\n-- El trigger trg_log_estado_pedido registra automáticamente la transición en pedido_estado_log\n-- con origen='trigger'. Para sobrescribir el origen a 'cron', usamos SET LOCAL.\nWITH cfg AS (\n  SELECT\n    p.id                                           AS pedido_id,\n    p.restaurante_id,\n    COALESCE(\n      (SELECT config_value::int\n       FROM   public.restaurante_config rc\n       WHERE  rc.config_key     = 'cart_expiry_minutes'\n         AND  rc.restaurante_id = p.restaurante_id\n       LIMIT 1),\n      60\n    ) AS cart_expiry_minutes\n  FROM public.pedidos p\n  WHERE p.estado = 'en_curso'\n),\ncandidatos AS (\n  SELECT c.pedido_id\n  FROM   cfg c\n  JOIN   public.pedidos p ON p.id = c.pedido_id\n  WHERE  COALESCE(p.updated_at, p.created_at) AT TIME ZONE 'UTC' < NOW() - (c.cart_expiry_minutes * INTERVAL '1 minute')\n)\nUPDATE public.pedidos\nSET\n  estado     = 'expirado',\n  updated_at = NOW()\nWHERE id IN (SELECT pedido_id FROM candidatos)\nRETURNING id, pedido_codigo, telefono, restaurante_id, updated_at, chatwoot_conversation_id"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "¿Hubo expiraciones?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        420
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-rows",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Sin Cambios",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        560
+      ],
+      "parameters": {
+        "jsCode": "// No hubo pedidos expirados en esta ejecución — noop silencioso\nconsole.log('[Cron Expirar Pedidos] Sin pedidos que expirar.');\nreturn [{ json: { total_expirados: 0 } }];"
+      }
+    },
+    {
+      "id": "34136136-5e25-413d-9065-cfd0cdce90e6",
+      "name": "Preparar Mensaje Expiracion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        340
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconst storedConvId = item.chatwoot_conversation_id\n  ? parseInt(String(item.chatwoot_conversation_id), 10)\n  : null;\n\nconst conversation_id = storedConvId;\nconst pedido_codigo = String(item.pedido_codigo || ('#' + item.id));\n\nconst mensaje = `Hola 👋 No tuvimos más actividad en tu pedido *${pedido_codigo}*, `\n  + `así que entendemos que tu antojo puede esperar por ahora.\\n\\n`\n  + `Cuando estés listo, cuéntanos qué se te apetece — `\n  + `estaremos encantados de prepararlo para ti. ¡Hasta pronto! 😊`;\n\nreturn [{\n  json: {\n    conversation_id,\n    tiene_conversacion: conversation_id !== null,\n    mensaje,\n    pedido_codigo,\n    telefono: String(item.telefono || '')\n  }\n}];"
+      }
+    },
+    {
+      "id": "c7146792-a7fd-4382-8331-ca172d2a69d4",
+      "name": "¿Enviar Notificacion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        340
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "95dbf0cb-2e1b-4001-a170-62ed24a5aee6",
+              "leftValue": "={{ $json.tiene_conversacion }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "578c44d4-c84c-4a00-bd51-07976ca0368b",
+      "name": "Enviar Notificacion Expiracion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1640,
+        340
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "GQGObUBKIPim8MDs",
           "name": "Header Auth account"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/1/conversations/{{$json.conversation_id}}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.mensaje }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -509,159 +286,6 @@
         [
           {
             "node": "Advertir Carritos Próximos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Expirar Carritos en_curso": {
-      "main": [
-        [
-          {
-            "node": "¿Hubo expiraciones?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Hubo expiraciones?": {
-      "main": [
-        [
-          {
-            "node": "Log Expiraciones",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Sin Cambios",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Log Expiraciones": {
-      "main": [
-        [
-          {
-            "node": "Loop Pedidos Expirados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Pedidos Expirados": {
-      "main": [
-        [
-          {
-            "node": "Buscar Contacto Chatwoot",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Buscar Contacto Chatwoot": {
-      "main": [
-        [
-          {
-            "node": "Extraer Contact ID",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extraer Contact ID": {
-      "main": [
-        [
-          {
-            "node": "¿Contacto Encontrado?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Contacto Encontrado?": {
-      "main": [
-        [
-          {
-            "node": "Obtener Conversaciones Contacto",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Loop Pedidos Expirados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Obtener Conversaciones Contacto": {
-      "main": [
-        [
-          {
-            "node": "Preparar Mensaje Expiracion",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Preparar Mensaje Expiracion": {
-      "main": [
-        [
-          {
-            "node": "¿Enviar Notificacion?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Enviar Notificacion?": {
-      "main": [
-        [
-          {
-            "node": "Enviar Notificacion Expiracion",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Loop Pedidos Expirados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar Notificacion Expiracion": {
-      "main": [
-        [
-          {
-            "node": "Loop Pedidos Expirados",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Advertir Carritos Próximos": {
-      "main": [
-        [
-          {
-            "node": "Loop Advertencias",
             "type": "main",
             "index": 0
           },
@@ -673,59 +297,7 @@
         ]
       ]
     },
-    "Loop Advertencias": {
-      "main": [
-        [
-          {
-            "node": "Buscar Contacto Adv",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "Buscar Contacto Adv": {
-      "main": [
-        [
-          {
-            "node": "Extraer Contact ID Adv",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extraer Contact ID Adv": {
-      "main": [
-        [
-          {
-            "node": "¿Contacto Adv?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Contacto Adv?": {
-      "main": [
-        [
-          {
-            "node": "Obtener Conv Adv",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Loop Advertencias",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Obtener Conv Adv": {
+    "Advertir Carritos Próximos": {
       "main": [
         [
           {
@@ -756,24 +328,59 @@
             "index": 0
           }
         ],
+        []
+      ]
+    },
+    "Expirar Carritos en_curso": {
+      "main": [
         [
           {
-            "node": "Loop Advertencias",
+            "node": "¿Hubo expiraciones?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Enviar Advertencia": {
+    "¿Hubo expiraciones?": {
       "main": [
         [
           {
-            "node": "Loop Advertencias",
+            "node": "Preparar Mensaje Expiracion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sin Cambios",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Preparar Mensaje Expiracion": {
+      "main": [
+        [
+          {
+            "node": "¿Enviar Notificacion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Enviar Notificacion?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Notificacion Expiracion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
