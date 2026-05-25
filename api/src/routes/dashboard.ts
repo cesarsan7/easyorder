@@ -194,9 +194,7 @@ dashboardRoutes.post('/admin/restaurants', async (c) => {
       ].map(dia => ({ restaurante_id: newRest.id, dia, disponible: false }));
 
       await tx`
-        INSERT INTO horarios (restaurante_id, dia, disponible)
-        ${tx(horarioSeed, 'restaurante_id', 'dia', 'disponible')}
-        ON CONFLICT DO NOTHING
+        INSERT INTO horarios ${tx(horarioSeed, 'restaurante_id', 'dia', 'disponible')}
       `;
 
       return newRest;
@@ -1813,8 +1811,7 @@ dashboardRoutes.post('/:slug/horarios/seed', async (c) => {
     if (Number(cnt) === 0) {
       const seed = DIAS_SEED.map(dia => ({ restaurante_id, dia, disponible: false }));
       await sql`
-        INSERT INTO horarios (restaurante_id, dia, disponible)
-        ${sql(seed, 'restaurante_id', 'dia', 'disponible')}
+        INSERT INTO horarios ${sql(seed, 'restaurante_id', 'dia', 'disponible')}
       `;
     }
 
