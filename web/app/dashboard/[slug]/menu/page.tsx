@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, createContext, useContext } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 import { useBranding } from '@/lib/context/branding'
@@ -130,6 +130,70 @@ function TextareaField({ label, value, onChange, placeholder, maxLength }: {
   )
 }
 
+// ─── Image Picker ─────────────────────────────────────────────────────────────
+
+function ImagePickerField({ value, onChange, slug }: {
+  value: string; onChange: (v: string) => void; slug: string
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [uploadErr, setUploadErr] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(file: File) {
+    if (file.size > 2 * 1024 * 1024) { setUploadErr('Imagen demasiado grande (máx 2 MB)'); return }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setUploadErr('Solo se aceptan JPG, PNG o WebP'); return
+    }
+    setUploadErr(''); setUploading(true)
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `${slug}/${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('menu-images').upload(path, file, { cacheControl: '3600', upsert: false })
+      if (error) throw error
+      const { data } = supabase.storage.from('menu-images').getPublicUrl(path)
+      onChange(data.publicUrl)
+    } catch (e: unknown) {
+      setUploadErr(e instanceof Error ? e.message : 'Error al subir imagen')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">Imagen del producto (opcional)</label>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+        onChange={e => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = '' }} />
+      {value ? (
+        <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3 bg-gray-50">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="preview" className="h-16 w-16 rounded-lg object-cover border border-gray-200 shrink-0"
+            onError={e => (e.currentTarget.style.opacity = '0.3')} />
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <p className="text-[10px] text-gray-400 truncate">{value.split('/').pop()}</p>
+            <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 text-left">
+              {uploading ? '⏳ Subiendo…' : '↑ Cambiar imagen'}
+            </button>
+            <button type="button" onClick={() => onChange('')}
+              className="text-xs text-red-400 hover:text-red-600 text-left">
+              × Eliminar imagen
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 py-5 text-sm text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-colors disabled:opacity-50">
+          {uploading ? '⏳ Subiendo…' : '📷 Subir imagen'}
+        </button>
+      )}
+      {uploadErr && <p className="text-xs text-red-500 mt-1">{uploadErr}</p>}
+    </div>
+  )
+}
+
 // ─── Category Form Modal ──────────────────────────────────────────────────────
 
 function CategoryModal({
@@ -189,10 +253,11 @@ function CategoryModal({
 // ─── Item Form Modal ──────────────────────────────────────────────────────────
 
 function ItemModal({
-  initial, categories, onSave, onClose,
+  initial, categories, slug, onSave, onClose,
 }: {
   initial?: Item
   categories: Category[]
+  slug: string
   onSave: (data: Partial<Item>) => Promise<void>
   onClose: () => void
 }) {
@@ -248,22 +313,7 @@ function ItemModal({
         </div>
         <TextareaField label="Descripción" value={description} onChange={setDescription} maxLength={500} />
         <InputField label="Tags (separados por coma)" value={tags} onChange={setTags} placeholder="pizza, sin gluten, picante" maxLength={300} />
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">URL de imagen (opcional)</label>
-          <div className="flex gap-2 items-start">
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={e => setImageUrl(e.target.value)}
-              placeholder="https://…"
-              className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-            />
-            {imageUrl.trim() && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl.trim()} alt="preview" className="h-10 w-10 rounded-lg object-cover border border-gray-200 shrink-0" onError={e => (e.currentTarget.style.display = 'none')} />
-            )}
-          </div>
-        </div>
+        <ImagePickerField value={imageUrl} onChange={setImageUrl} slug={slug} />
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-600">Es pizza</span>
           <ToggleSwitch value={isPizza} onChange={setIsPizza} />
@@ -553,7 +603,7 @@ function ItemRow({
       )}
       {modal && (
         <ItemModal
-          initial={item} categories={categories}
+          initial={item} categories={categories} slug={slug}
           onSave={handleSave} onClose={() => setModal(false)}
         />
       )}
@@ -635,7 +685,7 @@ function CategorySection({
       )}
       {addItemModal && (
         <ItemModal
-          categories={categories}
+          categories={categories} slug={slug}
           onSave={data => handleAddItem({ ...data, menu_category_id: category.menu_category_id })}
           onClose={() => setAddItemModal(false)}
         />
