@@ -122,6 +122,125 @@ type SortField = 'pedido_codigo' | 'created_at' | 'nombre_cliente' | 'estado' | 
 type SortDir   = 'asc' | 'desc'
 type DatePreset = 'hoy'|'ayer'|'7dias'|'mes'|'rango'|null
 
+// ── Sound system ──────────────────────────────────────────────────────────────
+
+type SoundEvent = 'new_order' | 'confirmado' | 'en_preparacion' | 'listo' | 'en_camino' | 'entregado'
+
+interface SoundSettings {
+  enabled: boolean
+  volume:  number
+  events:  Record<SoundEvent, boolean>
+}
+
+const SOUND_EVENTS: { key: SoundEvent; label: string; emoji: string; defaultOn: boolean }[] = [
+  { key: 'new_order',      label: 'Pedido nuevo',         emoji: '⏳', defaultOn: true  },
+  { key: 'confirmado',     label: 'Confirmado',           emoji: '✓',  defaultOn: true  },
+  { key: 'en_preparacion', label: 'En preparación',       emoji: '🍳', defaultOn: false },
+  { key: 'listo',          label: 'Listo para entregar',  emoji: '🔔', defaultOn: true  },
+  { key: 'en_camino',      label: 'En camino',            emoji: '🛵', defaultOn: false },
+  { key: 'entregado',      label: 'Entregado',            emoji: '📦', defaultOn: false },
+]
+
+const DEFAULT_SOUND_SETTINGS: SoundSettings = {
+  enabled: true,
+  volume:  0.5,
+  events: Object.fromEntries(SOUND_EVENTS.map(e => [e.key, e.defaultOn])) as Record<SoundEvent, boolean>,
+}
+
+const ESTADO_SOUND: Partial<Record<string, SoundEvent>> = {
+  recibido:       'new_order',
+  confirmado:     'confirmado',
+  en_preparacion: 'en_preparacion',
+  listo:          'listo',
+  en_camino:      'en_camino',
+  entregado:      'entregado',
+}
+
+function loadSoundSettings(): SoundSettings {
+  if (typeof window === 'undefined') return DEFAULT_SOUND_SETTINGS
+  try {
+    const raw = localStorage.getItem('eo-sound-settings')
+    if (!raw) return DEFAULT_SOUND_SETTINGS
+    const p = JSON.parse(raw) as Partial<SoundSettings>
+    return {
+      enabled: p.enabled ?? DEFAULT_SOUND_SETTINGS.enabled,
+      volume:  p.volume  ?? DEFAULT_SOUND_SETTINGS.volume,
+      events:  { ...DEFAULT_SOUND_SETTINGS.events, ...(p.events ?? {}) },
+    }
+  } catch { return DEFAULT_SOUND_SETTINGS }
+}
+
+function saveSoundSettings(s: SoundSettings) {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem('eo-sound-settings', JSON.stringify(s)) } catch {}
+}
+
+function playTone(
+  ctx: AudioContext, freq: number, start: number, dur: number,
+  vol: number, type: OscillatorType = 'sine'
+) {
+  const osc  = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain); gain.connect(ctx.destination)
+  osc.type = type
+  osc.frequency.setValueAtTime(freq, start)
+  gain.gain.setValueAtTime(0, start)
+  gain.gain.linearRampToValueAtTime(vol, start + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.001, start + dur)
+  osc.start(start); osc.stop(start + dur + 0.05)
+}
+
+function playSound(event: SoundEvent, volume: number) {
+  try {
+    const ctx = new AudioContext()
+    const v   = Math.max(0.01, Math.min(1, volume)) * 0.3
+    const t   = ctx.currentTime
+    switch (event) {
+      case 'new_order':
+        // Doble beep urgente — onda cuadrada 880 Hz
+        playTone(ctx, 880, t,        0.12, v, 'square')
+        playTone(ctx, 880, t + 0.20, 0.12, v, 'square')
+        break
+      case 'confirmado':
+        // Ding cálido — 660 Hz
+        playTone(ctx, 660, t, 0.50, v)
+        break
+      case 'en_preparacion':
+        // Par ascendente — 440 → 660 Hz
+        playTone(ctx, 440, t,        0.20, v)
+        playTone(ctx, 660, t + 0.25, 0.25, v)
+        break
+      case 'listo':
+        // Acorde Do-Mi-Sol — alerta más importante (pedido listo)
+        playTone(ctx, 523, t,        0.18, v)
+        playTone(ctx, 659, t + 0.20, 0.18, v)
+        playTone(ctx, 784, t + 0.40, 0.38, v)
+        break
+      case 'en_camino':
+        // Par descendente — 660 → 440 Hz
+        playTone(ctx, 660, t,        0.18, v)
+        playTone(ctx, 440, t + 0.22, 0.18, v)
+        break
+      case 'entregado':
+        // Tono suave de cierre — 523 Hz
+        playTone(ctx, 523, t, 0.50, v)
+        break
+    }
+    setTimeout(() => ctx.close(), 2000)
+  } catch { /* AudioContext no disponible */ }
+}
+
+function requestNotifPermission() {
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {})
+  }
+}
+
+function showBrowserNotif(title: string, body?: string) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  try { new Notification(title, { body, icon: '/favicon.ico', silent: true }) } catch {}
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n:number) { return `€${n.toFixed(2).replace('.',',')}` }
@@ -246,6 +365,139 @@ function printComanda(order:Order, detail:OrderDetail|null, tz:string) {
   const win=window.open('','_blank','width=350,height=600')
   if (!win) return; win.document.write(html); win.document.close(); win.focus()
   setTimeout(()=>{win.print();win.close()},300)
+}
+
+// ── SoundConfigPanel ─────────────────────────────────────────────────────────
+
+function SoundConfigPanel({
+  settingsRef, onClose,
+}: {
+  settingsRef: React.MutableRefObject<SoundSettings>
+  onClose: () => void
+}) {
+  const accent = useAccent()
+  const [local,   setLocal]   = useState<SoundSettings>(() => ({ ...settingsRef.current, events: { ...settingsRef.current.events } }))
+  const [testing, setTesting] = useState<SoundEvent | null>(null)
+
+  function testSound(ev: SoundEvent) {
+    if (testing) return
+    setTesting(ev)
+    playSound(ev, local.volume)
+    setTimeout(() => setTesting(null), 1200)
+  }
+
+  function save() {
+    settingsRef.current = local
+    saveSoundSettings(local)
+    onClose()
+  }
+
+  const notifGranted = typeof Notification !== 'undefined' && Notification.permission === 'granted'
+  const notifDefault = typeof Notification !== 'undefined' && Notification.permission === 'default'
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="fixed right-4 top-16 z-50 bg-white rounded-2xl shadow-2xl w-80 max-h-[82vh] overflow-y-auto border border-gray-100">
+
+        {/* Header */}
+        <div className="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-900 text-sm">🔔 Sonidos del dashboard</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+
+          {/* Master toggle */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Activar sonidos</span>
+            <button
+              onClick={() => setLocal(l => ({ ...l, enabled: !l.enabled }))}
+              className="relative inline-flex h-5 w-9 rounded-full transition-colors duration-200"
+              style={{ backgroundColor: local.enabled ? accent : '#D1D5DB' }}
+            >
+              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${local.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          {/* Volume */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-600">Volumen</span>
+              <span className="text-xs tabular-nums" style={{ color: accent }}>{Math.round(local.volume * 100)}%</span>
+            </div>
+            <input
+              type="range" min="0" max="1" step="0.05"
+              value={local.volume}
+              onChange={e => setLocal(l => ({ ...l, volume: Number(e.target.value) }))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200"
+              style={{ accentColor: accent }}
+            />
+          </div>
+
+          {/* Per-event toggles */}
+          <div className="border-t border-gray-100 pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Alertas por evento</p>
+            <div className="space-y-2.5">
+              {SOUND_EVENTS.map(ev => (
+                <div key={ev.key} className="flex items-center gap-2.5">
+                  {/* Toggle */}
+                  <button
+                    onClick={() => setLocal(l => ({ ...l, events: { ...l.events, [ev.key]: !l.events[ev.key] } }))}
+                    className="relative inline-flex h-4 w-7 rounded-full transition-colors duration-200 shrink-0"
+                    style={{ backgroundColor: local.events[ev.key] ? accent : '#D1D5DB' }}
+                  >
+                    <span className={`inline-block h-3 w-3 rounded-full bg-white shadow transform transition-transform duration-200 mt-0.5 ${local.events[ev.key] ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                  </button>
+                  {/* Label */}
+                  <span className={`text-xs flex-1 ${local.events[ev.key] ? 'text-gray-800' : 'text-gray-400'}`}>
+                    {ev.emoji} {ev.label}
+                  </span>
+                  {/* Test button */}
+                  <button
+                    onClick={() => testSound(ev.key)}
+                    disabled={!!testing}
+                    className="text-xs px-2 py-0.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 disabled:opacity-40 transition-colors tabular-nums w-8 text-center"
+                    title={`Probar sonido: ${ev.label}`}
+                  >
+                    {testing === ev.key ? '♪' : '▶'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Browser notifications */}
+          <div className="border-t border-gray-100 pt-3">
+            {notifGranted ? (
+              <p className="text-xs text-green-600 font-medium">✓ Notificaciones del navegador activas</p>
+            ) : notifDefault ? (
+              <button
+                onClick={() => { requestNotifPermission() }}
+                className="w-full rounded-xl py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: accent }}
+              >
+                Activar notificaciones del navegador
+              </button>
+            ) : (
+              <p className="text-xs text-gray-400">Notificaciones bloqueadas — actívalas desde la configuración del navegador.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Save */}
+        <div className="px-5 pb-5">
+          <button
+            onClick={save}
+            className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: accent }}
+          >
+            Guardar configuración
+          </button>
+        </div>
+      </div>
+    </>
+  )
 }
 
 // ── SortTh ────────────────────────────────────────────────────────────────────
@@ -529,7 +781,10 @@ export default function DashboardPage() {
   const [updatingId,     setUpdatingId]     = useState<number|null>(null)
   const [lastUpdated,    setLastUpdated]    = useState<Date|null>(null)
   const [selectedOrder,  setSelectedOrder]  = useState<Order|null>(null)
-  const timerRef = useRef<ReturnType<typeof setTimeout>|null>(null)
+  const timerRef          = useRef<ReturnType<typeof setTimeout>|null>(null)
+  const prevSnapshotRef   = useRef<Map<number, string> | null>(null)
+  const soundSettingsRef  = useRef<SoundSettings>(loadSoundSettings())
+  const [showSoundConfig, setShowSoundConfig] = useState(false)
 
   const DATE_PRESETS: {key:DatePreset;label:string}[] = [
     {key:'hoy',label:'Hoy'},{key:'ayer',label:'Ayer'},
@@ -548,12 +803,46 @@ export default function DashboardPage() {
       const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/orders${qs?'?'+qs:''}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data:{orders:Order[];total:number} = await res.json()
+
+      // ── Detección de cambios y sonidos (solo en polls silenciosos) ──────────
+      if (silent && prevSnapshotRef.current !== null) {
+        const prev     = prevSnapshotRef.current
+        const cfg      = soundSettingsRef.current
+        if (cfg.enabled) {
+          // Pedidos nuevos con estado 'recibido' que no estaban antes
+          const newRecibidos = data.orders.filter(o => o.estado === 'recibido' && !prev.has(o.id))
+          if (newRecibidos.length > 0 && cfg.events.new_order) {
+            playSound('new_order', cfg.volume)
+            showBrowserNotif(
+              newRecibidos.length === 1
+                ? `⏳ Pedido nuevo #${newRecibidos[0].pedido_codigo}`
+                : `⏳ ${newRecibidos.length} pedidos nuevos`,
+              newRecibidos.map(o => o.nombre_cliente).join(', ')
+            )
+          }
+          // Pedidos existentes que cambiaron de estado
+          const changed = data.orders.filter(o => prev.has(o.id) && prev.get(o.id) !== o.estado)
+          for (const order of changed) {
+            const ev = ESTADO_SOUND[order.estado]
+            if (ev && ev !== 'new_order' && cfg.events[ev]) {
+              playSound(ev, cfg.volume)
+              break // un sonido a la vez
+            }
+          }
+        }
+      }
+      // Actualizar snapshot siempre (inicial y silencioso)
+      prevSnapshotRef.current = new Map(data.orders.map(o => [o.id, o.estado] as [number, string]))
+
       setOrders(data.orders); setTotal(data.total)
       if (!filter&&!datePreset) setNewCount(data.orders.filter(o=>o.estado==='recibido').length)
       setLastUpdated(new Date())
     } catch { setError('No se pudieron cargar los pedidos.') }
     finally { if (!silent) setLoading(false) }
   },[slug,filter,datePreset,dateFrom,dateTo,authFetch])
+
+  // Solicitar permiso de notificaciones browser al montar (solo pide una vez si 'default')
+  useEffect(() => { requestNotifPermission() }, [])
 
   useEffect(()=>{fetchOrders()},[fetchOrders])
   useEffect(()=>{
@@ -625,6 +914,16 @@ export default function DashboardPage() {
             <button onClick={()=>fetchOrders()}
               className="rounded-lg px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600">
               ↻ Actualizar
+            </button>
+            <button
+              onClick={() => setShowSoundConfig(s => !s)}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors"
+              style={showSoundConfig
+                ? { backgroundColor: accent, color: '#fff' }
+                : { backgroundColor: '#F3F4F6', color: '#6B7280' }}
+              title="Configuración de sonidos"
+            >
+              🔔
             </button>
             <button onClick={handleLogout}
               className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors">
@@ -835,7 +1134,7 @@ export default function DashboardPage() {
                           </div>
                         </td>
 
-                        {/* Fecha/Hora -- merged, sortable */}
+                        {/* Fecha/Hora */}
                         <td className="px-3 py-3 whitespace-nowrap">
                           <span className="font-mono text-xs text-gray-700">{formatDateTime(order.created_at,zonaHoraria)}</span>
                         </td>
@@ -917,6 +1216,13 @@ export default function DashboardPage() {
           onClose={()=>setSelectedOrder(null)}
           onStatusChange={handleStatusChange}
           updatingId={updatingId}
+        />
+      )}
+
+      {showSoundConfig && (
+        <SoundConfigPanel
+          settingsRef={soundSettingsRef}
+          onClose={() => setShowSoundConfig(false)}
         />
       )}
     </div>

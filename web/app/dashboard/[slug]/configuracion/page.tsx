@@ -272,6 +272,7 @@ export default function ConfiguracionPage() {
   const [restRadius, setRestRadius] = useState<number>(5)
   const [geoState,   setGeoState]   = useState<SaveState>('idle')
   const [horariosExpanded, setHorariosExpanded] = useState(true)
+  const [horariosSeedState, setHorariosSeedState] = useState<SaveState>('idle')
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setFetchError(null)
@@ -422,6 +423,29 @@ export default function ConfiguracionPage() {
       if (!res.ok) throw new Error()
       setHorariosState('saved'); setTimeout(() => setHorariosState('idle'), 2000)
     } catch { setHorariosState('error'); setTimeout(() => setHorariosState('idle'), 3000) }
+  }
+
+  async function seedHorarios() {
+    setHorariosSeedState('saving')
+    try {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/horarios/seed`, {
+        method: 'POST',
+      })
+      if (!res.ok) throw new Error()
+      const data: { horarios: Array<{ id: number; dia: string; disponible: boolean; apertura_1: string | null; cierre_1: string | null; apertura_2: string | null; cierre_2: string | null }> } = await res.json()
+      const DIAS_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+      const sorted = [...data.horarios].sort((a, b) => DIAS_ORDER.indexOf(a.dia) - DIAS_ORDER.indexOf(b.dia))
+      setHorarios(sorted.map(h => ({
+        id: h.id, dia: h.dia, disponible: h.disponible,
+        apertura_1: h.apertura_1?.slice(0, 5) ?? '',
+        cierre_1:   h.cierre_1?.slice(0, 5)   ?? '',
+        apertura_2: h.apertura_2?.slice(0, 5) ?? '',
+        cierre_2:   h.cierre_2?.slice(0, 5)   ?? '',
+      })))
+      setHorariosSeedState('saved'); setTimeout(() => setHorariosSeedState('idle'), 2000)
+    } catch {
+      setHorariosSeedState('error'); setTimeout(() => setHorariosSeedState('idle'), 3000)
+    }
   }
 
   function setRed(red: string, url: string) {
@@ -682,10 +706,24 @@ export default function ConfiguracionPage() {
             </button>
             {horariosExpanded && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {horarios.length === 0
-                  ? <p className="text-sm text-gray-400 text-center py-6">No hay horarios configurados.</p>
-                  : horarios.map(h => <HorarioRow key={h.id} horario={h} onChange={u => { setHorarios(p => p.map(x => x.id === u.id ? u : x)); setHorariosState('idle') }} />)
-                }
+                {horarios.length === 0 ? (
+                  <div className="flex flex-col items-center gap-3 py-8 px-4">
+                    <p className="text-sm text-gray-400 text-center">No hay horarios configurados.</p>
+                    <button
+                      type="button"
+                      onClick={seedHorarios}
+                      disabled={horariosSeedState === 'saving'}
+                      className="text-sm font-semibold px-4 py-2 rounded-xl text-white disabled:opacity-50"
+                      style={{ backgroundColor: accent }}
+                    >
+                      {horariosSeedState === 'saving' ? 'Creando…' :
+                       horariosSeedState === 'error'  ? 'Error — reintentar' :
+                       '+ Crear horario semanal'}
+                    </button>
+                  </div>
+                ) : (
+                  horarios.map(h => <HorarioRow key={h.id} horario={h} onChange={u => { setHorarios(p => p.map(x => x.id === u.id ? u : x)); setHorariosState('idle') }} />)
+                )}
                 <div className="flex justify-end px-4 py-3 border-t border-gray-100">
                   <SaveButton state={horariosState} onClick={saveHorarios} disabled={horarios.length === 0} />
                 </div>
