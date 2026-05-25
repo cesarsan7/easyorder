@@ -188,6 +188,17 @@ dashboardRoutes.post('/admin/restaurants', async (c) => {
         ON CONFLICT (user_id, restaurante_id) DO NOTHING
       `;
 
+      // Seed 7 horario rows (all closed by default) so PATCH /horarios can UPDATE them
+      const horarioSeed = [
+        'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo',
+      ].map(dia => ({ restaurante_id: newRest.id, dia, disponible: false }));
+
+      await tx`
+        INSERT INTO horarios (restaurante_id, dia, disponible)
+        ${tx(horarioSeed, 'restaurante_id', 'dia', 'disponible')}
+        ON CONFLICT DO NOTHING
+      `;
+
       return newRest;
     });
 
@@ -1779,267 +1790,65 @@ dashboardRoutes.patch('/:slug/horarios', async (c) => {
 });
 
 // ----------------------------------------------------------------------------
-// GET /dashboard/:slug/delivery-zones
+// POST /dashboard/:slug/horarios/seed
 //
-// Returns ALL delivery zones for the restaurant (active and inactive) so the
-// operator can manage them from the settings page.
+// Creates the 7 default weekday rows for a restaurant that has none yet.
+// Safe to call multiple times — skips if rows already exist.
+// Role guard: owner or manager.
 // ----------------------------------------------------------------------------
-dashboardRoutes.get('/:slug/delivery-zones', async (c) => {
-  const restaurante_id = c.get('restaurante_id');
-
-  try {
-    const zones = await sql<DeliveryZoneRow[]>`
-      SELECT
-        delivery_zone_id,
-        zone_name,
-        postal_code,
-        fee,
-        is_active,
-        description,
-        min_order_amount,
-        estimated_minutes_min,
-        estimated_minutes_max
-      FROM delivery_zone
-      WHERE restaurante_id = ${restaurante_id}
-      ORDER BY zone_name ASC
-    `;
-
-    return c.json({
-      zones: zones.map((z) => ({
-        delivery_zone_id:      Number(z.delivery_zone_id),
-        zone_name:             z.zone_name,
-        postal_code:           z.postal_code,
-        fee:                   Number(z.fee),
-        is_active:             z.is_active,
-        description:           z.description ?? null,
-        min_order_amount:      z.min_order_amount !== null ? Number(z.min_order_amount) : null,
-        estimated_minutes_min: z.estimated_minutes_min ?? null,
-        estimated_minutes_max: z.estimated_minutes_max ?? null,
-      })),
-    });
-
-  } catch (err) {
-    console.error('[GET /dashboard/:slug/delivery-zones] Unhandled error:', err);
-    return c.json({ error: 'service_unavailable' }, 503);
-  }
-});
-
-// ----------------------------------------------------------------------------
-// PATCH /dashboard/:slug/delivery-zones/:id
-//
-// Updates a single delivery zone. All fields optional; at least one required.
-// Updatable: zone_name, postal_code, fee, min_order_amount,
-//            estimated_minutes_min, estimated_minutes_max, is_active
-//
-// Multi-tenant: WHERE includes restaurante_id so tenant A cannot mutate
-// a zone belonging to tenant B.
-// Role guard: owner or manager only.
-// ----------------------------------------------------------------------------
-dashboardRoutes.patch('/:slug/delivery-zones/:id', async (c) => {
-  const restaurante_id = c.get('restaurante_id');
-
-  const rol = c.get('rol');
-  if (rol !== 'owner' && rol !== 'manager') {
-    return c.json({ error: 'forbidden', detail: 'role owner or manager required' }, 403);
-  }
-
-  const idParam = c.req.param('id');
-  const zoneId = parseInt(idParam, 10);
-  if (!Number.isInteger(zoneId) || zoneId < 1) {
-    return c.json({ error: 'invalid_id' }, 400);
-  }
-
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'invalid_body' }, 400);
-  }
-
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return c.json({ error: 'invalid_body' }, 400);
-  }
-
-  const raw = body as Record<string, unknown>;
-
-  // Validate and collect update fields
-  const updates: Record<string, unknown> = {};
-
-  if ('zone_name' in raw) {
-    if (typeof raw['zone_name'] !== 'string' || raw['zone_name'].trim().length === 0) {
-      return c.json({ error: 'invalid_field', field: 'zone_name', detail: 'must be a non-empty string' }, 400);
-    }
-    updates['zone_name'] = raw['zone_name'].trim();
-  }
-
-  if ('postal_code' in raw) {
-    if (typeof raw['postal_code'] !== 'string' || raw['postal_code'].trim().length === 0) {
-      return c.json({ error: 'invalid_field', field: 'postal_code', detail: 'must be a non-empty string' }, 400);
-    }
-    updates['postal_code'] = raw['postal_code'].trim();
-  }
-
-  if ('fee' in raw) {
-    const fee = Number(raw['fee']);
-    if (isNaN(fee) || fee < 0) {
-      return c.json({ error: 'invalid_field', field: 'fee', detail: 'must be a non-negative number' }, 400);
-    }
-    updates['fee'] = fee;
-  }
-
-  if ('min_order_amount' in raw) {
-    const v = raw['min_order_amount'];
-    if (v === null) {
-      updates['min_order_amount'] = null;
-    } else {
-      const n = Number(v);
-      if (isNaN(n) || n < 0) {
-        return c.json({ error: 'invalid_field', field: 'min_order_amount', detail: 'must be a non-negative number or null' }, 400);
-      }
-      updates['min_order_amount'] = n;
-    }
-  }
-
-  if ('estimated_minutes_min' in raw) {
-    const v = raw['estimated_minutes_min'];
-    if (v === null) {
-      updates['estimated_minutes_min'] = null;
-    } else {
-      const n = parseInt(String(v), 10);
-      if (!Number.isInteger(n) || n < 0) {
-        return c.json({ error: 'invalid_field', field: 'estimated_minutes_min', detail: 'must be a non-negative integer or null' }, 400);
-      }
-      updates['estimated_minutes_min'] = n;
-    }
-  }
-
-  if ('estimated_minutes_max' in raw) {
-    const v = raw['estimated_minutes_max'];
-    if (v === null) {
-      updates['estimated_minutes_max'] = null;
-    } else {
-      const n = parseInt(String(v), 10);
-      if (!Number.isInteger(n) || n < 0) {
-        return c.json({ error: 'invalid_field', field: 'estimated_minutes_max', detail: 'must be a non-negative integer or null' }, 400);
-      }
-      updates['estimated_minutes_max'] = n;
-    }
-  }
-
-  if (Object.keys(updates).length === 0) {
-    return c.json({ error: 'no_valid_fields', detail: 'body must include at least one updatable field' }, 400);
-  }
-
-  try {
-    const rows = await sql<DeliveryZoneRow[]>`
-      UPDATE delivery_zone
-      SET    ${sql(updates)}
-      WHERE  delivery_zone_id = ${zoneId}
-        AND  restaurante_id   = ${restaurante_id}
-      RETURNING
-        delivery_zone_id,
-        zone_name,
-        postal_code,
-        fee,
-        is_active,
-        description,
-        min_order_amount,
-        estimated_minutes_min,
-        estimated_minutes_max
-    `;
-
-    if (rows.length === 0) {
-      return c.json({ error: 'zone_not_found' }, 404);
-    }
-
-    const z = rows[0];
-    return c.json({
-      delivery_zone_id:      Number(z.delivery_zone_id),
-      zone_name:             z.zone_name,
-      postal_code:           z.postal_code,
-      fee:                   Number(z.fee),
-      is_active:             z.is_active,
-      description:           z.description ?? null,
-      min_order_amount:      z.min_order_amount !== null ? Number(z.min_order_amount) : null,
-      estimated_minutes_min: z.estimated_minutes_min ?? null,
-      estimated_minutes_max: z.estimated_minutes_max ?? null,
-    });
-
-  } catch (err) {
-    console.error('[PATCH /dashboard/:slug/delivery-zones/:id] Unhandled error:', err);
-    return c.json({ error: 'service_unavailable' }, 503);
-  }
-});
-
-// ----------------------------------------------------------------------------
-// POST /dashboard/:slug/delivery-zones
-// Creates a new delivery zone for the restaurant.
-// ----------------------------------------------------------------------------
-dashboardRoutes.post('/:slug/delivery-zones', async (c) => {
+dashboardRoutes.post('/:slug/horarios/seed', async (c) => {
   const restaurante_id = c.get('restaurante_id');
   const rol = c.get('rol');
-  if (rol !== 'owner' && rol !== 'manager') return c.json({ error: 'forbidden' }, 403);
+  if (rol !== 'owner' && rol !== 'manager' && rol !== 'admin') {
+    return c.json({ error: 'forbidden' }, 403);
+  }
 
-  let body: unknown;
-  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_body' }, 400); }
-  const b = body as Record<string, unknown>;
-
-  const name                  = typeof b['name']                  === 'string' ? b['name'].trim()       : 'Nueva zona';
-  const postal_code           = typeof b['postal_code']           === 'string' ? b['postal_code'].trim() : null;
-  const delivery_fee          = Number(b['delivery_fee']          ?? 0);
-  const min_order_amount      = b['min_order_amount']      != null ? Number(b['min_order_amount'])      : null;
-  const estimated_minutes_min = b['estimated_minutes_min'] != null ? Number(b['estimated_minutes_min']) : null;
-  const estimated_minutes_max = b['estimated_minutes_max'] != null ? Number(b['estimated_minutes_max']) : null;
-  const is_active             = b['is_active'] === true || b['is_active'] === 'true' ? true : false;
+  const DIAS_SEED = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
   try {
-    const [row] = await sql<Record<string,unknown>[]>`
-      INSERT INTO delivery_zone (restaurante_id, zone_name, postal_code, delivery_fee, min_order_amount,
-        estimated_minutes_min, estimated_minutes_max, is_active)
-      VALUES (${restaurante_id}, ${name}, ${postal_code}, ${delivery_fee}, ${min_order_amount},
-        ${estimated_minutes_min}, ${estimated_minutes_max}, ${is_active})
-      RETURNING delivery_zone_id, zone_name, postal_code, delivery_fee, min_order_amount,
-        estimated_minutes_min, estimated_minutes_max, is_active
+    // Only insert if the restaurant has zero horarios rows (avoids duplicates).
+    const [{ cnt }] = await sql<{ cnt: string }[]>`
+      SELECT COUNT(*) AS cnt FROM horarios WHERE restaurante_id = ${restaurante_id}
     `;
-    return c.json({
-      delivery_zone_id:      Number(row['delivery_zone_id']),
-      zone_name:             row['zone_name'],
-      postal_code:           row['postal_code'],
-      fee:                   Number(row['delivery_fee']),
-      min_order_amount:      row['min_order_amount'] != null ? Number(row['min_order_amount']) : null,
-      estimated_minutes_min: row['estimated_minutes_min'] != null ? Number(row['estimated_minutes_min']) : null,
-      estimated_minutes_max: row['estimated_minutes_max'] != null ? Number(row['estimated_minutes_max']) : null,
-      is_active:             Boolean(row['is_active']),
-    }, 201);
+    if (Number(cnt) === 0) {
+      const seed = DIAS_SEED.map(dia => ({ restaurante_id, dia, disponible: false }));
+      await sql`
+        INSERT INTO horarios (restaurante_id, dia, disponible)
+        ${sql(seed, 'restaurante_id', 'dia', 'disponible')}
+      `;
+    }
+
+    const rows = await sql<HorarioWithId[]>`
+      SELECT id, dia, disponible,
+             TO_CHAR(apertura_1, 'HH24:MI') AS apertura_1,
+             TO_CHAR(cierre_1,   'HH24:MI') AS cierre_1,
+             TO_CHAR(apertura_2, 'HH24:MI') AS apertura_2,
+             TO_CHAR(cierre_2,   'HH24:MI') AS cierre_2
+      FROM   horarios
+      WHERE  restaurante_id = ${restaurante_id}
+      ORDER BY
+        CASE dia
+          WHEN 'Lunes'     THEN 1
+          WHEN 'Martes'    THEN 2
+          WHEN 'Miércoles' THEN 3
+          WHEN 'Jueves'    THEN 4
+          WHEN 'Viernes'   THEN 5
+          WHEN 'Sábado'    THEN 6
+          WHEN 'Domingo'   THEN 7
+          ELSE 8
+        END
+    `;
+
+    return c.json({ horarios: rows });
+
   } catch (err) {
-    console.error('[POST /dashboard/:slug/delivery-zones] Unhandled error:', err);
+    console.error('[POST /dashboard/:slug/horarios/seed] Unhandled error:', err);
     return c.json({ error: 'service_unavailable' }, 503);
   }
 });
 
-// ----------------------------------------------------------------------------
-// DELETE /dashboard/:slug/delivery-zones/:id
-// ----------------------------------------------------------------------------
-dashboardRoutes.delete('/:slug/delivery-zones/:id', async (c) => {
-  const restaurante_id = c.get('restaurante_id');
-  const rol = c.get('rol');
-  if (rol !== 'owner' && rol !== 'manager') return c.json({ error: 'forbidden' }, 403);
-
-  const zoneId = Number(c.req.param('id'));
-  if (!Number.isInteger(zoneId) || zoneId <= 0) return c.json({ error: 'invalid_id' }, 400);
-
-  try {
-    const result = await sql`
-      DELETE FROM delivery_zone
-      WHERE delivery_zone_id = ${zoneId} AND restaurante_id = ${restaurante_id}
-    `;
-    if ((result as unknown as { count: number }).count === 0) return c.json({ error: 'not_found' }, 404);
-    return c.json({ ok: true });
-  } catch (err) {
-    console.error('[DELETE /dashboard/:slug/delivery-zones/:id] Unhandled error:', err);
-    return c.json({ error: 'service_unavailable' }, 503);
-  }
-});
+// NOTE: delivery-zone CRUD is handled by deliveryZonesRoutes (api/src/routes/dashboard/delivery-zones.ts)
+// registered in index.ts. No duplicate handlers here.
 
 // Returns the local calendar date (YYYY-MM-DD) for a given IANA timezone.
 // Uses en-CA locale because it formats as YYYY-MM-DD without extra logic.
