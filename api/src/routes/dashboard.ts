@@ -212,6 +212,68 @@ dashboardRoutes.post('/admin/restaurants', async (c) => {
   }
 });
 
+// ----------------------------------------------------------------------------
+// POST /dashboard/join
+// Acepta una invitación por token. El usuario autenticado pasa el token y
+// queda añadido al restaurante con el rol indicado en la invitación.
+// No requiere slug — el restaurante se obtiene del propio invite.
+// Body: { token: string }
+// ----------------------------------------------------------------------------
+dashboardRoutes.post('/join', async (c) => {
+  // 1 — Auth: verificar JWT sin resolveTenant
+  const user = await validateBearerToken(c.req.header('Authorization'));
+  if (!user) return c.json({ error: 'unauthorized' }, 401);
+  const user_id = user.id;
+  const email   = user.email ?? null;
+
+  // 2 — Leer token del body
+  let body: unknown;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_body' }, 400); }
+  const b = body as Record<string, unknown>;
+  const token = b['token'] as string | undefined;
+  if (!token) return c.json({ error: 'token_required' }, 400);
+
+  try {
+    // 3 — Buscar invite válido (no expirado, no usado)
+    const [invite] = await sql<{ id: number; restaurante_id: number; rol: string; expires_at: string; used_by: string | null }[]>`
+      SELECT id, restaurante_id, rol, expires_at, used_by
+      FROM   restaurant_invites
+      WHERE  token = ${token}::uuid
+      LIMIT  1
+    `;
+
+    if (!invite) return c.json({ error: 'invalid_token' }, 404);
+    if (invite.used_by) return c.json({ error: 'token_already_used' }, 409);
+    if (new Date(invite.expires_at) < new Date()) return c.json({ error: 'token_expired' }, 410);
+
+    // 4 — Obtener slug del restaurante para la redirección
+    const [rest] = await sql<{ slug: string; nombre: string }[]>`
+      SELECT slug, nombre FROM restaurante WHERE id = ${invite.restaurante_id} LIMIT 1
+    `;
+    if (!rest) return c.json({ error: 'restaurant_not_found' }, 404);
+
+    // 5 — Insertar membresía (ignorar si ya existe)
+    await sql`
+      INSERT INTO local_memberships (user_id, restaurante_id, rol, email)
+      VALUES (${user_id}, ${invite.restaurante_id}, ${invite.rol}, ${email})
+      ON CONFLICT (user_id, restaurante_id) DO NOTHING
+    `;
+
+    // 6 — Marcar invite como usado
+    await sql`
+      UPDATE restaurant_invites
+      SET    used_by = ${user_id}::uuid, used_at = NOW()
+      WHERE  id = ${invite.id}
+    `;
+
+    return c.json({ ok: true, slug: rest.slug, nombre: rest.nombre, rol: invite.rol });
+
+  } catch (err) {
+    console.error('[POST /dashboard/join] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
 // All dashboard routes: slug resolution first, then JWT auth.
 // IMPORTANTE: este middleware va DESPUÉS de /me para que /:slug/* no lo capture.
 dashboardRoutes.use('/:slug/*', resolveTenant, requireAuth);

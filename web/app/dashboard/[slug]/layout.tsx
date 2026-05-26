@@ -17,6 +17,7 @@ const NAV = [
   { path: '/clientes',      icon: '⊙', label: 'Clientes'       },
   { path: '/configuracion', icon: '⚙', label: 'Configuración'  },
   { path: '/escalaciones',  icon: '⚑', label: 'Derivados'      },
+  { path: '/equipo',        icon: '⊞', label: 'Equipo'          },
 ]
 
 interface NotifData {
