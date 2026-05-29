@@ -43,7 +43,14 @@ function LoginInner() {
     })
 
     if (authError) {
-      setError('Email o contraseña incorrectos.')
+      const msg = authError.message ?? ''
+      if (msg.toLowerCase().includes('email not confirmed')) {
+        setError('Tu email aún no está confirmado. Revisa tu bandeja de entrada o desactiva la confirmación en Supabase.')
+      } else if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials') || msg.toLowerCase().includes('wrong password')) {
+        setError('Email o contraseña incorrectos.')
+      } else {
+        setError(`Error al iniciar sesión: ${msg}`)
+      }
       setLoading(false)
       return
     }
@@ -240,8 +247,7 @@ function LoginInner() {
   )
 }
 
-// ─── Page wrapper (Suspense requerido por useSearchParams) ────────────────────
-
+// Page wrapper
 export default function LoginPage() {
   return (
     <Suspense fallback={
