@@ -19,16 +19,29 @@ function LoginInner() {
   const [error, setError]     = useState<string | null>(null)
   const [registered, setRegistered] = useState(false)
 
-  function getRedirectUrl(user_id: string) {
-    // Si viene de /join u otra URL protegida, respetar ese destino
+  // Determina a dónde redirigir tras autenticarse.
+  // Si viene de /join u otra URL next=, respeta ese destino.
+  // Si no, consulta /dashboard/me para saber a qué restaurante tiene acceso.
+  // Si no tiene ninguno, devuelve null y se muestra error en pantalla.
+  async function resolveRedirect(accessToken: string): Promise<string | null> {
     if (nextUrl && nextUrl.startsWith('/')) return nextUrl
-    // Si no, ir al último slug visitado o al índice del dashboard
+
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
     try {
-      const savedSlug = localStorage.getItem('easyorder-last-slug')
-      return savedSlug ? `/dashboard/${savedSlug}` : '/dashboard'
-    } catch {
-      return '/dashboard'
-    }
+      const res = await fetch(`${apiBase}/dashboard/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const restaurants = data.restaurants as { slug: string }[] | undefined
+        if (restaurants && restaurants.length > 0) {
+          return `/dashboard/${restaurants[0].slug}`
+        }
+      }
+    } catch { /* red error — caer al fallback */ }
+
+    // Sin membresías
+    return null
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -37,7 +50,7 @@ function LoginInner() {
     setError(null)
 
     const supabase = createClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     })
@@ -45,8 +58,12 @@ function LoginInner() {
     if (authError) {
       const msg = authError.message ?? ''
       if (msg.toLowerCase().includes('email not confirmed')) {
-        setError('Tu email aún no está confirmado. Revisa tu bandeja de entrada o desactiva la confirmación en Supabase.')
-      } else if (msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials') || msg.toLowerCase().includes('wrong password')) {
+        setError('Tu email aún no está confirmado. Revisa tu bandeja de entrada.')
+      } else if (
+        msg.toLowerCase().includes('invalid login') ||
+        msg.toLowerCase().includes('invalid credentials') ||
+        msg.toLowerCase().includes('wrong password')
+      ) {
         setError('Email o contraseña incorrectos.')
       } else {
         setError(`Error al iniciar sesión: ${msg}`)
@@ -55,8 +72,14 @@ function LoginInner() {
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    window.location.href = getRedirectUrl(user?.id ?? '')
+    const accessToken = signInData.session?.access_token ?? ''
+    const dest = await resolveRedirect(accessToken)
+    if (!dest) {
+      setError('Esta cuenta no tiene acceso a ningún restaurante. Pide al propietario que te envíe una invitación.')
+      setLoading(false)
+      return
+    }
+    window.location.href = dest
   }
 
   async function handleRegister(e: React.FormEvent) {
@@ -69,7 +92,6 @@ function LoginInner() {
       email: email.trim(),
       password,
       options: {
-        // Si viene de /join, redirigir ahí tras confirmar email
         emailRedirectTo: nextUrl
           ? `${window.location.origin}${nextUrl}`
           : `${window.location.origin}/dashboard`,
@@ -82,10 +104,16 @@ function LoginInner() {
       return
     }
 
-    // Supabase puede confirmar automáticamente (sin email) si está configurado así
+    // Confirmación automática activa — sesión lista inmediatamente
     if (data.session) {
-      // Confirmación automática activa — sesión lista, redirigir
-      window.location.href = getRedirectUrl(data.user?.id ?? '')
+      const accessToken = data.session.access_token
+      const dest = await resolveRedirect(accessToken)
+      if (!dest) {
+        setError('Cuenta creada. Pide al propietario que te envíe una invitación para acceder.')
+        setLoading(false)
+        return
+      }
+      window.location.href = dest
       return
     }
 
@@ -256,6 +284,7 @@ export default function LoginPage() {
       </main>
     }>
       <LoginInner />
+   
     </Suspense>
   )
 }
