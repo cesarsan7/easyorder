@@ -269,8 +269,9 @@ dashboardRoutes.post('/join', async (c) => {
     return c.json({ ok: true, slug: rest.slug, nombre: rest.nombre, rol: invite.rol });
 
   } catch (err) {
-    console.error('[POST /dashboard/join] Unhandled error:', err);
-    return c.json({ error: 'service_unavailable' }, 503);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[POST /dashboard/join] Unhandled error:', msg);
+    return c.json({ error: 'service_unavailable', detail: msg }, 503);
   }
 });
 

@@ -64,7 +64,8 @@ function JoinInner() {
         }
 
         setStatus('error')
-        setMessage(errMap[data.error ?? ''] ?? `Error al procesar la invitación. (${data.error ?? res.status})`)
+        const detail = (data as { detail?: string }).detail
+        setMessage(errMap[data.error ?? ''] ?? `Error al procesar la invitación. (${data.error ?? res.status}${detail ? ': ' + detail : ''})`)
         return
       }
 
