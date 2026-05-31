@@ -41,7 +41,7 @@ membersRoutes.get('/:slug/members', async (c) => {
 // POST /dashboard/:slug/members/invite
 // Genera un token de invitación (válido 7 días) para un rol dado.
 // Solo owner y manager pueden invitar.
-// Body: { rol: 'manager' | 'staff' }
+// Body: { rol: 'manager' | 'viewer' }
 // ----------------------------------------------------------------------------
 membersRoutes.post('/:slug/members/invite', async (c) => {
   const restaurante_id = c.get('restaurante_id');
@@ -58,12 +58,12 @@ membersRoutes.post('/:slug/members/invite', async (c) => {
   const b = body as Record<string, unknown>;
   const rol = b['rol'] as string | undefined;
 
-  if (!rol || !['manager', 'staff'].includes(rol)) {
-    return c.json({ error: 'invalid_rol', detail: "rol must be 'manager' or 'staff'" }, 400);
+  if (!rol || !['manager', 'viewer'].includes(rol)) {
+    return c.json({ error: 'invalid_rol', detail: "rol must be 'manager' or 'viewer'" }, 400);
   }
 
   // Managers can only invite staff (not other managers)
-  if (rol_caller === 'manager' && rol !== 'staff') {
+  if (rol_caller === 'manager' && rol !== 'viewer') {
     return c.json({ error: 'forbidden', detail: 'managers can only invite staff' }, 403);
   }
 
@@ -85,7 +85,7 @@ membersRoutes.post('/:slug/members/invite', async (c) => {
 // ----------------------------------------------------------------------------
 // PATCH /dashboard/:slug/members/:user_id/rol
 // Cambia el rol de un miembro. Solo owner puede hacerlo.
-// Body: { rol: 'manager' | 'staff' }
+// Body: { rol: 'manager' | 'viewer' }
 // No puede cambiar su propio rol.
 // ----------------------------------------------------------------------------
 membersRoutes.patch('/:slug/members/:target_user_id/rol', async (c) => {
@@ -108,8 +108,8 @@ membersRoutes.patch('/:slug/members/:target_user_id/rol', async (c) => {
   const b = body as Record<string, unknown>;
   const new_rol = b['rol'] as string | undefined;
 
-  if (!new_rol || !['manager', 'staff'].includes(new_rol)) {
-    return c.json({ error: 'invalid_rol', detail: "rol must be 'manager' or 'staff'" }, 400);
+  if (!new_rol || !['manager', 'viewer'].includes(new_rol)) {
+    return c.json({ error: 'invalid_rol', detail: "rol must be 'manager' or 'viewer'" }, 400);
   }
 
   try {

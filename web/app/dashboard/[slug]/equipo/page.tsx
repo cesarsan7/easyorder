@@ -32,17 +32,17 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 const ROL_LABEL: Record<string, string> = {
   owner:   'Propietario',
   manager: 'Gerente',
-  staff:   'Personal',
+  viewer:   'Personal',
 }
 
 const ROL_BADGE: Record<string, { bg: string; text: string }> = {
   owner:   { bg: '#FEF3C7', text: '#92400E' },
   manager: { bg: '#DBEAFE', text: '#1E40AF' },
-  staff:   { bg: '#F3F4F6', text: '#374151' },
+  viewer:   { bg: '#F3F4F6', text: '#374151' },
 }
 
 function RolBadge({ rol }: { rol: string }) {
-  const style = ROL_BADGE[rol] ?? ROL_BADGE['staff']
+  const style = ROL_BADGE[rol] ?? ROL_BADGE['viewer']
   return (
     <span
       style={{ backgroundColor: style.bg, color: style.text }}
@@ -101,7 +101,7 @@ function EquipoInner({
   const [error, setError]             = useState('')
 
   // Invite form
-  const [inviteRol, setInviteRol]     = useState<'manager' | 'staff'>('staff')
+  const [inviteRol, setInviteRol]     = useState<'manager' | 'viewer'>('viewer')
   const [inviteState, setInviteState] = useState<SaveState>('idle')
   const [inviteResult, setInviteResult] = useState<InviteResult | null>(null)
   const [copied, setCopied]           = useState(false)
@@ -259,13 +259,13 @@ function EquipoInner({
             <label className="text-sm text-gray-600 font-medium">Rol:</label>
             <select
               value={inviteRol}
-              onChange={e => setInviteRol(e.target.value as 'manager' | 'staff')}
+              onChange={e => setInviteRol(e.target.value as 'manager' | 'viewer')}
               className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none"
             >
               {myRol === 'owner' && (
                 <option value="manager">Gerente</option>
               )}
-              <option value="staff">Personal</option>
+              <option value="viewer">Personal</option>
             </select>
 
             <button
@@ -348,7 +348,7 @@ function EquipoInner({
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none"
                   >
                     <option value="manager">Gerente</option>
-                    <option value="staff">Personal</option>
+                    <option value="viewer">Personal</option>
                   </select>
                 ) : (
                   <RolBadge rol={m.rol} />
