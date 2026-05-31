@@ -6,19 +6,79 @@ import { createClient } from '@/lib/supabase/client'
 
 const ACCENT = '#E63946'
 
+const ROL_LABEL: Record<string, string> = {
+  manager: 'Gerente',
+  staff:   'Personal',
+  owner:   'Propietario',
+}
+
 // ─── Inner component (uses useSearchParams) ───────────────────────────────────
 
 function JoinInner() {
   const searchParams = useSearchParams()
   const token        = searchParams.get('token') ?? ''
 
-  const [status, setStatus] = useState<'loading' | 'ready' | 'joining' | 'success' | 'error' | 'no_auth'>('loading')
-  const [message, setMessage]   = useState('')
-  const [slug, setSlug]         = useState('')
-  const [nombre, setNombre]     = useState('')
-  const [rol, setRol]           = useState('')
+  const [status, setStatus]   = useState<'loading' | 'joining' | 'success' | 'error'>('loading')
+  const [message, setMessage] = useState('')
+  const [slug, setSlug]       = useState('')
+  const [nombre, setNombre]   = useState('')
+  const [rol, setRol]         = useState('')
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
+
+  // Llamada al API para aceptar el invite con el access_token ya disponible
+  async function acceptInvite(accessToken: string) {
+    setStatus('joining')
+    try {
+      const res = await fetch(`${apiBase}/dashboard/join`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ token }),
+      })
+
+      const data = await res.json() as { error?: string; slug?: string; nombre?: string; rol?: string }
+
+      if (!res.ok) {
+        const errMap: Record<string, string> = {
+          invalid_token:      'El enlace de invitación no existe o es inválido.',
+          token_expired:      'El enlace de invitación ha expirado.',
+          unauthorized:       'Sesión expirada. Vuelve a iniciar sesión.',
+          restaurant_not_found: 'El restaurante asociado a esta invitación no existe.',
+        }
+
+        // token_already_used: el usuario ya es miembro — redirigir al dashboard
+        if (data.error === 'token_already_used') {
+          try {
+            const meRes = await fetch(`${apiBase}/dashboard/me`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            })
+            if (meRes.ok) {
+              const me = await meRes.json() as { restaurants?: { slug: string }[] }
+              const first = me.restaurants?.[0]
+              if (first) { window.location.href = `/dashboard/${first.slug}`; return }
+            }
+          } catch { /* silent */ }
+        }
+
+        setStatus('error')
+        setMessage(errMap[data.error ?? ''] ?? `Error al procesar la invitación. (${data.error ?? res.status})`)
+        return
+      }
+
+      setSlug(data.slug ?? '')
+      setNombre(data.nombre ?? '')
+      setRol(data.rol ?? '')
+      setStatus('success')
+      setTimeout(() => { window.location.href = `/dashboard/${data.slug}` }, 1500)
+
+    } catch {
+      setStatus('error')
+      setMessage('Error de conexión. Intenta de nuevo.')
+    }
+  }
 
   useEffect(() => {
     if (!token) {
@@ -27,73 +87,20 @@ function JoinInner() {
       return
     }
 
-    // Check if user is authenticated
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // Redirect to login, preserving the invite URL as next param
+        // Sin sesión → ir a login, conservando el token de invite en ?next=
         const next = encodeURIComponent(`/dashboard/join?token=${token}`)
         window.location.href = `/login?next=${next}`
         return
       }
-      setStatus('ready')
+      // Sesión activa → aceptar automáticamente, sin botón intermedio
+      acceptInvite(session.access_token)
     })
-  }, [token])
+  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleJoin() {
-    setStatus('joining')
-    try {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        window.location.href = `/login?next=${encodeURIComponent(window.location.href)}`
-        return
-      }
-
-      const res = await fetch(`${apiBase}/dashboard/join`, {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ token }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        const errMap: Record<string, string> = {
-          invalid_token:    'El enlace de invitación no existe.',
-          token_already_used: 'Este enlace ya fue utilizado.',
-          token_expired:    'El enlace de invitación ha expirado.',
-          unauthorized:     'Debes iniciar sesión para aceptar la invitación.',
-        }
-        setStatus('error')
-        setMessage(errMap[(data as { error?: string }).error ?? ''] ?? 'No se pudo procesar la invitación.')
-        return
-      }
-
-      const d = data as { slug: string; nombre: string; rol: string }
-      setSlug(d.slug)
-      setNombre(d.nombre)
-      setRol(d.rol)
-      setStatus('success')
-
-      // Redirect after short delay
-      setTimeout(() => {
-        window.location.href = `/dashboard/${d.slug}`
-      }, 2000)
-
-    } catch {
-      setStatus('error')
-      setMessage('Error de conexión. Intenta de nuevo.')
-    }
-  }
-
-  const ROL_LABEL: Record<string, string> = {
-    manager: 'Gerente',
-    staff:   'Personal',
-  }
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -111,40 +118,20 @@ function JoinInner() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-7 text-center space-y-5">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-8 text-center space-y-5">
 
-          {status === 'loading' && (
-            <p className="text-sm text-gray-400">Verificando invitación…</p>
-          )}
-
-          {status === 'ready' && (
+          {(status === 'loading' || status === 'joining') && (
             <>
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-2xl mx-auto"
                 style={{ backgroundColor: '#FEF3C7' }}
               >
-                📩
+                ⏳
               </div>
-              <div>
-                <h2 className="text-base font-semibold text-gray-900">
-                  Te han invitado a un restaurante
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Al aceptar quedarás añadido como miembro del equipo.
-                </p>
-              </div>
-              <button
-                onClick={handleJoin}
-                className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: ACCENT }}
-              >
-                Aceptar invitación
-              </button>
+              <p className="text-sm text-gray-500">
+                {status === 'loading' ? 'Verificando invitación…' : 'Procesando…'}
+              </p>
             </>
-          )}
-
-          {status === 'joining' && (
-            <p className="text-sm text-gray-400">Procesando invitación…</p>
           )}
 
           {status === 'success' && (
@@ -160,8 +147,7 @@ function JoinInner() {
                   ¡Bienvenido a {nombre}!
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Tu rol: <strong>{ROL_LABEL[rol] ?? rol}</strong>.
-                  Redirigiendo al dashboard…
+                  Rol: <strong>{ROL_LABEL[rol] ?? rol}</strong>. Redirigiendo…
                 </p>
               </div>
               <a
@@ -204,7 +190,7 @@ function JoinInner() {
   )
 }
 
-// ─── Page (wraps in Suspense for useSearchParams) ─────────────────────────────
+// ─── Page wrapper ─────────────────────────────────────────────────────────────
 
 export default function JoinPage() {
   return (
