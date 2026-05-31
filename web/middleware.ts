@@ -31,16 +31,20 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    // Construir URL de login con el destino original en ?next=
+    // NO usar nextUrl.clone() — arrastra los query params originales
+    // (/dashboard/join?token=X → /login?token=X en vez de /login?next=...)
+    const loginUrl = new URL('/login', request.nextUrl.origin)
+    const originalPath = request.nextUrl.pathname + request.nextUrl.search
+    loginUrl.searchParams.set('next', originalPath)
+    return NextResponse.redirect(loginUrl)
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  // Solo rutas protegidas — las páginas públicas (/[slug]/...) no necesitan auth.
+  // Solo rutas protegidas
   matcher: [
     '/dashboard/:path*',
     '/login',
