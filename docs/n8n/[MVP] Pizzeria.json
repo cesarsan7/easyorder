@@ -490,6 +490,12 @@
               "name": "moneda",
               "value": "={{ $json.moneda || '€' }}",
               "type": "string"
+            },
+            {
+              "id": "rid-multitenant-001",
+              "name": "restaurante_id",
+              "value": "={{ Number($json.body.conversation.meta.sender.custom_attributes.p_restaurante_id || $json.body.sender.custom_attributes.p_restaurante_id || 1) }}",
+              "type": "number"
             }
           ]
         },
@@ -738,7 +744,7 @@
             "telefono": "={{ $('Variables').item.json.telefono }}",
             "timestamp": "={{ $now }}",
             "contexto": "El usuario es un cliente nuevo, no tengo más contexto para entregarte.",
-            "restaurante_id": 1
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -845,7 +851,10 @@
       "name": "Consultar Pedido Activo",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
-      "position": [3960, 1072],
+      "position": [
+        3960,
+        1072
+      ],
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
@@ -1148,7 +1157,7 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $input.first().json.conversation_id }}",
+        "sessionKey": "={{ $('Variables').first().json.restaurante_id + '_' + String($input.first().json.conversation_id) }}",
         "contextWindowLength": 12
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
@@ -1224,7 +1233,8 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "pregunta": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pregunta', `Texto exacto de la consulta del cliente. Incluye el mensaje completo (sin resumir) para que el subworkflow responda FAQs/menú o haga una única pregunta aclaratoria si falta información.`, 'string') }}"
+            "pregunta": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pregunta', `Texto exacto de la consulta del cliente. Incluye el mensaje completo (sin resumir) para que el subworkflow responda FAQs/menú o haga una única pregunta aclaratoria si falta información.`, 'string') }}",
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [
             "pregunta"
@@ -1258,6 +1268,16 @@
               "display": true,
               "canBeUsedToMatch": true,
               "type": "string",
+              "removed": false
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
               "removed": false
             }
           ],
@@ -1293,7 +1313,8 @@
             "account_id": "={{ $('Variables').first().json.account_id }}",
             "contact_id": "={{ $('Variables').first().json.contact_id }}",
             "contexto_actual": "={{ $('Obtener registros').first().json.contexto }}",
-            "tipo_escalacion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo_escalacion', `Tipo de escalación: 'derivacion_cliente' si el cliente pidió hablar con humano, 'ventana_expirada' si el pedido ya no se puede modificar, 'pedido_en_preparacion' si el pedido ya está siendo preparado.`, 'string') }}"
+            "tipo_escalacion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo_escalacion', `Tipo de escalación: 'derivacion_cliente' si el cliente pidió hablar con humano, 'ventana_expirada' si el pedido ya no se puede modificar, 'pedido_en_preparacion' si el pedido ya está siendo preparado.`, 'string') }}",
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -1365,6 +1386,16 @@
               "display": true,
               "canBeUsedToMatch": true,
               "type": "string",
+              "removed": false
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
               "removed": false
             }
           ],
@@ -1492,7 +1523,8 @@
             "tipo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo', `Tipo de despacho: delivery o retiro. Usa exactamente uno de esos dos valores.`, 'string') }}",
             "lat": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lat', 'Latitud si el cliente envió un pin de ubicación por WhatsApp. Si NO hay pin, envía cadena vacía \\'\\'. NUNCA envíes null.', 'string') }}",
             "lng": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lng', 'Longitud si el cliente envió un pin de ubicación por WhatsApp. Si NO hay pin, envía cadena vacía \\'\\'. NUNCA envíes null.', 'string') }}",
-            "zona_confirmada_por_cliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('zona_confirmada_por_cliente', 'true si el cliente dijo explícitamente la zona (Arrecife/Playa Honda/Taiche) O si la dirección contiene un código postal de 5 dígitos (ej: 35500) — en ambos casos el sistema resuelve la zona automáticamente. false solo si la dirección no tiene zona ni CP válido. NUNCA pongas false cuando ya tienes zona o CP en la dirección.', 'string') }}"
+            "zona_confirmada_por_cliente": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('zona_confirmada_por_cliente', 'true si el cliente dijo explícitamente la zona (Arrecife/Playa Honda/Taiche) O si la dirección contiene un código postal de 5 dígitos (ej: 35500) — en ambos casos el sistema resuelve la zona automáticamente. false solo si la dirección no tiene zona ni CP válido. NUNCA pongas false cuando ya tienes zona o CP en la dirección.', 'string') }}",
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -1574,6 +1606,16 @@
               "display": true,
               "canBeUsedToMatch": true,
               "type": "string"
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -1608,7 +1650,8 @@
             "session_id": "={{ $('Session Manager').item.json.session_id }}",
             "usuario_id": "={{ $('Asegurar Usuario Maestro').first().json.id }}",
             "forzar_pedido_nuevo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('forzar_pedido_nuevo', `Usa \"true\" solo si el cliente pidió explícitamente un pedido separado, otro pedido o un pedido nuevo. En cualquier otro caso usa \"false\".`, 'string') }}",
-            "conversation_id": "={{ $('Variables').item.json.conversation_id }}"
+            "conversation_id": "={{ $('Variables').item.json.conversation_id }}",
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -1681,6 +1724,16 @@
               "canBeUsedToMatch": true,
               "type": "string",
               "removed": false
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -1711,7 +1764,8 @@
             "telefono": "={{ $('Variables').item.json.telefono }}",
             "session_id": "={{ $('Session Manager').item.json.session_id }}",
             "metodo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('metodo', `Método de pago elegido por el cliente: efectivo, transferencia, tarjeta, bizum u online.`, 'string') }}",
-            "pedido_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pedido_id_pago', `Usa el pedido_id exacto del pedido al que corresponde el pago si ya fue devuelto por una tool previa. Si no lo tienes, envía cadena vacía. No inventes este valor.`, 'string') }}"
+            "pedido_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('pedido_id_pago', `Usa el pedido_id exacto del pedido al que corresponde el pago si ya fue devuelto por una tool previa. Si no lo tienes, envía cadena vacía. No inventes este valor.`, 'string') }}",
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -1747,6 +1801,16 @@
             {
               "id": "pedido_id",
               "displayName": "pedido_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -1799,7 +1863,7 @@
           "values": [
             {
               "column": "id",
-              "value": "1"
+              "value": "={{ $('Variables').first().json.restaurante_id }}"
             }
           ]
         },
@@ -1823,7 +1887,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO public.usuarios(restaurante_id, telefono, created_at, updated_at)\nVALUES (1, '{{ $('Variables').first().json.telefono }}', NOW(), NOW())\nON CONFLICT (telefono) DO UPDATE SET updated_at = NOW()\nRETURNING id, telefono, nombre, direccion_frecuente, lat_frecuente, long_frecuente",
+        "query": "INSERT INTO public.usuarios(restaurante_id, telefono, created_at, updated_at)\nVALUES ({{ $('Variables').first().json.restaurante_id }}, '{{ $('Variables').first().json.telefono }}', NOW(), NOW())\nON CONFLICT (restaurante_id, telefono) DO UPDATE SET updated_at = NOW()\nRETURNING id, telefono, nombre, direccion_frecuente, lat_frecuente, long_frecuente",
         "options": {}
       },
       "id": "f74291d8-1edd-4e73-9592-10a8e6beb9e7",
@@ -1859,7 +1923,8 @@
             "telefono": "={{ $('Variables').first().json.telefono }}",
             "nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('nombre_cliente', `Nombre del cliente para dejar el pedido. Si no aplica, cadena vacía.`, 'string') }}",
             "direccion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('direccion_cliente', `Dirección completa del cliente para delivery. Si no aplica, cadena vacía.`, 'string') }}",
-            "tipo_despacho": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo_despacho_perfil', `Tipo de despacho asociado a la actualización: retiro, delivery o domicilio.`, 'string') }}"
+            "tipo_despacho": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tipo_despacho_perfil', `Tipo de despacho asociado a la actualización: retiro, delivery o domicilio.`, 'string') }}",
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -1912,6 +1977,16 @@
               "canBeUsedToMatch": true,
               "type": "string",
               "removed": false
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -1942,7 +2017,8 @@
           "value": {
             "accion": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('accion_pedido_cliente', `Usa \"listar_modificables\" para listar pedidos vigentes, \"resolver\" para identificar un pedido que el cliente quiere CAMBIAR, y \"consultar\" para identificar o resumir un pedido por código cuando el cliente lo quiere CONSULTAR.`, 'string') }}",
             "telefono": "={{ $('Variables').first().json.telefono }}",
-            "referencia": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('referencia_pedido', `Código o referencia del pedido que el cliente quiere consultar o modificar. Acepta formatos como 260418-1001 o 1001. Si no aplica, cadena vacía.`, 'string') }}"
+            "referencia": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('referencia_pedido', `Código o referencia del pedido que el cliente quiere consultar o modificar. Acepta formatos como 260418-1001 o 1001. Si no aplica, cadena vacía.`, 'string') }}",
+            "restaurante_id": "={{ $('Variables').item.json.restaurante_id }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -1974,6 +2050,16 @@
               "display": true,
               "canBeUsedToMatch": true,
               "type": "string",
+              "removed": false
+            },
+            {
+              "id": "restaurante_id",
+              "displayName": "restaurante_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
               "removed": false
             }
           ],

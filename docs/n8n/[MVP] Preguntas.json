@@ -13,6 +13,9 @@
             },
             {
               "name": "session_id"
+            },
+            {
+              "name": "restaurante_id"
             }
           ]
         }
@@ -73,7 +76,7 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $('When Executed by Another Workflow').first().json.telefono }}",
+        "sessionKey": "={{ $('When Executed by Another Workflow').first().json.restaurante_id + '_' + String($('When Executed by Another Workflow').first().json.telefono) }}",
         "contextWindowLength": 10
       },
       "id": "fd2fab54-fe2c-419f-a307-6d2da36d7454",
@@ -112,7 +115,7 @@
         "descriptionType": "manual",
         "toolDescription": "Base de conocimiento del restaurante: FAQs sobre delivery, metodos de pago, horarios, zona de cobertura, como hacer pedidos, politicas y preguntas frecuentes. Usala para responder preguntas generales sobre el restaurante. Devuelve la pregunta, respuesta y palabras clave.",
         "operation": "executeQuery",
-        "query": "SELECT pregunta, respuesta FROM public.faqs WHERE restaurante_id = 1 ORDER BY COALESCE(orden,0), pregunta",
+        "query": "SELECT pregunta, respuesta FROM public.faqs WHERE restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} ORDER BY COALESCE(orden,0), pregunta",
         "options": {}
       },
       "id": "0c2fba30-3f39-496c-a0bb-976cb9835992",
@@ -135,7 +138,7 @@
         "descriptionType": "manual",
         "toolDescription": "Catálogo completo del restaurante: categorías, productos, variantes o tamaños, precios, descripciones y extras disponibles. Úsala para responder qué hay en el menú, cuánto cuesta un producto, qué variantes/tamaños existen, qué extras o personalizaciones permite y qué categoría corresponde.",
         "operation": "executeQuery",
-        "query": "SELECT categoria, producto, descripcion, variante AS tamano, precio, extras_disponibles, disponible, tags, is_pizza, producto_display\nFROM public.fn_menu_lookup(NULL)\nORDER BY categoria, producto, precio",
+        "query": "SELECT categoria, producto, descripcion, variante AS tamano, precio, extras_disponibles, disponible, tags, is_pizza, producto_display\nFROM public.fn_menu_lookup(NULL, {{ $('When Executed by Another Workflow').first().json.restaurante_id }})\nORDER BY categoria, producto, precio",
         "options": {}
       },
       "id": "727fbce1-08a2-4d82-ab43-98a4dec8d4f7",
@@ -156,7 +159,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT dia, disponible, apertura_1, cierre_1, apertura_2, cierre_2\nFROM public.horarios\nWHERE restaurante_id = 1\nORDER BY CASE lower(dia) WHEN 'lunes' THEN 1 WHEN 'martes' THEN 2 WHEN 'miércoles' THEN 3 WHEN 'miercoles' THEN 3 WHEN 'jueves' THEN 4 WHEN 'viernes' THEN 5 WHEN 'sábado' THEN 6 WHEN 'sabado' THEN 6 WHEN 'domingo' THEN 7 ELSE 99 END",
+        "query": "SELECT dia, disponible, apertura_1, cierre_1, apertura_2, cierre_2\nFROM public.horarios\nWHERE restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\nORDER BY CASE lower(dia) WHEN 'lunes' THEN 1 WHEN 'martes' THEN 2 WHEN 'miércoles' THEN 3 WHEN 'miercoles' THEN 3 WHEN 'jueves' THEN 4 WHEN 'viernes' THEN 5 WHEN 'sábado' THEN 6 WHEN 'sabado' THEN 6 WHEN 'domingo' THEN 7 ELSE 99 END",
         "options": {}
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -199,7 +202,7 @@
       "continueOnFail": true,
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Preguntas\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }},\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Preguntas\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
         "options": {}
       },
       "credentials": {

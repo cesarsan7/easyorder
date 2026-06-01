@@ -28,6 +28,9 @@
             },
             {
               "name": "conversation_id"
+            },
+            {
+              "name": "restaurante_id"
             }
           ]
         }
@@ -47,7 +50,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT *\nFROM public.fn_select_pedido_reutilizable(\n  '{{ $('When Executed by Another Workflow').first().json.telefono }}',\n  '{{ $('When Executed by Another Workflow').first().json.session_id }}',\n  '{{ String($('When Executed by Another Workflow').first().json.pedido_id || '').replace(/'/g, \"''\") }}',\n  {{ ['true', true, '1', 1].includes($('When Executed by Another Workflow').first().json.forzar_pedido_nuevo) ? 'true' : 'false' }}\n)",
+        "query": "SELECT *\nFROM public.fn_select_pedido_reutilizable(\n  '{{ $('When Executed by Another Workflow').first().json.telefono }}',\n  '{{ $('When Executed by Another Workflow').first().json.session_id }}',\n  '{{ String($('When Executed by Another Workflow').first().json.pedido_id || '').replace(/'/g, \"''\") }}',\n  {{ ['true', true, '1', 1].includes($('When Executed by Another Workflow').first().json.forzar_pedido_nuevo) ? 'true' : 'false' }},\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\n)",
         "options": {}
       },
       "id": "f24c63f7-55fa-4b26-83ef-394cd7288d7c",
@@ -104,7 +107,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT public.fn_next_pedido_numero() AS siguiente_numero",
+        "query": "SELECT public.fn_next_pedido_numero({{ $('When Executed by Another Workflow').first().json.restaurante_id }}) AS siguiente_numero",
         "options": {}
       },
       "id": "143eb5ef-20de-4e00-b393-9597f2adc27a",
@@ -127,7 +130,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO pedidos (\n  restaurante_id, usuario_id, telefono, session_id, session_started_at, pedido_numero,\n  items, subtotal, total, estado, canal, chatwoot_conversation_id, created_at, updated_at\n) VALUES (\n  1,\n  COALESCE(\n    CASE WHEN regexp_replace('{{ $('When Executed by Another Workflow').item.json.usuario_id || '' }}', '[^0-9]', '', 'g') <> '' THEN regexp_replace('{{ $('When Executed by Another Workflow').item.json.usuario_id || '' }}', '[^0-9]', '', 'g')::int ELSE NULL END,\n    (SELECT id FROM usuarios WHERE telefono = '{{ $('When Executed by Another Workflow').item.json.telefono }}' LIMIT 1)\n  ),\n  '{{ $('When Executed by Another Workflow').item.json.telefono }}',\n  '{{ $('When Executed by Another Workflow').item.json.session_id }}',\n  NOW(),\n  {{ $json.siguiente_numero }},\n  '[]'::jsonb, 0, 0, 'en_curso',\n  'whatsapp',\n  NULLIF('{{ $('When Executed by Another Workflow').item.json.conversation_id || '' }}', ''),\n  NOW(), NOW()\n) RETURNING *",
+        "query": "INSERT INTO pedidos (\n  restaurante_id, usuario_id, telefono, session_id, session_started_at, pedido_numero,\n  items, subtotal, total, estado, canal, chatwoot_conversation_id, created_at, updated_at\n) VALUES (\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }},\n  COALESCE(\n    CASE WHEN regexp_replace('{{ $('When Executed by Another Workflow').item.json.usuario_id || '' }}', '[^0-9]', '', 'g') <> '' THEN regexp_replace('{{ $('When Executed by Another Workflow').item.json.usuario_id || '' }}', '[^0-9]', '', 'g')::int ELSE NULL END,\n    (SELECT id FROM usuarios WHERE telefono = '{{ $('When Executed by Another Workflow').item.json.telefono }}' AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} LIMIT 1)\n  ),\n  '{{ $('When Executed by Another Workflow').item.json.telefono }}',\n  '{{ $('When Executed by Another Workflow').item.json.session_id }}',\n  NOW(),\n  {{ $json.siguiente_numero }},\n  '[]'::jsonb, 0, 0, 'en_curso',\n  'whatsapp',\n  NULLIF('{{ $('When Executed by Another Workflow').item.json.conversation_id || '' }}', ''),\n  NOW(), NOW()\n) RETURNING *",
         "options": {}
       },
       "id": "583fe91b-8edb-4bb6-a8bb-44604cf0763b",
@@ -164,7 +167,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  categoria,\n  producto,\n  descripcion,\n  variante,\n  precio,\n  extras_disponibles,\n  disponible,\n  tags,\n  is_pizza,\n  producto_display AS nombre,\n  menu_item_id,\n  menu_variant_id,\n  extras_json\nFROM public.fn_menu_lookup(NULL)\nORDER BY categoria, producto, precio",
+        "query": "SELECT\n  categoria,\n  producto,\n  descripcion,\n  variante,\n  precio,\n  extras_disponibles,\n  disponible,\n  tags,\n  is_pizza,\n  producto_display AS nombre,\n  menu_item_id,\n  menu_variant_id,\n  extras_json\nFROM public.fn_menu_lookup(NULL, {{ $('When Executed by Another Workflow').first().json.restaurante_id }})\nORDER BY categoria, producto, precio",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
@@ -261,7 +264,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": " SELECT EXISTS(\n  SELECT 1 FROM pedidos p\n  CROSS JOIN LATERAL (\n    SELECT COALESCE(config_value::int, 60) AS minutos\n    FROM restaurante_config\n    WHERE config_key = 'cart_expiry_minutes'\n      AND restaurante_id = 1\n    LIMIT 1\n  ) cfg\n  WHERE p.telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n    AND p.estado IN ('en_curso', 'recibido')\n    AND p.updated_at < NOW() - (cfg.minutos * INTERVAL '1 minute')\n    AND p.updated_at > NOW() - INTERVAL '24 hours' \n) AS tenia_carrito_expirado",
+        "query": " SELECT EXISTS(\n  SELECT 1 FROM pedidos p\n  CROSS JOIN LATERAL (\n    SELECT COALESCE(config_value::int, 60) AS minutos\n    FROM restaurante_config\n    WHERE config_key = 'cart_expiry_minutes'\n      AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\n    LIMIT 1\n  ) cfg\n  WHERE p.telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n    AND p.estado IN ('en_curso', 'recibido')\n    AND p.updated_at < NOW() - (cfg.minutos * INTERVAL '1 minute')\n    AND p.updated_at > NOW() - INTERVAL '24 hours' \n) AS tenia_carrito_expirado",
         "options": {}
       },
       "id": "1507fe8e-1f73-4c59-bc27-247d801cdc2a",
@@ -306,7 +309,7 @@
       "continueOnFail": true,
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Apertura\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }},\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Apertura\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
         "options": {}
       },
       "credentials": {

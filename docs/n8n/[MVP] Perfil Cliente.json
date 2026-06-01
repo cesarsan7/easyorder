@@ -19,6 +19,9 @@
             },
             {
               "name": "tipo_despacho"
+            },
+            {
+              "name": "restaurante_id"
             }
           ]
         }
@@ -35,7 +38,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM public.fn_upsert_usuario_perfil(\n  '{{ String($('When Executed by Another Workflow').first().json.telefono || '').replace(/'/g, \"''\") }}',\n  {{ (() => { const v = String($('When Executed by Another Workflow').first().json.nombre || '').trim(); return v ? \"'\" + v.replace(/'/g, \"''\") + \"'\" : 'NULL'; })() }},\n  {{ (() => { const v = String($('When Executed by Another Workflow').first().json.direccion || '').trim(); return v ? \"'\" + v.replace(/'/g, \"''\") + \"'\" : 'NULL'; })() }},\n  {{ (() => { const v = String($('When Executed by Another Workflow').first().json.tipo_despacho || '').trim(); return v ? \"'\" + v.replace(/'/g, \"''\") + \"'\" : 'NULL'; })() }}\n)",
+        "query": "SELECT * FROM public.fn_upsert_usuario_perfil(\n  '{{ String($('When Executed by Another Workflow').first().json.telefono || '').replace(/'/g, \"''\") }}',\n  {{ (() => { const v = String($('When Executed by Another Workflow').first().json.nombre || '').trim(); return v ? \"'\" + v.replace(/'/g, \"''\") + \"'\" : 'NULL'; })() }},\n  {{ (() => { const v = String($('When Executed by Another Workflow').first().json.direccion || '').trim(); return v ? \"'\" + v.replace(/'/g, \"''\") + \"'\" : 'NULL'; })() }},\n  {{ (() => { const v = String($('When Executed by Another Workflow').first().json.tipo_despacho || '').trim(); return v ? \"'\" + v.replace(/'/g, \"''\") + \"'\" : 'NULL'; })() }},\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\n)",
         "options": {}
       },
       "id": "43ca376e-61f4-4e1e-872a-e5142c8172e3",
@@ -94,7 +97,7 @@
       "continueOnFail": true,
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Perfil Cliente\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }},\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Perfil Cliente\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
         "options": {}
       },
       "credentials": {
