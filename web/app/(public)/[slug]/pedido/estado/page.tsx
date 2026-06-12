@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useCartStore } from '@/lib/store/cart'
 import { fmtPrice } from '@/lib/fmt'
 
-const ACCENT = '#E63946'
+// accent leído del cart store para respetar el branding del restaurante
 
 const ESTADO_LABELS: Record<string, { label: string; icon: string; color: string }> = {
   pendiente_pago:  { label: 'Pendiente de pago',  icon: '⏳', color: '#F59E0B' },
@@ -48,6 +48,7 @@ export default function PedidoEstadoPage() {
   const router = useRouter()
   const clearCart = useCartStore((s) => s.clearCart)
   const moneda = useCartStore((s) => s.moneda)
+  const ACCENT = useCartStore((s) => s.accentColor) || '#E63946'
   const fmt = (n: number) => fmtPrice(n, moneda)
 
   const codigo = searchParams.get('codigo') ?? ''

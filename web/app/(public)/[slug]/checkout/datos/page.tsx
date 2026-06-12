@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useCartStore } from '@/lib/store/cart'
 
-const PHONE_PREFIX = '+34'
-
 const STEPS = ['Datos', 'Despacho', 'Pago', 'Confirmar'] as const
 
 function ProgressBar({ current, accent }: { current: number; accent: string }) {
@@ -50,6 +48,7 @@ export default function CheckoutDatosPage() {
   const customerPhone = useCartStore((s) => s.customerPhone)
   const setCustomer   = useCartStore((s) => s.setCustomer)
   const accent        = useCartStore((s) => s.accentColor)
+  const PHONE_PREFIX  = useCartStore((s) => s.phonePrefix) || '+34'
 
   const [name, setName] = useState(customerName)
   const [phone, setPhone] = useState(customerPhone)
@@ -87,14 +86,14 @@ export default function CheckoutDatosPage() {
     }
   }
 
-  /** Normaliza a +34XXXXXXXXX si el usuario no puso código de país */
+  /** Normaliza a {PHONE_PREFIX}XXXXXXXXX si el usuario no puso código de país */
   function normalizePhone(raw: string): string {
     const trimmed = raw.trim()
     if (!trimmed) return trimmed
     if (trimmed.startsWith('+')) return trimmed
-    // Solo dígitos → prefijo +34 (España)
+    // Solo dígitos → prefijo dinámico del restaurante
     const digits = trimmed.replace(/\D/g, '')
-    return `+34${digits}`
+    return `${PHONE_PREFIX}${digits}`
   }
 
   function handleContinue() {

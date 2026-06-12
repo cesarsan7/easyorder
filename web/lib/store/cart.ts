@@ -35,6 +35,7 @@ interface CartState {
   moneda: string
   notas: string
   accentColor: string
+  phonePrefix: string
 }
 
 export interface ZoneInfo {
@@ -56,6 +57,7 @@ interface CartActions {
   setMoneda: (moneda: string) => void
   setNotas: (notas: string) => void
   setAccentColor: (color: string) => void
+  setPhonePrefix: (prefix: string) => void
   subtotal: () => number
   total: () => number
   itemCount: () => number
@@ -80,6 +82,7 @@ const initialState: CartState = {
   moneda: 'CLP',
   notas: '',
   accentColor: '#6366F1',
+  phonePrefix: '+34',
 }
 
 function itemKey(itemId: number, variantId: number | null, extras: CartItemExtra[]): string {
@@ -156,6 +159,8 @@ export const useCartStore = create<CartStore>()(
       setNotas: (notas) => set({ notas }),
 
       setAccentColor: (color) => set({ accentColor: color }),
+
+      setPhonePrefix: (prefix) => set({ phonePrefix: prefix }),
 
       setOrderId: (id) => set({ orderId: id }),
 

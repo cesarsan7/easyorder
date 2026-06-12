@@ -24,7 +24,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
   // Q3 has its own .catch() because restaurante_config.restaurante_id column
   // is a pending migration (CRÍTICO-2): if it doesn't exist yet, Q3 fails
   // gracefully and is_open_override falls back to null without breaking Q1/Q2.
-  const [restauranteRows, horariosRows, overrideRows, brandingRows] = await Promise.all([
+  const [restauranteRows, horariosRows, overrideRows, brandingRows, phonePrefixRows] = await Promise.all([
 
     // Q1: Public restaurant fields. datos_bancarios / lat / long excluded explicitly.
     sql<RestauranteRow[]>`
@@ -87,6 +87,15 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
       WHERE id = ${restaurante_id}
       LIMIT 1
     `.catch(() => [] as { eslogan: null; texto_banner: null; redes_sociales: null; theme_id: null }[]),
+
+    // Q5: Phone prefix from restaurante_config.
+    // Falls back to '+34' if not set or if restaurante_config table is missing.
+    sql<{ config_value: string }[]>`
+      SELECT config_value FROM restaurante_config
+      WHERE config_key     = 'phone_prefix'
+        AND restaurante_id = ${restaurante_id}
+      LIMIT 1
+    `.catch(() => [] as { config_value: string }[]),
   ]);
 
   // MEDIO-1: guard against race condition where restaurant is deleted between
@@ -133,6 +142,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
     pickup_enabled:      r.pickup_enabled ?? true,
     delivery_min_order:  Number(r.delivery_min_order ?? 0),
     phone:               r.telefono,
+    phone_prefix:        phonePrefixRows[0]?.config_value ?? '+34',
     moneda:              r.moneda,
     zona_horaria:        r.zona_horaria,
     mensaje_bienvenida:  r.mensaje_bienvenida,

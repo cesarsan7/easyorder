@@ -300,10 +300,13 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
   const moneda: string = menu.moneda ?? restaurant.moneda ?? 'EUR'
   const setMoneda      = useCartStore((s) => s.setMoneda)
   const setAccentColor = useCartStore((s) => s.setAccentColor)
+  const setPhonePrefix = useCartStore((s) => s.setPhonePrefix)
+  const phonePrefix    = restaurant.phone_prefix ?? '+34'
   useEffect(() => {
     setMoneda(moneda)
     setAccentColor(accent)
-  }, [moneda, accent, setMoneda, setAccentColor])
+    setPhonePrefix(phonePrefix)
+  }, [moneda, accent, phonePrefix, setMoneda, setAccentColor, setPhonePrefix])
 
   const activeCategories = categories
     .filter((c) => c.items.some((i) => i.is_active))

@@ -95,6 +95,7 @@ export interface RestaurantPublicResponse {
   theme_id: string | null
   address: string | null
   phone: string | null
+  phone_prefix: string
   moneda: string
   zona_horaria: string
   delivery_enabled: boolean
