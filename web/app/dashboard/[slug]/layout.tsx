@@ -237,6 +237,18 @@ function DashboardSidebar({ slug, notifBadge }: { slug: string; notifBadge: numb
           </svg>
           Ver menú público
         </a>
+        <button
+          onClick={() => router.push('/dashboard/admin')}
+          className="mt-2 flex items-center gap-2 w-full rounded-xl px-3 py-2 text-xs font-medium transition-colors"
+          style={{ color: SIDEBAR_TEXT, backgroundColor: 'transparent' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = SIDEBAR_HOVER)}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
+          </svg>
+          Mis locales
+        </button>
         <div className="mt-3 px-1">
           <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>EasyOrder SaaS</p>
           <p className="text-xs mt-0.5" style={{ color: '#CBD5E1' }}>MVP v0.1</p>
@@ -382,6 +394,16 @@ function MobileTopBar({
                 </svg>
                 Ver menu publico
               </a>
+              <button
+                onClick={() => { router.push('/dashboard/admin'); setOpen(false) }}
+                className="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-xs font-medium"
+                style={{ color: SIDEBAR_TEXT, backgroundColor: 'transparent' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+                  <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
+                </svg>
+                Mis locales
+              </button>
             </div>
           </div>
         </>
@@ -390,7 +412,7 @@ function MobileTopBar({
   )
 }
 
-// ─── Root layout ──────────────────────────────────────────────────────────────
+// --- Root layout ---
 export default function DashboardSlugLayout({ children }: { children: React.ReactNode }) {
   const params    = useParams<{ slug: string }>()
   const slug      = params.slug

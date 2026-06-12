@@ -2402,4 +2402,130 @@ dashboardRoutes.get('/:slug/analytics', async (c) => {
   }
 });
 
+// TEAM / MEMBERS ENDPOINTS
+// ============================================================
+
+// GET /dashboard/:slug/members
+dashboardRoutes.get('/:slug/members', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  try {
+    const members = await sql<{ user_id: string; rol: string; email: string | null; created_at: string }[]>`
+      SELECT user_id::text, rol, email, created_at
+      FROM   local_memberships
+      WHERE  restaurante_id = ${restaurante_id}
+      ORDER  BY created_at ASC
+    `;
+    return c.json({ members });
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/members]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// POST /dashboard/:slug/members/invite
+dashboardRoutes.post('/:slug/members/invite', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const user_id        = c.get('user_id');
+  const rol_caller     = c.get('rol');
+
+  if (rol_caller !== 'owner' && rol_caller !== 'manager') {
+    return c.json({ error: 'forbidden' }, 403);
+  }
+
+  let body: { rol?: string };
+  try { body = await c.req.json(); } catch { body = {}; }
+
+  const invited_rol = body.rol === 'manager' ? 'manager' : 'viewer';
+
+  if (rol_caller === 'manager' && invited_rol === 'manager') {
+    return c.json({ error: 'forbidden' }, 403);
+  }
+
+  try {
+    const [invite] = await sql<{ token: string; expires_at: string; rol: string }[]>`
+      INSERT INTO restaurant_invites (restaurante_id, rol, created_by, expires_at)
+      VALUES (${restaurante_id}, ${invited_rol}, ${user_id}::uuid, NOW() + INTERVAL '7 days')
+      RETURNING token::text, expires_at::text, rol
+    `;
+    return c.json({ token: invite.token, expires_at: invite.expires_at, rol: invite.rol });
+  } catch (err) {
+    console.error('[POST /dashboard/:slug/members/invite]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// PATCH /dashboard/:slug/members/:target_user_id/rol
+dashboardRoutes.patch('/:slug/members/:target_user_id/rol', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const rol_caller     = c.get('rol');
+  const target_user_id = c.req.param('target_user_id');
+
+  if (rol_caller !== 'owner') {
+    return c.json({ error: 'forbidden' }, 403);
+  }
+
+  let body: { rol?: string };
+  try { body = await c.req.json(); } catch { body = {}; }
+
+  const allowed_roles = ['manager', 'viewer'];
+  const new_rol = body.rol;
+  if (!new_rol || !allowed_roles.includes(new_rol)) {
+    return c.json({ error: 'invalid_rol' }, 400);
+  }
+
+  try {
+    const [target] = await sql<{ rol: string }[]>`
+      SELECT rol FROM local_memberships
+      WHERE  restaurante_id = ${restaurante_id}
+        AND  user_id        = ${target_user_id}::uuid
+      LIMIT 1
+    `;
+    if (!target) return c.json({ error: 'member_not_found' }, 404);
+    if (target.rol === 'owner') return c.json({ error: 'cannot_change_owner' }, 400);
+
+    await sql`
+      UPDATE local_memberships
+      SET    rol = ${new_rol}
+      WHERE  restaurante_id = ${restaurante_id}
+        AND  user_id        = ${target_user_id}::uuid
+    `;
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/members/:id/rol]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// DELETE /dashboard/:slug/members/:target_user_id
+dashboardRoutes.delete('/:slug/members/:target_user_id', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const rol_caller     = c.get('rol');
+  const target_user_id = c.req.param('target_user_id');
+
+  if (rol_caller !== 'owner') {
+    return c.json({ error: 'forbidden' }, 403);
+  }
+
+  try {
+    const [target] = await sql<{ rol: string }[]>`
+      SELECT rol FROM local_memberships
+      WHERE  restaurante_id = ${restaurante_id}
+        AND  user_id        = ${target_user_id}::uuid
+      LIMIT 1
+    `;
+    if (!target) return c.json({ error: 'member_not_found' }, 404);
+    if (target.rol === 'owner') return c.json({ error: 'cannot_remove_owner' }, 400);
+
+    await sql`
+      DELETE FROM local_memberships
+      WHERE  restaurante_id = ${restaurante_id}
+        AND  user_id        = ${target_user_id}::uuid
+    `;
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[DELETE /dashboard/:slug/members/:id]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
 export default dashboardRoutes;
