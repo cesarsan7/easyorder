@@ -25,6 +25,10 @@ const TIMEZONES = [
   { label: 'Rep. Dominicana',              value: 'America/Santo_Domingo' },
   { label: 'Costa Rica',                   value: 'America/Costa_Rica' },
   { label: 'Guatemala',                    value: 'America/Guatemala' },
+  { label: 'EE.UU. — Este (ET)',           value: 'America/New_York' },
+  { label: 'EE.UU. — Centro (CT)',         value: 'America/Chicago' },
+  { label: 'EE.UU. — Montaña (MT)',        value: 'America/Denver' },
+  { label: 'EE.UU. — Pacífico (PT)',       value: 'America/Los_Angeles' },
 ]
 
 const MONEDAS = [
