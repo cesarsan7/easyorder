@@ -360,12 +360,12 @@ ordersRoutes.post('/:slug/orders', async (c) => {
 
     // ── Step 8: upsert cliente, then insert pedido ────────────────────────────
     //
-    // fn_upsert_usuario_perfil currently hardcodes restaurante_id = 1 (audit
-    // observation: will be parametrized in Fase 5/6 migration, RC-2 resolution).
-    // For MVP with a single active tenant this is not blocking.
+    // fn_upsert_usuario_perfil now accepts p_restaurante_id (M-22_complete).
+    // Passing restaurante_id explicitly ensures customers are scoped to the
+    // correct tenant — no cross-tenant leaks when multiple restaurants are active.
     const usuarioRows = await sql<{ id: number }[]>`
       SELECT id
-      FROM   fn_upsert_usuario_perfil(${telefono}, ${nombre}, ${tipo_despacho === 'delivery' ? direccion : null}, ${tipo_despacho})
+      FROM   fn_upsert_usuario_perfil(${telefono}, ${nombre}, ${tipo_despacho === 'delivery' ? direccion : null}, ${tipo_despacho}, ${restaurante_id})
       LIMIT  1
     `;
     const usuario_id = usuarioRows[0]?.id ?? null;
