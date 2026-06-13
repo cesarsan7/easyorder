@@ -12,6 +12,7 @@ import hoursRoutes from './routes/dashboard/hours.js';
 import deliveryZonesRoutes from './routes/dashboard/delivery-zones.js';
 import clientesRoutes from './routes/dashboard/clientes.js';
 import membersRoutes from './routes/dashboard/members.js';
+import onboardingRoutes from './routes/onboarding.js';
 
 const app = new Hono();
 
@@ -47,6 +48,7 @@ app.route('/dashboard', hoursRoutes);
 app.route('/dashboard', deliveryZonesRoutes);
 app.route('/dashboard', clientesRoutes);
 app.route('/dashboard', membersRoutes);
+app.route('/onboarding', onboardingRoutes);
 
 serve(
   { fetch: app.fetch, port: Number(process.env.PORT) || 3001 },
