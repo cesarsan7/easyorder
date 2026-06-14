@@ -66,6 +66,17 @@ interface DeliveryZone {
   estimated_minutes_max: number | null
 }
 
+interface ConfigRow {
+  config_key:   string
+  config_value: string
+  description:  string | null
+}
+
+interface ConfigOpRow {
+  tiempo_espera_minutos: number | null
+  mensaje_tiempo_espera: string | null
+}
+
 interface HorarioLocal {
   id:         number
   dia:        string
@@ -263,6 +274,13 @@ export default function ConfiguracionPage() {
   const [pickupEnabled,   setPickupEnabled]   = useState(true)
   const [dispatchState,   setDispatchState]   = useState<SaveState>('idle')
 
+  // ── Config avanzada
+  const [configRows,      setConfigRows]      = useState<ConfigRow[]>([])
+  const [configOp,        setConfigOp]        = useState<ConfigOpRow | null>(null)
+  const [configEdits,     setConfigEdits]     = useState<Record<string, string>>({})
+  const [opEdits,         setOpEdits]         = useState<{ tiempo_espera_minutos: string; mensaje_tiempo_espera: string }>({ tiempo_espera_minutos: '', mensaje_tiempo_espera: '' })
+  const [configState,     setConfigState]     = useState<SaveState>('idle')
+
   // ── Horarios / Zonas
   const [horarios,         setHorarios]         = useState<HorarioLocal[]>([])
   const [horariosState,    setHorariosState]    = useState<SaveState>('idle')
@@ -284,10 +302,11 @@ export default function ConfiguracionPage() {
     setLoading(true); setFetchError(null)
     try {
       const base = process.env.NEXT_PUBLIC_API_URL
-      const [settingsRes, statusRes, zonesRes] = await Promise.all([
+      const [settingsRes, statusRes, zonesRes, configKeysRes] = await Promise.all([
         authFetch(`${base}/dashboard/${slug}/settings`),
         authFetch(`${base}/dashboard/${slug}/restaurant/status`),
         authFetch(`${base}/dashboard/${slug}/delivery-zones`),
+        authFetch(`${base}/dashboard/${slug}/config-keys`),
       ])
       if (!settingsRes.ok) throw new Error(`settings HTTP ${settingsRes.status}`)
       if (!statusRes.ok)   throw new Error(`status HTTP ${statusRes.status}`)
@@ -321,6 +340,18 @@ export default function ConfiguracionPage() {
         apertura_2: h.apertura_2?.slice(0, 5) ?? '', cierre_2: h.cierre_2?.slice(0, 5) ?? '',
       })))
       if (zonesRes.ok) { const zd: { zones: DeliveryZone[] } = await zonesRes.json(); setZones(zd.zones) }
+      if (configKeysRes.ok) {
+        const ck: { restaurante_config: ConfigRow[]; config_operativa: ConfigOpRow | null } = await configKeysRes.json()
+        setConfigRows(ck.restaurante_config ?? [])
+        setConfigOp(ck.config_operativa)
+        const edits: Record<string, string> = {}
+        for (const r of ck.restaurante_config ?? []) edits[r.config_key] = r.config_value
+        setConfigEdits(edits)
+        setOpEdits({
+          tiempo_espera_minutos: String(ck.config_operativa?.tiempo_espera_minutos ?? 30),
+          mensaje_tiempo_espera: ck.config_operativa?.mensaje_tiempo_espera ?? '',
+        })
+      }
     } catch { setFetchError('No se pudo cargar la configuración.') }
     finally { setLoading(false) }
   }, [slug, authFetch])
@@ -376,6 +407,32 @@ export default function ConfiguracionPage() {
 
   function saveGeo() {
     patch({ lat: restLat, lng: restLng, radio_cobertura_km: restRadius }, setGeoState)
+  }
+
+  async function saveConfigKeys() {
+    setConfigState('saving')
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL
+      const opPayload: Record<string, unknown> = {}
+      const etaNum = parseInt(opEdits.tiempo_espera_minutos, 10)
+      if (!isNaN(etaNum)) opPayload['tiempo_espera_minutos'] = etaNum
+      if (opEdits.mensaje_tiempo_espera.trim()) opPayload['mensaje_tiempo_espera'] = opEdits.mensaje_tiempo_espera.trim()
+
+      const res = await authFetch(`${base}/dashboard/${slug}/config-keys`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurante_config: configEdits,
+          config_operativa: Object.keys(opPayload).length > 0 ? opPayload : undefined,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      setConfigState('saved')
+      setTimeout(() => setConfigState('idle'), 2000)
+    } catch {
+      setConfigState('error')
+      setTimeout(() => setConfigState('idle'), 3000)
+    }
   }
 
   async function saveZone(zone: DeliveryZone) {
@@ -958,6 +1015,80 @@ export default function ConfiguracionPage() {
               <Field label="Alias (Bizum, etc.)" value={alias} onChange={v => { setAlias(v); setBancosState('idle') }} placeholder="620123456" maxLength={50} />
               <div className="flex justify-end pt-1">
                 <SaveButton state={bancosState} onClick={saveBancarios} />
+              </div>
+            </div>
+
+            {/* ── Configuración avanzada (restaurante_config + config_operativa) ── */}
+            <SectionTitle>Configuración avanzada</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
+              <p className="text-xs text-gray-400">
+                Parámetros operativos del sistema. Afectan tiempos de espera, expiración del carrito y mensajes automáticos.
+              </p>
+
+              {/* config_operativa */}
+              {(configOp !== null || opEdits.tiempo_espera_minutos !== '') && (
+                <div className="space-y-3 pb-3 border-b border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Operativa general</p>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Tiempo de espera (minutos)
+                    </label>
+                    <input
+                      type="number" min={1} max={240}
+                      value={opEdits.tiempo_espera_minutos}
+                      onChange={e => { setOpEdits(p => ({ ...p, tiempo_espera_minutos: e.target.value })); setConfigState('idle') }}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white"
+                      placeholder="30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Mensaje de tiempo de espera
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={opEdits.mensaje_tiempo_espera}
+                      onChange={e => { setOpEdits(p => ({ ...p, mensaje_tiempo_espera: e.target.value })); setConfigState('idle') }}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white"
+                      placeholder="Tu pedido estará listo en aproximadamente {minutos} minutos."
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Usa <code className="bg-gray-100 px-1 rounded">{"{minutos}"}</code> como variable dinámica.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* restaurante_config key-value */}
+              {configRows.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Parámetros del sistema</p>
+                  {configRows.map(row => (
+                    <div key={row.config_key}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {row.config_key}
+                        {row.description && (
+                          <span className="font-normal text-gray-400 ml-1">— {row.description}</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={configEdits[row.config_key] ?? row.config_value}
+                        onChange={e => {
+                          setConfigEdits(p => ({ ...p, [row.config_key]: e.target.value }))
+                          setConfigState('idle')
+                        }}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent bg-white"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {configRows.length === 0 && configOp === null && (
+                <p className="text-sm text-gray-400 italic text-center py-2">No hay parámetros configurados todavía.</p>
+              )}
+
+              <div className="flex justify-end pt-2 border-t border-gray-100">
+                <SaveButton state={configState} onClick={saveConfigKeys} />
               </div>
             </div>
           </>

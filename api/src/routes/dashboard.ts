@@ -2573,4 +2573,104 @@ dashboardRoutes.delete('/:slug/members/:target_user_id', async (c) => {
   }
 });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /dashboard/:slug/config-keys
+// Devuelve todas las entradas de restaurante_config + fila de config_operativa
+// ─────────────────────────────────────────────────────────────────────────────
+dashboardRoutes.get('/:slug/config-keys', async (c) => {
+  const slug         = c.req.param('slug');
+  const restaurante_id: number | undefined = c.get('restaurante_id');
+  if (!restaurante_id) return c.json({ error: 'not_found' }, 404);
+
+  try {
+    const configRows = await sql<{ config_key: string; config_value: string; description: string | null }[]>`
+      SELECT config_key, config_value, description
+        FROM public.restaurante_config
+       WHERE restaurante_id = ${restaurante_id}
+       ORDER BY config_key ASC
+    `;
+
+    const [opRow] = await sql<{
+      tiempo_espera_minutos:  number | null;
+      mensaje_tiempo_espera:  string | null;
+    }[]>`
+      SELECT tiempo_espera_minutos, mensaje_tiempo_espera
+        FROM public.config_operativa
+       WHERE restaurante_id = ${restaurante_id}
+       LIMIT 1
+    `;
+
+    return c.json({
+      slug,
+      restaurante_config: configRows,
+      config_operativa: opRow ?? null,
+    });
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/config-keys]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /dashboard/:slug/config-keys
+// Body: { restaurante_config?: Record<string,string>, config_operativa?: {...} }
+// ─────────────────────────────────────────────────────────────────────────────
+dashboardRoutes.patch('/:slug/config-keys', async (c) => {
+  const restaurante_id: number | undefined = c.get('restaurante_id');
+  if (!restaurante_id) return c.json({ error: 'not_found' }, 404);
+
+  let body: unknown;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_body' }, 400); }
+  const b = body as Record<string, unknown>;
+
+  try {
+    await sql.begin(async (tx) => {
+      // 1. Actualizar claves de restaurante_config
+      const rcPatch = b['restaurante_config'];
+      if (rcPatch && typeof rcPatch === 'object' && !Array.isArray(rcPatch)) {
+        for (const [key, val] of Object.entries(rcPatch as Record<string, unknown>)) {
+          if (typeof val !== 'string') continue;
+          await tx`
+            INSERT INTO public.restaurante_config
+              (restaurante_id, config_key, config_value, updated_at)
+            VALUES (${restaurante_id}, ${key}, ${val}, NOW())
+            ON CONFLICT (config_key, restaurante_id) DO UPDATE
+              SET config_value = EXCLUDED.config_value,
+                  updated_at   = NOW()
+          `;
+        }
+      }
+
+      // 2. Actualizar config_operativa
+      const opPatch = b['config_operativa'];
+      if (opPatch && typeof opPatch === 'object' && !Array.isArray(opPatch)) {
+        const op = opPatch as Record<string, unknown>;
+        const eta = typeof op['tiempo_espera_minutos'] === 'number' ? op['tiempo_espera_minutos'] : null;
+        const msg = typeof op['mensaje_tiempo_espera']  === 'string'  ? op['mensaje_tiempo_espera']  : null;
+
+        if (eta !== null || msg !== null) {
+          await tx`
+            INSERT INTO public.config_operativa
+              (restaurante_id, tiempo_espera_minutos, mensaje_tiempo_espera)
+            VALUES (
+              ${restaurante_id},
+              ${eta ?? 30},
+              ${msg ?? 'Tu pedido estara listo en aproximadamente {minutos} minutos.'}
+            )
+            ON CONFLICT (restaurante_id) DO UPDATE
+              SET tiempo_espera_minutos = COALESCE(EXCLUDED.tiempo_espera_minutos, config_operativa.tiempo_espera_minutos),
+                  mensaje_tiempo_espera = COALESCE(EXCLUDED.mensaje_tiempo_espera, config_operativa.mensaje_tiempo_espera)
+          `;
+        }
+      }
+    });
+
+    return c.json({ ok: true });
+  } catch (err) {
+    console.error('[PATCH /dashboard/:slug/config-keys]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
 export default dashboardRoutes;
