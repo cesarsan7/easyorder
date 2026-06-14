@@ -1083,10 +1083,3 @@ interface UnavailableItem {
 }
 
 export default publicRoutes;
-eItem {
-  menu_variant_id?: number;
-  extra_id?: number;
-  reason: 'variant_not_found' | 'variant_inactive' | 'extra_not_found' | 'extra_inactive' | 'extra_not_linked';
-}
-
-export default publicRoutes;
