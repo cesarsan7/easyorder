@@ -1322,6 +1322,7 @@ const KNOWN_SETTINGS_KEYS = new Set<string>([
   'payment_methods', 'datos_bancarios',
   'brand_color', 'logo_url', 'redes_sociales', 'theme_id',
   'lat', 'lng', 'radio_cobertura_km',
+  'delivery_enabled', 'pickup_enabled',
 ]);
 
 dashboardRoutes.patch('/:slug/settings', async (c) => {
@@ -1510,6 +1511,36 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
     }
   }
 
+  // --- Validate delivery_enabled / pickup_enabled --------------------------
+  let deliveryEnabledVal: boolean | undefined;
+  let pickupEnabledVal:   boolean | undefined;
+
+  if ('delivery_enabled' in raw) {
+    const v = raw['delivery_enabled'];
+    if (typeof v !== 'boolean') {
+      return c.json({ error: 'invalid_field', field: 'delivery_enabled', detail: 'must be a boolean' }, 400);
+    }
+    deliveryEnabledVal = v;
+  }
+  if ('pickup_enabled' in raw) {
+    const v = raw['pickup_enabled'];
+    if (typeof v !== 'boolean') {
+      return c.json({ error: 'invalid_field', field: 'pickup_enabled', detail: 'must be a boolean' }, 400);
+    }
+    pickupEnabledVal = v;
+  }
+
+  // Guard: restaurant must not disable both modes at the same time.
+  // We validate the combination: if caller sends both false, reject immediately.
+  // We can't validate against the current DB state here without a pre-query,
+  // but rejecting the obvious case is sufficient for the MVP.
+  if (deliveryEnabledVal === false && pickupEnabledVal === false) {
+    return c.json({
+      error:  'invalid_dispatch_config',
+      detail: 'At least one of delivery_enabled or pickup_enabled must be true',
+    }, 400);
+  }
+
   // --- Validate lat / lng / radio_cobertura_km ----------------------------
   let latVal: number | null | undefined;
   let lngVal: number | null | undefined;
@@ -1540,7 +1571,8 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
   if (textClauses.length === 0 && pmVal === undefined && dbVal === undefined
       && brandColorVal === undefined && logoUrlVal === undefined
       && themeIdVal === undefined && redesVal === undefined
-      && latVal === undefined && lngVal === undefined && radioKmVal === undefined) {
+      && latVal === undefined && lngVal === undefined && radioKmVal === undefined
+      && deliveryEnabledVal === undefined && pickupEnabledVal === undefined) {
     return c.json({
       error:  'no_valid_fields',
       detail: 'body must include at least one updatable field',
@@ -1615,11 +1647,18 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
           await tx`UPDATE restaurante SET radio_cobertura_km = ${radioKmVal} WHERE id = ${restaurante_id}`;
         }
       }
+      if (deliveryEnabledVal !== undefined) {
+        await tx`UPDATE restaurante SET delivery_enabled = ${deliveryEnabledVal} WHERE id = ${restaurante_id}`;
+      }
+      if (pickupEnabledVal !== undefined) {
+        await tx`UPDATE restaurante SET pickup_enabled = ${pickupEnabledVal} WHERE id = ${restaurante_id}`;
+      }
       return tx<UpdateRow[]>`
         SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
                payment_methods, datos_bancarios,
                brand_color, logo_url, eslogan, texto_banner, redes_sociales, theme_id,
-               lat, long, radio_cobertura_km
+               lat, long, radio_cobertura_km,
+               delivery_enabled, pickup_enabled
         FROM   restaurante
         WHERE  id = ${restaurante_id}
         LIMIT  1
@@ -1665,6 +1704,12 @@ dashboardRoutes.patch('/:slug/settings', async (c) => {
     }
     if (radioKmVal !== undefined) {
       responseFields['radio_cobertura_km'] = persisted['radio_cobertura_km'];
+    }
+    if (deliveryEnabledVal !== undefined) {
+      responseFields['delivery_enabled'] = persisted['delivery_enabled'];
+    }
+    if (pickupEnabledVal !== undefined) {
+      responseFields['pickup_enabled'] = persisted['pickup_enabled'];
     }
     if (ignoredFields.length > 0) {
       responseFields['ignored_fields'] = ignoredFields;

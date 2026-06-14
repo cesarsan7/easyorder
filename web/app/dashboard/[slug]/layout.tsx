@@ -83,13 +83,24 @@ function useCurrentUser(slug: string, authFetch: ReturnType<typeof useAuthFetch>
   return { email, rol }
 }
 
+// ─── Logout helper ───────────────────────────────────────────────────────────
+function useLogout() {
+  const router = useRouter()
+  return async () => {
+    await createClient().auth.signOut()
+    router.push('/registro')
+  }
+}
+
 // ─── Desktop top header ───────────────────────────────────────────────────────
 function DesktopTopBar({
   email,
   rol,
+  onLogout,
 }: {
   email: string | null
   rol:   string | null
+  onLogout: () => void
 }) {
   const { theme } = useBranding()
   const ACCENT       = theme.accent
@@ -102,10 +113,12 @@ function DesktopTopBar({
 
   return (
     <div
-      className="hidden lg:flex items-center justify-end px-6 py-2.5 shrink-0"
+      className="hidden lg:flex items-center justify-between px-6 py-2.5 shrink-0"
       style={{ backgroundColor: SIDEBAR_BG, borderBottom: `1px solid ${SIDEBAR_BDR}` }}
     >
-      <div className="flex items-center gap-2.5">
+      {/* placeholder left side */}
+      <div />
+      <div className="flex items-center gap-3">
         {rolLabel && (
           <span
             className="text-xs font-medium px-2 py-0.5 rounded-full"
@@ -123,13 +136,27 @@ function DesktopTopBar({
         <span className="text-sm font-medium" style={{ color: '#374151' }}>
           {username}
         </span>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+          style={{ color: '#6B7280', backgroundColor: '#F3F4F6' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#E5E7EB')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#F3F4F6')}
+          title="Cerrar sesión"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+            <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
+            <path fillRule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-1.07a.75.75 0 10-1.004-1.114l-2.5 2.5a.75.75 0 000 1.068l2.5 2.5a.75.75 0 101.004-1.114l-1.048-1.07h9.546A.75.75 0 0019 10z" clipRule="evenodd" />
+          </svg>
+          Salir
+        </button>
       </div>
     </div>
   )
 }
 
 // ─── Sidebar (desktop) ────────────────────────────────────────────────────────
-function DashboardSidebar({ slug, notifBadge }: { slug: string; notifBadge: number }) {
+function DashboardSidebar({ slug, notifBadge, onLogout }: { slug: string; notifBadge: number; onLogout: () => void }) {
   const router   = useRouter()
   const pathname = usePathname()
   const { theme, restaurantName, eslogan, logoUrl } = useBranding()
@@ -249,6 +276,19 @@ function DashboardSidebar({ slug, notifBadge }: { slug: string; notifBadge: numb
           </svg>
           Mis locales
         </button>
+        <button
+          onClick={onLogout}
+          className="mt-2 flex items-center gap-2 w-full rounded-xl px-3 py-2 text-xs font-medium transition-colors"
+          style={{ color: '#EF4444', backgroundColor: 'transparent' }}
+          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#FEF2F2')}
+          onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+            <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
+            <path fillRule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-1.07a.75.75 0 10-1.004-1.114l-2.5 2.5a.75.75 0 000 1.068l2.5 2.5a.75.75 0 101.004-1.114l-1.048-1.07h9.546A.75.75 0 0019 10z" clipRule="evenodd" />
+          </svg>
+          Cerrar sesión
+        </button>
         <div className="mt-3 px-1">
           <p className="text-xs font-medium" style={{ color: '#9CA3AF' }}>EasyOrder SaaS</p>
           <p className="text-xs mt-0.5" style={{ color: '#CBD5E1' }}>MVP v0.1</p>
@@ -264,11 +304,13 @@ function MobileTopBar({
   notifBadge,
   email,
   rol,
+  onLogout,
 }: {
   slug: string
   notifBadge: number
   email: string | null
   rol:   string | null
+  onLogout: () => void
 }) {
   const router   = useRouter()
   const pathname = usePathname()
@@ -392,7 +434,7 @@ function MobileTopBar({
                   <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 00-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 00.75-.75v-4a.75.75 0 011.5 0v4A2.25 2.25 0 0112.75 17h-8.5A2.25 2.25 0 012 14.75v-8.5A2.25 2.25 0 014.25 4h5a.75.75 0 010 1.5h-5z" clipRule="evenodd" />
                   <path fillRule="evenodd" d="M6.194 12.753a.75.75 0 001.06.053L16.5 4.44v2.81a.75.75 0 001.5 0v-4.5a.75.75 0 00-.75-.75h-4.5a.75.75 0 000 1.5h2.553l-9.056 8.194a.75.75 0 00-.053 1.06z" clipRule="evenodd" />
                 </svg>
-                Ver menu publico
+                Ver menú público
               </a>
               <button
                 onClick={() => { router.push('/dashboard/admin'); setOpen(false) }}
@@ -403,6 +445,17 @@ function MobileTopBar({
                   <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
                 </svg>
                 Mis locales
+              </button>
+              <button
+                onClick={() => { setOpen(false); onLogout() }}
+                className="flex items-center gap-2 w-full rounded-xl px-3 py-2 text-xs font-medium"
+                style={{ color: '#EF4444', backgroundColor: 'transparent' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 shrink-0">
+                  <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-1.07a.75.75 0 10-1.004-1.114l-2.5 2.5a.75.75 0 000 1.068l2.5 2.5a.75.75 0 101.004-1.114l-1.048-1.07h9.546A.75.75 0 0019 10z" clipRule="evenodd" />
+                </svg>
+                Cerrar sesión
               </button>
             </div>
           </div>
@@ -419,14 +472,15 @@ export default function DashboardSlugLayout({ children }: { children: React.Reac
   const authFetch = useAuthFetch()
   const notifData = useLayoutNotifs(slug, authFetch)
   const { email, rol } = useCurrentUser(slug, authFetch)
+  const logout    = useLogout()
 
   return (
     <BrandingProvider slug={slug} authFetch={authFetch}>
       <div className="flex min-h-screen" style={{ backgroundColor: '#F8FAFC' }}>
-        <DashboardSidebar slug={slug} notifBadge={notifData.badge} />
+        <DashboardSidebar slug={slug} notifBadge={notifData.badge} onLogout={logout} />
         <div className="flex-1 flex flex-col min-w-0">
-          <MobileTopBar slug={slug} notifBadge={notifData.badge} email={email} rol={rol} />
-          <DesktopTopBar email={email} rol={rol} />
+          <MobileTopBar slug={slug} notifBadge={notifData.badge} email={email} rol={rol} onLogout={logout} />
+          <DesktopTopBar email={email} rol={rol} onLogout={logout} />
           {children}
         </div>
       </div>

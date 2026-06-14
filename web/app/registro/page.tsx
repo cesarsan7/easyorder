@@ -9,6 +9,29 @@ const ACCENT  = '#E63946'
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
 const PUBLIC_DOMAIN = typeof window !== 'undefined' ? window.location.origin : 'https://easyorder.ai2nomous.com'
 
+// Timezone → phone prefix (must stay in sync with api/src/routes/onboarding.ts)
+const TZ_PHONE_PREFIX: Record<string, string> = {
+  'Atlantic/Canary':                '+34',
+  'Europe/Madrid':                  '+34',
+  'America/Mexico_City':            '+52',
+  'America/Bogota':                 '+57',
+  'America/Lima':                   '+51',
+  'America/Santiago':               '+56',
+  'America/Argentina/Buenos_Aires': '+54',
+  'America/Caracas':                '+58',
+  'America/Guayaquil':              '+593',
+  'America/Montevideo':             '+598',
+  'America/Asuncion':               '+595',
+  'America/La_Paz':                 '+591',
+  'America/Santo_Domingo':          '+1',
+  'America/Costa_Rica':             '+506',
+  'America/Guatemala':              '+502',
+  'America/New_York':               '+1',
+  'America/Chicago':                '+1',
+  'America/Denver':                 '+1',
+  'America/Los_Angeles':            '+1',
+}
+
 const TIMEZONES = [
   { label: 'España — Canarias',           value: 'Atlantic/Canary' },
   { label: 'España — Península/Baleares', value: 'Europe/Madrid' },
@@ -368,7 +391,12 @@ function StepRestaurant({ onDone }: { onDone: (slug: string, nombre: string) => 
         body: JSON.stringify({
           nombre: nombre.trim(),
           slug,
-          telefono: telefono.trim() || undefined,
+          // Prepend country prefix if the user didn't type one
+          telefono: telefono.trim()
+            ? (telefono.trim().startsWith('+')
+                ? telefono.trim()
+                : `${TZ_PHONE_PREFIX[zonaHoraria] ?? '+1'}${telefono.trim()}`)
+            : undefined,
           moneda,
           zona_horaria: zonaHoraria,
         }),
@@ -447,19 +475,7 @@ function StepRestaurant({ onDone }: { onDone: (slug: string, nombre: string) => 
         )}
       </div>
 
-      {/* Teléfono */}
-      <div>
-        <Label htmlFor="telefono">Teléfono de contacto <span className="font-normal text-gray-400">(opcional)</span></Label>
-        <Input
-          id="telefono"
-          type="tel"
-          placeholder="+34 600 000 000"
-          value={telefono}
-          onChange={(e) => setTelefono(e.target.value)}
-        />
-      </div>
-
-      {/* Moneda + Zona horaria */}
+      {/* Moneda + Zona horaria — primero para que el prefijo esté definido antes del tel */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="moneda">Moneda</Label>
@@ -470,13 +486,37 @@ function StepRestaurant({ onDone }: { onDone: (slug: string, nombre: string) => 
           </Select>
         </div>
         <div>
-          <Label htmlFor="zona">Zona horaria</Label>
+          <Label htmlFor="zona">País / Zona horaria</Label>
           <Select id="zona" value={zonaHoraria} onChange={(e) => setZonaHoraria(e.target.value)}>
             {TIMEZONES.map((tz) => (
               <option key={tz.value} value={tz.value}>{tz.label}</option>
             ))}
           </Select>
         </div>
+      </div>
+
+      {/* Teléfono — el prefijo se infiere del país seleccionado */}
+      <div>
+        <Label htmlFor="telefono">Teléfono de contacto <span className="font-normal text-gray-400">(opcional)</span></Label>
+        <div className="flex rounded-xl border border-gray-200 overflow-hidden focus-within:ring-2" style={{ '--tw-ring-color': ACCENT } as React.CSSProperties}>
+          <span className="flex items-center px-3 text-sm font-medium select-none"
+            style={{ backgroundColor: '#F3F4F6', color: '#374151', borderRight: '1px solid #E5E7EB', minWidth: 52 }}>
+            {TZ_PHONE_PREFIX[zonaHoraria] ?? '+1'}
+          </span>
+          <input
+            id="telefono"
+            type="tel"
+            inputMode="numeric"
+            placeholder="600 000 000"
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
+            className="flex-1 px-3 py-2.5 text-sm outline-none bg-white"
+            style={{ color: '#111827' }}
+          />
+        </div>
+        <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
+          El código de área se establece automáticamente según el país seleccionado.
+        </p>
       </div>
 
       {error && <ErrorBox msg={error} />}

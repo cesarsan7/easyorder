@@ -46,6 +46,9 @@ interface Settings {
   lat:                number | null
   lng:                number | null
   radio_cobertura_km: number | null
+  // dispatch modes
+  delivery_enabled:   boolean
+  pickup_enabled:     boolean
 }
 
 interface DeliveryZone {
@@ -256,6 +259,9 @@ export default function ConfiguracionPage() {
   const [cuenta,         setCuenta]         = useState('')
   const [alias,          setAlias]          = useState('')
   const [bancosState,    setBancosState]    = useState<SaveState>('idle')
+  const [deliveryEnabled, setDeliveryEnabled] = useState(true)
+  const [pickupEnabled,   setPickupEnabled]   = useState(true)
+  const [dispatchState,   setDispatchState]   = useState<SaveState>('idle')
 
   // ── Horarios / Zonas
   const [horarios,         setHorarios]         = useState<HorarioLocal[]>([])
@@ -305,6 +311,8 @@ export default function ConfiguracionPage() {
       setEslogan(s.eslogan ?? '')
       setTextoBanner(s.texto_banner ?? '')
       setRedes(s.redes_sociales ?? [])
+      setDeliveryEnabled(s.delivery_enabled ?? true)
+      setPickupEnabled(s.pickup_enabled ?? true)
 
       const sorted = [...(st.horarios_semana ?? [])].sort((a, b) => DIAS.indexOf(a.dia) - DIAS.indexOf(b.dia))
       setHorarios(sorted.map(h => ({
@@ -350,6 +358,11 @@ export default function ConfiguracionPage() {
   function savePago() {
     if (paymentMethods.length === 0) return
     patch({ payment_methods: paymentMethods }, setPagoState)
+  }
+
+  function saveDispatch() {
+    if (!deliveryEnabled && !pickupEnabled) return // guard: at least one must be enabled
+    patch({ delivery_enabled: deliveryEnabled, pickup_enabled: pickupEnabled }, setDispatchState)
   }
 
   function saveBancarios() {
@@ -873,6 +886,45 @@ export default function ConfiguracionPage() {
 
         ) : (
           <>
+            {/* ── Modos de despacho ────────────────────────────────────── */}
+            <SectionTitle>Modos de despacho</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4">
+              <p className="text-xs text-gray-400 mb-4">
+                Define qué opciones de entrega ven tus clientes al hacer un pedido.
+                Al menos una debe estar activa.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { key: 'delivery', label: 'Delivery (envío a domicilio)', icon: '🛵', enabled: deliveryEnabled, setEnabled: setDeliveryEnabled },
+                  { key: 'pickup',   label: 'Retiro en local',              icon: '🏪', enabled: pickupEnabled,   setEnabled: setPickupEnabled },
+                ].map(({ key, label, icon, enabled, setEnabled }) => {
+                  const isDisabling = !enabled
+                  const wouldDisableAll = key === 'delivery' ? (!deliveryEnabled && pickupEnabled) : (deliveryEnabled && !pickupEnabled)
+                  void wouldDisableAll
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setEnabled(v => !v); setDispatchState('idle') }}
+                      disabled={enabled && (key === 'delivery' ? !pickupEnabled : !deliveryEnabled)}
+                      className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-colors text-left ${!isDisabling ? '' : 'border-gray-200 bg-white hover:bg-gray-50 opacity-60'}`}
+                      style={!isDisabling ? { borderColor: accent, backgroundColor: accentLight } : undefined}
+                      title={enabled && (key === 'delivery' ? !pickupEnabled : !deliveryEnabled) ? 'Debe haber al menos un modo activo' : undefined}
+                    >
+                      <span className="text-xl">{icon}</span>
+                      <span className="flex-1 text-sm font-medium text-gray-900">{label}</span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${!isDisabling ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
+                        style={!isDisabling ? { backgroundColor: accent } : undefined}>
+                        {!isDisabling ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex justify-end pt-3 border-t border-gray-100 mt-3">
+                <SaveButton state={dispatchState} onClick={saveDispatch} disabled={!deliveryEnabled && !pickupEnabled} />
+              </div>
+            </div>
+
             {/* ── Métodos de pago ──────────────────────────────────────── */}
             <SectionTitle>Métodos de pago</SectionTitle>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4">
