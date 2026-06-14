@@ -9,6 +9,29 @@ const publicRoutes = new Hono<{ Variables: Variables }>();
 
 publicRoutes.use('/:slug/*', resolveTenant);
 
+// Timezone → phone prefix fallback (mirrors onboarding.ts — update both if adding countries)
+const TZ_PHONE_PREFIX: Record<string, string> = {
+  'Atlantic/Canary':                '+34',
+  'Europe/Madrid':                  '+34',
+  'America/Mexico_City':            '+52',
+  'America/Bogota':                 '+57',
+  'America/Lima':                   '+51',
+  'America/Santiago':               '+56',
+  'America/Argentina/Buenos_Aires': '+54',
+  'America/Caracas':                '+58',
+  'America/Guayaquil':              '+593',
+  'America/Montevideo':             '+598',
+  'America/Asuncion':               '+595',
+  'America/La_Paz':                 '+591',
+  'America/Santo_Domingo':          '+1',
+  'America/Costa_Rica':             '+506',
+  'America/Guatemala':              '+502',
+  'America/New_York':               '+1',
+  'America/Chicago':                '+1',
+  'America/Denver':                 '+1',
+  'America/Los_Angeles':            '+1',
+};
+
 // ----------------------------------------------------------------------------
 // GET /public/:slug/restaurant
 // Returns public restaurant info + real-time is_open calculated from horarios.
@@ -142,7 +165,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
     pickup_enabled:      r.pickup_enabled ?? true,
     delivery_min_order:  Number(r.delivery_min_order ?? 0),
     phone:               r.telefono,
-    phone_prefix:        phonePrefixRows[0]?.config_value ?? '+34',
+    phone_prefix:        phonePrefixRows[0]?.config_value ?? TZ_PHONE_PREFIX[r.zona_horaria] ?? '+1',
     moneda:              r.moneda,
     zona_horaria:        r.zona_horaria,
     mensaje_bienvenida:  r.mensaje_bienvenida,
@@ -1030,10 +1053,6 @@ interface ValidateExtraRow {
   is_active: boolean;
 }
 
-// ---------------------------------------------------------------------------
-// cart/validate — response shape types
-// ---------------------------------------------------------------------------
-
 interface ValidatedExtra {
   extra_id: number;
   name: string;
@@ -1058,6 +1077,13 @@ interface ValidatedItem {
 }
 
 interface UnavailableItem {
+  menu_variant_id?: number;
+  extra_id?: number;
+  reason: 'variant_not_found' | 'variant_inactive' | 'extra_not_found' | 'extra_inactive' | 'extra_not_linked';
+}
+
+export default publicRoutes;
+eItem {
   menu_variant_id?: number;
   extra_id?: number;
   reason: 'variant_not_found' | 'variant_inactive' | 'extra_not_found' | 'extra_inactive' | 'extra_not_linked';
