@@ -63,7 +63,7 @@ BEGIN
   -- ── 1. menu_item_extra (depende de menu_item) ─────────────────────────────
   DELETE FROM public.menu_item_extra
    WHERE menu_item_id IN (
-     SELECT id FROM public.menu_item WHERE restaurante_id = v_id
+     SELECT menu_item_id FROM public.menu_item WHERE restaurante_id = v_id
    );
 
   -- ── 2. menu_item ──────────────────────────────────────────────────────────

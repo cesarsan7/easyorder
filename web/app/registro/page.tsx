@@ -195,7 +195,7 @@ function StepAccount({ onDone }: { onDone: () => void }) {
       const { data, error: authErr } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { emailRedirectTo: `${window.location.origin}/registro` },
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/registro` },
       })
       if (authErr) { setError(authErr.message); setLoading(false); return }
       if (data.session) { onDone(); return }
@@ -379,8 +379,13 @@ function StepRestaurant({ onDone }: { onDone: (slug: string, nombre: string) => 
 
     try {
       const supabase = createClient()
+
+      // getUser() fuerza validación con Supabase y refresca el token si expiró.
+      // Luego getSession() devuelve el token fresco garantizado.
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) { setError('Sesión expirada. Por favor recarga la página e inicia sesión.'); setLoading(false); return }
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Sesión expirada. Recarga la página.'); setLoading(false); return }
+      if (!session) { setError('No se pudo obtener la sesión. Recarga la página.'); setLoading(false); return }
 
       const res = await fetch(`${API_URL}/onboarding/complete`, {
         method:  'POST',
@@ -601,12 +606,14 @@ export default function RegistroPage() {
   const [resultNombre, setResultNombre] = useState('')
   const [checkingAuth, setCheckingAuth] = useState(true)
 
-  // On mount: check if user is already authenticated — skip account step
+  // On mount: check if user is already authenticated — skip account step.
+  // getUser() valida con el servidor y maneja el canje PKCE (?code=xxx) si viene
+  // de un link de confirmación de email redirigido por /auth/callback.
   useEffect(() => {
     async function check() {
       const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) setStep('restaurant')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) setStep('restaurant')
       setCheckingAuth(false)
     }
     check()
