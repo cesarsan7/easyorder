@@ -476,7 +476,49 @@ menuItemsRoutes.put('/:slug/menu/items/:item_id/extras', async (c) => {
   }
 });
 
-// -------
+// ----------------------------------------------------------------------------
+// GET /dashboard/:slug/menu/items/:item_id/extras
+//
+// Returns the extras currently linked to this item via menu_item_extra.
+// Used by the dashboard to populate the extras-assignment panel.
+// ----------------------------------------------------------------------------
+menuItemsRoutes.get('/:slug/menu/items/:item_id/extras', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+
+  const itemIdParam = c.req.param('item_id');
+  const item_id = parseInt(itemIdParam, 10);
+  if (!Number.isInteger(item_id) || item_id < 1) {
+    return c.json({ error: 'invalid_item_id' }, 400);
+  }
+
+  try {
+    // Verify item belongs to this tenant
+    const itemRows = await sql<{ menu_item_id: number }[]>`
+      SELECT menu_item_id FROM public.menu_item
+      WHERE menu_item_id  = ${item_id}
+        AND restaurante_id = ${restaurante_id}
+      LIMIT 1
+    `;
+    if (itemRows.length === 0) {
+      return c.json({ error: 'item_not_found' }, 404);
+    }
+
+    const rows = await sql<ExtraRow[]>`
+      SELECT e.extra_id, e.name, e.price, e.allergens, e.is_active
+      FROM public.extra e
+      JOIN public.menu_item_extra mie ON mie.extra_id = e.extra_id
+      WHERE mie.menu_item_id  = ${item_id}
+        AND e.restaurante_id  = ${restaurante_id}
+      ORDER BY e.name ASC
+    `;
+
+    return c.json({ menu_item_id: item_id, extras: rows.map(mapExtra) });
+
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/menu/items/:item_id/extras] Unhandled error:', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Helpers

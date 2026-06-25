@@ -453,6 +453,133 @@ function ExtraModal({
   )
 }
 
+// ─── Item Extras Sub-panel ────────────────────────────────────────────────────
+// Shows all restaurant extras as checkboxes; linked extras are checked.
+// On save calls PUT /:item_id/extras with the full selection.
+
+function ItemExtrasPanel({ item, slug, authFetch }: { item: Item; slug: string; authFetch: ReturnType<typeof useAuthFetch> }) {
+  const accent = useAccent()
+  const [allExtras, setAllExtras]   = useState<Extra[]>([])
+  const [pending, setPending]       = useState<Set<number>>(new Set())
+  const [loading, setLoading]       = useState(true)
+  const [saving, setSaving]         = useState(false)
+  const [dirty, setDirty]           = useState(false)
+  const [saveMsg, setSaveMsg]       = useState<string | null>(null)
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [allRes, linkedRes] = await Promise.all([
+        authFetch(`${apiBase}/dashboard/${slug}/menu/extras`),
+        authFetch(`${apiBase}/dashboard/${slug}/menu/items/${item.menu_item_id}/extras`),
+      ])
+      const allData    = allRes.ok    ? (await allRes.json()    as { extras: Extra[] }) : { extras: [] }
+      const linkedData = linkedRes.ok ? (await linkedRes.json() as { extras: Extra[] }) : { extras: [] }
+      const linkedIds  = new Set(linkedData.extras.map((e: Extra) => e.extra_id))
+      setAllExtras(allData.extras)
+      setPending(new Set(linkedIds))
+      setDirty(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [item.menu_item_id, slug, apiBase, authFetch])
+
+  useEffect(() => { load() }, [load])
+
+  function toggle(id: number) {
+    setPending(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+    setDirty(true)
+    setSaveMsg(null)
+  }
+
+  async function save() {
+    setSaving(true); setSaveMsg(null)
+    try {
+      const res = await authFetch(`${apiBase}/dashboard/${slug}/menu/items/${item.menu_item_id}/extras`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extra_ids: Array.from(pending) }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setDirty(false)
+      setSaveMsg('Guardado ✓')
+      setTimeout(() => setSaveMsg(null), 2000)
+    } catch {
+      setSaveMsg('Error al guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <div className="py-2 text-xs text-gray-400">Cargando extras…</div>
+
+  if (allExtras.length === 0) {
+    return (
+      <div className="mt-2 border-t border-gray-100 pt-2">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Extras disponibles</span>
+        <p className="text-xs text-gray-400 italic mt-1">
+          No hay extras configurados. Créalos primero en la pestaña <strong>Extras</strong>.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 border-t border-gray-100 pt-2">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Extras disponibles</span>
+        <div className="flex items-center gap-2">
+          {saveMsg && (
+            <span className={`text-xs font-medium ${saveMsg.startsWith('Error') ? 'text-red-500' : 'text-green-600'}`}>
+              {saveMsg}
+            </span>
+          )}
+          {dirty && (
+            <button
+              onClick={save}
+              disabled={saving}
+              className="text-xs font-semibold px-2 py-1 rounded-lg text-white disabled:opacity-50"
+              style={{ backgroundColor: accent }}
+            >
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        {allExtras.map(extra => {
+          const checked = pending.has(extra.extra_id)
+          return (
+            <label
+              key={extra.extra_id}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 cursor-pointer transition-colors ${
+                checked ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-transparent hover:border-gray-200'
+              } ${!extra.is_active ? 'opacity-50' : ''}`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggle(extra.extra_id)}
+                className="accent-indigo-500 h-3.5 w-3.5 shrink-0"
+              />
+              <span className="flex-1 text-sm text-gray-800">{extra.name}</span>
+              {!extra.is_active && (
+                <span className="text-[10px] text-gray-400 font-medium">inactivo</span>
+              )}
+              <span className="text-xs font-semibold text-gray-600 shrink-0">{fmtPrice(extra.price)}</span>
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Variants Sub-panel ───────────────────────────────────────────────────────
 
 function VariantsPanel({ item, slug, authFetch }: { item: Item; slug: string; authFetch: ReturnType<typeof useAuthFetch> }) {
@@ -599,6 +726,7 @@ function ItemRow({
       {expanded && (
         <div className="px-4 pb-3">
           <VariantsPanel item={item} slug={slug} authFetch={authFetch} />
+          <ItemExtrasPanel item={item} slug={slug} authFetch={authFetch} />
         </div>
       )}
       {modal && (
