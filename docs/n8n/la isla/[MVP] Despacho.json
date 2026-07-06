@@ -1,0 +1,726 @@
+{
+  "name": "[MVP] Despacho",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\"tipo\": \"delivery\", \"direccion_texto\": \"Av. Providencia 1234\", \"codigo_postal\": \"7500000\", \"lat\": null, \"lng\": null, \"telefono\": \"+56912345678\", \"session_id\": \"abc-123-def-456\", \"pedido_id\": 58, \"zona_confirmada_por_cliente\": false, \"restaurante_id\": 1}"
+      },
+      "id": "e63c8b7b-b654-4286-b7ab-d75bf27abc45",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -1344,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM public.fn_select_pedido_reutilizable(\n  '{{ $('When Executed by Another Workflow').first().json.telefono }}',\n  '{{ $('When Executed by Another Workflow').first().json.session_id }}',\n  '{{ String($('When Executed by Another Workflow').first().json.pedido_id || '').replace(/'/g, \"''\") }}',\n  false,\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\n)",
+        "options": {}
+      },
+      "id": "9e900086-5d1b-45fc-aa70-f8cc3d8340d1",
+      "name": "Obtener Pedido Activo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -1120,
+        480
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-tipo",
+              "leftValue": "={{ ['retiro','retirar','recoger','local','para llevar','pickup'].includes(String($('When Executed by Another Workflow').first().json.tipo || '').toLowerCase().trim()) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "43d2c717-643f-4f38-a37a-ba03ae07f8ad",
+      "name": "¿Es Retiro?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -896,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT delivery_zone_id, zone_name, postal_code, fee, min_order_amount, estimated_minutes_min, estimated_minutes_max, is_active\nFROM public.delivery_zone\nWHERE is_active = true\n  AND (postal_code = '{{ (() => { const t = $('When Executed by Another Workflow').first().json; const src = [t.codigo_postal, t.direccion_texto].filter(Boolean).join(' '); const m = String(src).match(/\\b\\d{5}\\b/); return m ? m[0] : ''; })() }}'\n       OR (\n         lower(zone_name) = lower('{{ (() => { const t = $('When Executed by Another Workflow').first().json; const txt = String([t.codigo_postal, t.direccion_texto].filter(Boolean).join(' ')).toLowerCase(); if (txt.includes('arrecife')) return 'Arrecife'; if (txt.includes('playa honda')) return 'Playa Honda'; if (txt.includes('taiche')) return 'Taiche'; return ''; })() }}')\n         AND '{{ String($('When Executed by Another Workflow').first().json.zona_confirmada_por_cliente || 'false') }}' = 'true'\n       ))\nLIMIT 1",
+        "options": {}
+      },
+      "id": "2906a107-9c96-433c-9340-921fd513015a",
+      "name": "Consultar Zona Delivery",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        -672,
+        576
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-zona",
+              "leftValue": "={{ $json.delivery_zone_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "41233162-8da8-4500-84c3-8b1a46095f9d",
+      "name": "¿Zona Encontrada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -448,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido = $('Obtener Pedido Activo').first().json || {};\nconst zona = $('Consultar Zona Delivery').first().json || {};\n\nfunction money(v) {\n  return '€' + Number(v || 0).toFixed(2).replace('.', ',');\n}\n\nconst subtotal = Number(pedido.subtotal || 0);\nconst minimo = Number(zona.min_order_amount || 0);\nconst fee = Number(zona.fee || 0);\nconst total = subtotal + fee;\n\nconst base = {\n  pedido_id: pedido.id,\n  pedido_numero: pedido.pedido_numero,\n  pedido_codigo: pedido.pedido_codigo || null,\n  tipo_despacho: 'delivery',\n  direccion: trigger.direccion_texto || pedido.direccion || '',\n  codigo_postal: trigger.codigo_postal || zona.postal_code || '',\n  lat: (trigger.lat !== '' && trigger.lat != null) ? Number(trigger.lat) : (pedido.lat ?? null),\n  lng: (trigger.lng !== '' && trigger.lng != null) ? Number(trigger.lng) : (pedido.lng ?? null),\n  zona_nombre: zona.zone_name || null,\n  fee,\n  subtotal,\n  total,\n  tiempo_min: zona.estimated_minutes_min,\n  tiempo_max: zona.estimated_minutes_max,\n  telefono: trigger.telefono,\n  session_id: trigger.session_id\n};\n\nif (subtotal < minimo) {\n  return [{\n    json: {\n      ...base,\n      puede_continuar: false,\n      motivo: 'minimo_no_alcanzado',\n      delivery_pendiente_minimo: true,\n      respuesta_agente: `Mantengo delivery a ${base.direccion}. Tu pedido es de ${money(subtotal)} y el mínimo para esa zona es ${money(minimo)}. ¿Quieres agregar algo más para llegar al mínimo o prefieres pasar a retiro?`\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...base,\n    puede_continuar: true,\n    delivery_pendiente_minimo: false\n  }\n}];"
+      },
+      "id": "7f6d0936-1fd3-49e2-b6da-fc0fa94181bc",
+      "name": "Validar Mínimo y Calcular Total",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        480
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-continuar",
+              "leftValue": "={{ $json.puede_continuar }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "42d86322-0890-4fe5-b7ba-8adc2d8160b5",
+      "name": "¿Puede Continuar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE pedidos\nSET\n  tipo_despacho = 'delivery',\n  direccion = '{{ String($json.direccion || '').replace(/''/g, \"''\") }}',\n  lat = {{ $json.lat !== null ? $json.lat : 'NULL' }},\n  lng = {{ $json.lng !== null ? $json.lng : 'NULL' }},\n  postal_code = NULLIF('{{ String($json.codigo_postal || \"\") }}', ''),\n  costo_envio = {{ Number($json.fee || 0) }},\n  total = {{ Number($json.total || 0) }},\n  tiempo_estimado = COALESCE(\n    NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_text' AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} LIMIT 1), ''),\n    (\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_min_minutes' AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} LIMIT 1), ''), '{{ Number($json.tiempo_min || 30) }}')\n      || '-' ||\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_max_minutes' AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} LIMIT 1), ''), '{{ Number($json.tiempo_max || 45) }}')\n      || ' min'\n    )\n  ),\n  updated_at = NOW()\nWHERE id = {{ $json.pedido_id }}\nRETURNING *,\n  (SELECT datos_bancarios FROM restaurante WHERE id = pedidos.restaurante_id LIMIT 1) AS datos_bancarios",
+        "options": {}
+      },
+      "id": "e89215de-ea77-4a3b-9ca2-f29db65c382b",
+      "name": "Actualizar Pedido Delivery",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        288
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido = $('Obtener Pedido Activo').first().json || {};\n\nreturn [{\n  json: {\n    pedido_id: pedido.id,\n    pedido_numero: pedido.pedido_numero,\n    pedido_codigo: pedido.pedido_codigo || null,\n    tipo_despacho: 'retiro',\n    fee: 0,\n    subtotal: Number(pedido.subtotal || 0),\n    total: Number(pedido.subtotal || 0),\n    telefono: trigger.telefono,\n    session_id: trigger.session_id\n  }\n}];"
+      },
+      "id": "40999fa2-a8d0-49c0-90cd-9d7730c444c6",
+      "name": "Preparar Retiro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE pedidos\nSET\n  tipo_despacho = 'retiro',\n  direccion = NULL,\n  lat = NULL,\n  lng = NULL,\n  costo_envio = 0,\n  total = subtotal,\n  tiempo_estimado = COALESCE(\n    NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'pickup_eta_text' AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} LIMIT 1), ''),\n    (\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'pickup_eta_minutes' AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} LIMIT 1), ''), '20')\n      || ' min'\n    )\n  ),\n  updated_at = NOW()\nWHERE id = {{ $json.pedido_id }}\nRETURNING *,\n  (SELECT datos_bancarios FROM restaurante WHERE id = pedidos.restaurante_id LIMIT 1) AS datos_bancarios",
+        "options": {}
+      },
+      "id": "808f563b-87f0-4e60-a994-08f4ae79b743",
+      "name": "Actualizar Pedido Retiro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedidoDB = $json || {};\nconst subtotal = Number(pedidoDB.subtotal || 0);\nconst tiempo = pedidoDB.tiempo_estimado || '20 min';\n\nfunction money(v) {\n  return '€' + Number(v || 0).toFixed(2).replace('.', ',');\n}\n\n// Finding 4: list available payment methods dynamically\nconst db = pedidoDB.datos_bancarios || null;\nlet opcionesPago = 'efectivo';\nif (db) opcionesPago += ' o transferencia bancaria';\n\nreturn [{\n  json: {\n    success: true,\n    tipo_despacho: 'retiro',\n    respuesta_agente: `Perfecto, tu pedido${pedidoDB.pedido_codigo ? ` ${pedidoDB.pedido_codigo}` : ''} será para retiro en el local. Tiempo estimado: ${tiempo}. El subtotal es ${money(subtotal)}. ¿Cómo quieres pagar? Puedes pagar en ${opcionesPago}.`,\n    pedido_id: pedidoDB.id,\n    pedido_numero: pedidoDB.pedido_numero,\n    pedido_codigo: pedidoDB.pedido_codigo || null,\n    subtotal,\n    costo_envio: 0,\n    total: subtotal,\n    tiempo_estimado: tiempo\n  }\n}];"
+      },
+      "id": "360d7a03-9adc-4c5b-9ea3-642f34efc149",
+      "name": "Respuesta Retiro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedidoDB = $json || {};\nconst fee = Number(pedidoDB.costo_envio || 0);\nconst subtotal = Number(pedidoDB.subtotal || 0);\nconst total = Number(pedidoDB.total || 0);\nconst tiempo = pedidoDB.tiempo_estimado || '30-45 min';\n\nfunction money(v) {\n  return '€' + Number(v || 0).toFixed(2).replace('.', ',');\n}\n\n// Finding 4: list available payment methods dynamically\nconst db = pedidoDB.datos_bancarios || null;\nlet opcionesPago = 'efectivo';\nif (db) opcionesPago += ' o transferencia bancaria';\n\nreturn [{\n  json: {\n    success: true,\n    tipo_despacho: 'delivery',\n    respuesta_agente: `Perfecto, mantengo delivery${pedidoDB.direccion ? ` a ${pedidoDB.direccion}` : ''}. El envío tiene un costo de ${money(fee)} y el tiempo estimado es ${tiempo}. El total con despacho es ${money(total)}. ¿Cómo quieres pagar? Puedes pagar en ${opcionesPago}.`,\n    pedido_id: pedidoDB.id,\n    pedido_numero: pedidoDB.pedido_numero,\n    pedido_codigo: pedidoDB.pedido_codigo || null,\n    subtotal,\n    costo_envio: fee,\n    total,\n    direccion: pedidoDB.direccion,\n    tiempo_estimado: tiempo\n  }\n}];"
+      },
+      "id": "985b8db0-4604-436d-a1e9-b2db1db910ce",
+      "name": "Respuesta Delivery OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido = $('Obtener Pedido Activo').first().json || {};\n\nconst address  = String(trigger.direccion_texto || '').trim();\nconst cp       = String(trigger.codigo_postal   || '').trim();\nconst hasAddress = address.length > 0 || cp.length > 0;\n\nconst ZONAS_DISPONIBLES = ['Arrecife', 'Playa Honda', 'Taiche'];\nconst zonasList = ZONAS_DISPONIBLES.join(', ');\n\n// Detectar si el texto de la dirección ya menciona zona o CP de 5 dígitos\nconst addressLower = (address + ' ' + cp).toLowerCase();\nconst hasZoneHint  = ZONAS_DISPONIBLES.some(z => addressLower.includes(z.toLowerCase()))\n                   || /\\b\\d{5}\\b/.test(address + ' ' + cp);\n\nlet respuesta;\nlet motivo;\n\nif (!hasAddress) {\n  motivo    = 'sin_direccion';\n  respuesta = `Para delivery necesito tu dirección completa con zona o CP. `\n            + `Zonas disponibles: ${zonasList}. `\n            + `¿A qué dirección te lo enviamos? Ej: Calle Mayor 12, 3ºA, Arrecife.`;\n} else if (!hasZoneHint) {\n  motivo    = 'zona_no_identificada';\n  respuesta = `Recibí la dirección \"${address}\", pero necesito saber en qué zona está para calcular el envío. `\n            + `¿Es Arrecife, Playa Honda o Taiche?`;\n} else {\n  motivo    = 'fuera_de_cobertura';\n  respuesta = `Lo siento, no llegamos a \"${address || cp}\". `\n            + `Nuestras zonas de delivery son: ${zonasList}. `\n            + `¿Quieres cambiar la dirección o prefieres retiro en el local?`;\n}\n\nreturn [{\n  json: {\n    success: false,\n    motivo,\n    respuesta_agente: respuesta,\n    pedido_id:     pedido.id,\n    pedido_numero: pedido.pedido_numero,\n    pedido_codigo: pedido.pedido_codigo || null,\n    subtotal:      Number(pedido.subtotal || 0)\n  }\n}];"
+      },
+      "id": "2a1818ef-b822-4f70-8f69-57e9829237cd",
+      "name": "Respuesta Fuera Cobertura",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        960
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        960,
+        480
+      ],
+      "id": "bcaa9844-bd43-4609-bbd9-5ad6377328ce",
+      "name": "Merge Respuesta Final"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.usuarios\nSET direccion_frecuente = '{{ String($('When Executed by Another Workflow').first().json.direccion_texto || '').replace(/'/g, \"''\") }}', updated_at = NOW()\nWHERE telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n  AND lower('{{ $('When Executed by Another Workflow').first().json.tipo || '' }}') IN ('delivery','domicilio')\nRETURNING id, telefono, nombre, direccion_frecuente",
+        "options": {}
+      },
+      "id": "f56d7fcf-0424-4eeb-9607-85adb59aaed0",
+      "name": "Guardar Direccion Frecuente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        192
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE pedidos\nSET\n  tipo_despacho = 'delivery',\n  direccion = '{{ String($json.direccion || '').replace(/'/g, \"''\") }}',\n  lat = {{ $json.lat !== null ? $json.lat : 'NULL' }},\n  lng = {{ $json.lng !== null ? $json.lng : 'NULL' }},\n  costo_envio = {{ Number($json.fee || 0) }},\n  total = {{ Number($json.total || 0) }},\n  tiempo_estimado = COALESCE(\n    NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_text' LIMIT 1), ''),\n    (\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_min_minutes' LIMIT 1), ''), '{{ Number($json.tiempo_min || 30) }}')\n      || '-' ||\n      COALESCE(NULLIF((SELECT trim(config_value) FROM public.restaurante_config WHERE config_key = 'delivery_eta_max_minutes' LIMIT 1), ''), '{{ Number($json.tiempo_max || 45) }}')\n      || ' min'\n    )\n  ),\n  updated_at = NOW()\nWHERE id = {{ $json.pedido_id }}\nRETURNING *",
+        "options": {}
+      },
+      "id": "7d8f98be-55b5-4f87-aa31-3112a20762c3",
+      "name": "Persistir Delivery Pendiente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        672
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pedidoDB = $json || {};\nconst trigger = $('When Executed by Another Workflow').first().json || {};\nconst zona = $('Consultar Zona Delivery').first().json || {};\n\nfunction money(v) {\n  return '€' + Number(v || 0).toFixed(2).replace('.', ',');\n}\n\nconst subtotal = Number(pedidoDB.subtotal || 0);\nconst fee = Number(pedidoDB.costo_envio || 0);\nconst minimo = Number(zona.min_order_amount || 0);\nconst totalEstimado = subtotal + fee;\nconst tiempo = pedidoDB.tiempo_estimado || '30-45 min';\n\nreturn [{\n  json: {\n    success: false,\n    motivo: 'minimo_no_alcanzado',\n    tipo_despacho: 'delivery',\n    respuesta_agente: `Mantengo delivery${pedidoDB.direccion ? ` a ${pedidoDB.direccion}` : ''}. Tu pedido va en ${money(subtotal)} y el mínimo para esa zona es ${money(minimo)}. Si llegas al mínimo, el total estimado con envío será ${money(totalEstimado)} y el tiempo estimado será ${tiempo}. ¿Quieres agregar algo más o prefieres pasar a retiro?`,\n    pedido_id: pedidoDB.id,\n    pedido_numero: pedidoDB.pedido_numero,\n    pedido_codigo: pedidoDB.pedido_codigo || null,\n    subtotal,\n    costo_envio: fee,\n    total_estimado: totalEstimado,\n    direccion: pedidoDB.direccion || trigger.direccion_texto || null,\n    tiempo_estimado: tiempo\n  }\n}];"
+      },
+      "id": "fc2d9712-657b-4b34-9f93-7780dfa8112a",
+      "name": "Respuesta Mínimo Delivery",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.usuarios\nSET direccion_frecuente = '{{ String($('When Executed by Another Workflow').first().json.direccion_texto || '').replace(/'/g, \"''\") }}', updated_at = NOW()\nWHERE telefono = '{{ $('When Executed by Another Workflow').first().json.telefono }}'\n  AND lower('{{ $('When Executed by Another Workflow').first().json.tipo || '' }}') IN ('delivery','domicilio')\nRETURNING id, telefono, nombre, direccion_frecuente",
+        "options": {}
+      },
+      "id": "bc5975d2-2e97-4f7f-85ad-c41d1ff9511f",
+      "name": "Guardar Direccion Frecuente Pendiente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        768
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nodo de catch global para Despacho\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Despacho',\n    mensaje: `Error técnico en Despacho (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Despacho (${origen}): ${detalle}`\n  }\n}];"
+      },
+      "id": "a4bb757c-a06c-46aa-82c4-de0fd2920075",
+      "name": "Respuesta Error Sistema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }},\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Despacho\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
+        "options": {}
+      },
+      "id": "68d40f50-d062-4b6e-8738-c541dbc231d4",
+      "name": "Registrar Escalacion Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1904,
+        368
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
+      },
+      "id": "92290f6c-768a-48d9-b30a-f915cad4b832",
+      "name": "Devolver Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        368
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Obtener Pedido Activo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Pedido Activo": {
+      "main": [
+        [
+          {
+            "node": "¿Es Retiro?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Retiro?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Retiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Consultar Zona Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Zona Delivery": {
+      "main": [
+        [
+          {
+            "node": "¿Zona Encontrada?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Zona Encontrada?": {
+      "main": [
+        [
+          {
+            "node": "Validar Mínimo y Calcular Total",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Fuera Cobertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Mínimo y Calcular Total": {
+      "main": [
+        [
+          {
+            "node": "¿Puede Continuar?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Puede Continuar?": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Pedido Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Persistir Delivery Pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Pedido Delivery": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Delivery OK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guardar Direccion Frecuente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Retiro": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Pedido Retiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar Pedido Retiro": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Retiro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Retiro": {
+      "main": [
+        [
+          {
+            "node": "Merge Respuesta Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Delivery OK": {
+      "main": [
+        [
+          {
+            "node": "Merge Respuesta Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Fuera Cobertura": {
+      "main": [
+        [
+          {
+            "node": "Merge Respuesta Final",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Persistir Delivery Pendiente": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Mínimo Delivery",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Guardar Direccion Frecuente Pendiente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Mínimo Delivery": {
+      "main": [
+        [
+          {
+            "node": "Merge Respuesta Final",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Guardar Direccion Frecuente": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Direccion Frecuente Pendiente": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Respuesta Error Sistema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Error Sistema": {
+      "main": [
+        [
+          {
+            "node": "Registrar Escalacion Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Escalacion Error": {
+      "main": [
+        [
+          {
+            "node": "Devolver Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "473c0b80-de18-4613-a91a-7efb4e6922f5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3e9e2731a8d5bb19fd4086b1e0521bd627f7d1fd4fb35cc0a5387b699bc723b0"
+  },
+  "nodeGroups": [],
+  "id": "D79TNGwwAbCYwPhN",
+  "tags": []
+}

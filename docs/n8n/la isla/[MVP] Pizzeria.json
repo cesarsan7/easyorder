@@ -129,8 +129,8 @@
       "name": "OpenAI1",
       "credentials": {
         "openAiApi": {
-          "id": "MjjYLoIl0GDk3Exw",
-          "name": "OpenAi account 2"
+          "id": "HJg3oCSrlKPoW35V",
+          "name": "OpenAI account"
         }
       }
     },
@@ -1100,7 +1100,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/conversations/{{ $('Variables').first().json.conversation_id }}/messages",
+        "url": "=https://la-isla-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/conversations/{{ $('Variables').first().json.conversation_id }}/messages",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -1133,9 +1133,9 @@
       "parameters": {
         "model": {
           "__rl": true,
-          "value": "gpt-4o-mini",
+          "value": "gpt-4.1-mini",
           "mode": "list",
-          "cachedResultName": "gpt-4o-mini"
+          "cachedResultName": "gpt-4.1-mini"
         },
         "builtInTools": {},
         "options": {
@@ -1153,8 +1153,8 @@
       "name": "OpenAI",
       "credentials": {
         "openAiApi": {
-          "id": "iQIEdjfflw5sGyn1",
-          "name": "OpenAi account"
+          "id": "HJg3oCSrlKPoW35V",
+          "name": "OpenAI account"
         }
       }
     },
@@ -1229,9 +1229,9 @@
         "description": "Tool para responder consultas del cliente (FAQs y menú). Úsala cuando el cliente pregunte por productos, precios, ingredientes, promociones, horarios, ubicación, retiro/despacho o cualquier duda operativa. La respuesta debe basarse solo en la información disponible del negocio. Si la pregunta es ambigua, devuelve una sola pregunta aclaratoria. Si no hay información suficiente para responder con certeza, indícalo y sugiere derivación a humano.A",
         "workflowId": {
           "__rl": true,
-          "value": "eTRNqtoJUYeSa9RS",
+          "value": "E2Hxy9lgF1o8MjNH",
           "mode": "list",
-          "cachedResultUrl": "/workflow/eTRNqtoJUYeSa9RS",
+          "cachedResultUrl": "/workflow/E2Hxy9lgF1o8MjNH",
           "cachedResultName": "[MVP] Preguntas"
         },
         "workflowInputs": {
@@ -1303,9 +1303,9 @@
         "description": "Deriva la conversación a un humano cuando el cliente lo pide, está confundido/molesto, o la consulta/pedido es riesgoso de resolver automático (posible mala experiencia).\nUsar esta tool para pausar la automatización y dejar contexto claro al operador.\nInputs: problema = motivo + resumen + último mensaje del cliente; telefono/conversation_id/contact_id para ubicar el chat.",
         "workflowId": {
           "__rl": true,
-          "value": "FXbiRUhxODlEkpIU",
+          "value": "OlSEnNch6HUrN1C1",
           "mode": "list",
-          "cachedResultUrl": "/workflow/FXbiRUhxODlEkpIU",
+          "cachedResultUrl": "/workflow/OlSEnNch6HUrN1C1",
           "cachedResultName": "[MVP] Derivar Humano"
         },
         "workflowInputs": {
@@ -1511,9 +1511,9 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "Aa2Kt85PLIXZZlZ9",
+          "value": "D79TNGwwAbCYwPhN",
           "mode": "list",
-          "cachedResultUrl": "/workflow/Aa2Kt85PLIXZZlZ9",
+          "cachedResultUrl": "/workflow/D79TNGwwAbCYwPhN",
           "cachedResultName": "[MVP] Despacho"
         },
         "workflowInputs": {
@@ -1639,9 +1639,9 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "z66aHt1gKAnCyzfy",
+          "value": "xPaI1neHixQjDPXJ",
           "mode": "list",
-          "cachedResultUrl": "/workflow/z66aHt1gKAnCyzfy",
+          "cachedResultUrl": "/workflow/xPaI1neHixQjDPXJ",
           "cachedResultName": "[MVP] Apertura"
         },
         "workflowInputs": {
@@ -1757,9 +1757,9 @@
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "KOv7S6vePfv1GTZF",
+          "value": "5bw56B9IJwLfuOYF",
           "mode": "list",
-          "cachedResultUrl": "/workflow/KOv7S6vePfv1GTZF",
+          "cachedResultUrl": "/workflow/5bw56B9IJwLfuOYF",
           "cachedResultName": "[MVP] Pago"
         },
         "workflowInputs": {
@@ -1915,9 +1915,9 @@
         "description": "Actualiza o confirma datos del cliente. Úsala para guardar el nombre del pedido y la dirección frecuente cuando el cliente la confirme o la cambie. También puedes usarla si el cliente actualiza su nombre.",
         "workflowId": {
           "__rl": true,
-          "value": "nnqR5Ccgps8U3B4o",
+          "value": "bWbJQPndHG56RRHn",
           "mode": "list",
-          "cachedResultUrl": "/workflow/nnqR5Ccgps8U3B4o",
+          "cachedResultUrl": "/workflow/bWbJQPndHG56RRHn",
           "cachedResultName": "[MVP] Perfil Cliente"
         },
         "workflowInputs": {
@@ -2011,9 +2011,9 @@
         "description": "Resuelve pedidos del cliente por código o referencia y también permite listar los pedidos aún modificables. Úsala cuando el cliente mencione un pedido por código completo o corto (por ejemplo 260418-1001 o 1001), cuando quiera consultar un pedido específico, o cuando necesites elegir entre varios pedidos vigentes.",
         "workflowId": {
           "__rl": true,
-          "value": "YzB0pgjih7LqyvOx",
+          "value": "CXSyNqVqMk3gHzSm",
           "mode": "list",
-          "cachedResultUrl": "/workflow/YzB0pgjih7LqyvOx",
+          "cachedResultUrl": "/workflow/CXSyNqVqMk3gHzSm",
           "cachedResultName": "[MVP] Pedidos Cliente"
         },
         "workflowInputs": {

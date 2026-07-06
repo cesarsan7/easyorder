@@ -6,7 +6,7 @@
         "inputSource": "jsonExample",
         "jsonExample": "{\"metodo\": \"transferencia\", \"telefono\": \"+56912345678\", \"session_id\": \"abc-123-def-456\", \"pedido_id\": 58, \"restaurante_id\": 1}"
       },
-      "id": "950b6026-fa13-4a2b-82e7-e78adee933af",
+      "id": "3b55e86f-6d67-4500-a71b-3944371e93d6",
       "typeVersion": 1.1,
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -21,7 +21,7 @@
         "query": "SELECT *\nFROM public.fn_select_pedido_reutilizable(\n  '{{ $('When Executed by Another Workflow').first().json.telefono }}',\n  '{{ $('When Executed by Another Workflow').first().json.session_id }}',\n  '{{ String($('When Executed by Another Workflow').first().json.pedido_id || '').replace(/'/g, \"''\") }}',\n  false,\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\n)",
         "options": {}
       },
-      "id": "0eac27ca-b9fc-4c05-9748-8d3d24224566",
+      "id": "0948c938-d661-41ca-aef7-d4db495d426f",
       "name": "Obtener Pedido con Total",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
@@ -32,7 +32,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -63,7 +63,7 @@
         },
         "options": {}
       },
-      "id": "c4b1c52c-d97a-465a-982b-ea997d8c5aa7",
+      "id": "2680633c-76cc-47c1-bd00-bc8fceb18797",
       "name": "¿Pedido Válido?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -97,7 +97,7 @@
         },
         "options": {}
       },
-      "id": "838febb0-7d20-4a0e-92e5-5ca30aac5e0c",
+      "id": "7f90890b-ef34-4958-950b-baa31f665e29",
       "name": "¿Es Transferencia?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
@@ -112,7 +112,7 @@
         "query": "SELECT datos_bancarios, direccion, moneda FROM restaurante WHERE id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} LIMIT 1",
         "options": {}
       },
-      "id": "1a9d7836-be02-4b9b-be81-0603fdf61ff1",
+      "id": "ea3de65b-9c8a-4191-8d06-0dbcbaabebfb",
       "name": "Obtener Datos Bancarios",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
@@ -123,7 +123,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -135,7 +135,7 @@
         "query": "UPDATE pedidos\nSET\n  metodo_pago = {{\n    String($(\"When Executed by Another Workflow\").first().json.metodo || \"\").toLowerCase().trim().includes(\"transfer\") ? \"'transferencia'\" :\n    String($(\"When Executed by Another Workflow\").first().json.metodo || \"\").toLowerCase().trim().includes(\"bizum\") ? \"'bizum'\" :\n    String($(\"When Executed by Another Workflow\").first().json.metodo || \"\").toLowerCase().trim().includes(\"online\") ? \"'online'\" :\n    (String($(\"When Executed by Another Workflow\").first().json.metodo || \"\").toLowerCase().trim().includes(\"tarjeta\") || String($(\"When Executed by Another Workflow\").first().json.metodo || \"\").toLowerCase().trim().includes(\"card\")) ? \"'tarjeta'\" :\n    \"'efectivo'\"\n  }},\n  estado = 'recibido',\n  estado_pago = 'pendiente',\n  updated_at = NOW()\nWHERE id = {{ $(\"Obtener Pedido con Total\").first().json.id }}\nRETURNING *",
         "options": {}
       },
-      "id": "ce6c8bba-826c-4220-9c54-fa44d1996947",
+      "id": "b34902a0-ee84-4038-976e-1b14a2bb3659",
       "name": "Registrar Método y Estado",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
@@ -145,7 +145,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -155,7 +155,7 @@
       "parameters": {
         "jsCode": "const pedidoDB = $json || {};\nconst trigger = (() => { try { return $(\"When Executed by Another Workflow\").first().json || {}; } catch { return {}; } })();\nconst datosRest = (() => { try { return $(\"Obtener Datos Bancarios\").first().json || {}; } catch { return {}; } })();\n\nfunction price(v) {\n  return \"€\" + Number(v || 0).toFixed(2).replace(\".\", \",\");\n}\n\nconst rawMetodo = String(trigger.metodo || \"\").toLowerCase().trim();\nconst metodo = rawMetodo.includes(\"transfer\") ? \"transferencia\"\n  : rawMetodo.includes(\"bizum\") ? \"bizum\"\n  : rawMetodo.includes(\"online\") ? \"online\"\n  : (rawMetodo.includes(\"tarjeta\") || rawMetodo.includes(\"card\")) ? \"tarjeta\"\n  : \"efectivo\";\n\nlet items = [];\ntry {\n  items = typeof pedidoDB.items === \"string\" ? JSON.parse(pedidoDB.items) : (pedidoDB.items || []);\n} catch {\n  items = [];\n}\n\nconst itemsTexto = items.length\n  ? items.map(i => `${Number(i.cantidad || 1)}x ${i.nombre}`).join(\", \")\n  : \"sin detalle disponible\";\n\nconst subtotal    = Number(pedidoDB.subtotal || 0);\nconst total       = Number(pedidoDB.total || 0);\nconst costoEnvio  = Number(pedidoDB.costo_envio || 0);\nconst tiempo      = pedidoDB.tiempo_estimado ? ` Tiempo estimado: ${pedidoDB.tiempo_estimado}.` : \"\";\n\nconst despachoTexto = String(pedidoDB.tipo_despacho || \"\") === \"delivery\"\n  ? `Delivery a ${pedidoDB.direccion}. Envío: ${price(costoEnvio)}.${tiempo}`\n  : `Retiro en el local${datosRest.direccion ? ` (${datosRest.direccion})` : \"\"}.${tiempo}`;\n\nconst codigoTexto = pedidoDB.pedido_codigo ? `Tu código de pedido es *${pedidoDB.pedido_codigo}*.` : \"\";\n\nlet instrucciones = \"\";\nif (metodo === \"transferencia\") {\n  const db = datosRest.datos_bancarios || null;\n  instrucciones = `Tu pedido ha sido REGISTRADO y está pendiente de confirmación por el restaurante. Para agilizar el proceso, transfiere ${price(total)}`;\n  if (db) {\n    instrucciones += \" a:\\n\";\n    if (db.banco)   instrucciones += `🏦 Banco: ${db.banco}\\n`;\n    if (db.titular) instrucciones += `👤 Titular: ${db.titular}\\n`;\n    if (db.cuenta)  instrucciones += `🔢 Cuenta: ${db.cuenta}\\n`;\n    if (db.alias)   instrucciones += `📲 Alias: ${db.alias}\\n`;\n    instrucciones += \"Envíanos el comprobante por aquí y el restaurante confirmará tu pedido.\";\n  } else {\n    instrucciones += \" y envíanos el comprobante. El restaurante confirmará tu pedido al verificarlo.\";\n  }\n} else if (metodo === \"efectivo\") {\n  instrucciones = `Pagarás en efectivo por ${price(total)}.`;\n} else if (metodo === \"tarjeta\") {\n  instrucciones = `El pago será con tarjeta por ${price(total)}.`;\n} else if (metodo === \"bizum\") {\n  instrucciones = `El pago será por Bizum por ${price(total)}.`;\n} else {\n  instrucciones = `El pago será online por ${price(total)}.`;\n}\n\nconst resumenItems = `${itemsTexto}. ${despachoTexto} Método de pago: ${metodo}. Subtotal: ${price(subtotal)}. Total: ${price(total)}.`;\nconst respuesta = [codigoTexto, resumenItems, instrucciones].filter(Boolean).join(\" \").replace(/  +/g, \" \").trim();\n\n// Datos bancarios estructurados para que el Director los incluya completos\nconst datosBancariosEstructurados = (() => {\n  const db = datosRest.datos_bancarios || null;\n  if (!db) return null;\n  return {\n    banco:   db.banco   || null,\n    titular: db.titular || null,\n    cuenta:  db.cuenta  || null,\n    alias:   db.alias   || null\n  };\n})();\n\nreturn [{\n  json: {\n    success: true,\n    respuesta_agente: respuesta,\n    pedido_id: pedidoDB.id,\n    pedido_numero: pedidoDB.pedido_numero,\n    pedido_codigo: pedidoDB.pedido_codigo || null,\n    total,\n    subtotal,\n    metodo_pago: metodo,\n    estado: pedidoDB.estado || \"recibido\",\n    estado_pago: pedidoDB.estado_pago || \"pendiente\",\n    tipo_despacho: pedidoDB.tipo_despacho || null,\n    tiempo_estimado: pedidoDB.tiempo_estimado || null,\n    datos_bancarios: datosBancariosEstructurados\n  }\n}];"
       },
-      "id": "8929a5f0-a51e-450f-a270-8964c36d7bc4",
+      "id": "1d359bf3-667b-48e5-bdd7-5183abc11995",
       "name": "Generar Resumen Final",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -169,7 +169,7 @@
       "parameters": {
         "jsCode": "// Sin pedido activo\nreturn [{\n  json: {\n    success: false,\n    respuesta_agente: 'No encontré un pedido activo para tu número. ¿Quieres hacer un pedido nuevo?',\n    pedido_id: null\n  }\n}];"
       },
-      "id": "7d7b66e9-909a-47f7-984a-767ff0becba7",
+      "id": "2afee819-7148-4490-b436-bc23a3ae69ee",
       "name": "Error Sin Pedido",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -186,56 +186,56 @@
         736,
         272
       ],
-      "id": "c823e2e5-9814-4646-a590-a78199357d70",
+      "id": "a2232042-06c6-4120-b348-84e9bd5932a1",
       "name": "Merge Respuesta Final"
     },
     {
-      "id": "error-sistema-pago-001",
+      "parameters": {
+        "jsCode": "// Nodo de catch global para Pago\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Pago',\n    mensaje: `Error técnico en Pago (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Pago (${origen}): ${detalle}`\n  }\n}];"
+      },
+      "id": "8cd9de4c-953d-4d33-ad7c-c8842614b4a4",
       "name": "Respuesta Error Sistema",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1200,
         400
-      ],
-      "parameters": {
-        "jsCode": "// Nodo de catch global para Pago\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Pago',\n    mensaje: `Error técnico en Pago (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Pago (${origen}): ${detalle}`\n  }\n}];"
-      }
+      ]
     },
     {
-      "id": "registrar-escalacion-pago-001",
-      "name": "Registrar Escalacion Error",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        1500,
-        400
-      ],
-      "continueOnFail": true,
       "parameters": {
         "operation": "executeQuery",
         "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }},\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Pago\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
         "options": {}
       },
+      "id": "375fe0b1-f828-4a9f-a272-9cd13d8ee7a6",
+      "name": "Registrar Escalacion Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1504,
+        400
+      ],
       "credentials": {
         "postgres": {
-          "id": "BqJnEVb3yFVjGaAz",
-          "name": "Postgres La Isla"
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
-      "id": "devolver-error-pago-001",
+      "parameters": {
+        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
+      },
+      "id": "75f868e9-24f7-4241-8055-97149cc9c3a7",
       "name": "Devolver Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1800,
+        1808,
         400
-      ],
-      "parameters": {
-        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
-      }
+      ]
     }
   ],
   "pinData": {},
@@ -396,12 +396,15 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
-  "versionId": "8d26b1e6-7da3-4395-8964-73791bc8235f",
+  "versionId": "f88c1ee8-0839-42d6-a5cf-dea5aceddbec",
   "meta": {
-    "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3e9e2731a8d5bb19fd4086b1e0521bd627f7d1fd4fb35cc0a5387b699bc723b0"
   },
-  "id": "TeL7JQMi9eqxaluk",
+  "nodeGroups": [],
+  "id": "5bw56B9IJwLfuOYF",
   "tags": []
 }

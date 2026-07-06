@@ -20,7 +20,7 @@
           ]
         }
       },
-      "id": "afd2708d-29c2-4df5-be0c-0dfcce71b210",
+      "id": "27aec494-e69f-4085-a4f5-98164d8132de",
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -37,7 +37,7 @@
           "systemMessage": "Eres el asistente de información de La Isla Pizzería\n\nResponde en español claro y breve. Máximo 4 frases. Texto plano. Puedes usar bullets simples con \"•\" si enumeras varias opciones.\n\nTOOLS:\n- Preguntas: preguntas frecuentes del restaurante.\n- Menu: catálogo actual del menú con categorías, productos, variantes/tamaños, extras y personalización.\n- Horarios: horario regular del local.\n\nREGLAS:\n1. Nunca inventes precios, ingredientes, tamaños, variantes ni extras.\n2. Si preguntan por menú, categorías, productos, variantes/tamaños, extras o personalización, usa Menu.\n3. Si preguntan por métodos de pago, delivery, cómo pedir o FAQs, usa Preguntas.\n4. Si preguntan por horarios o apertura, usa Horarios.\n5. Si no hay información exacta, dilo con honestidad.\n6. No tomes pedidos. Si el cliente quiere pedir, di: \"En el chat principal te ayudo con el pedido.\"\n7. Si hay varias opciones, ordénalas y muéstralas claramente.\n8. Si la pregunta es ambigua, haz una sola pregunta aclaratoria."
         }
       },
-      "id": "1d188c0d-41e6-4c4f-89b2-2208cdd1a82e",
+      "id": "283b3f75-ecfb-440e-b480-1a53e969d764",
       "name": "Agente Preguntas",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
@@ -51,8 +51,9 @@
       "parameters": {
         "model": {
           "__rl": true,
+          "value": "gpt-4.1-mini",
           "mode": "list",
-          "value": "gpt-4.1-mini"
+          "cachedResultName": "gpt-4.1-mini"
         },
         "options": {
           "temperature": 0.2,
@@ -60,7 +61,7 @@
           "useResponsesApi": false
         }
       },
-      "id": "b02d8b26-d60c-4d30-a1e3-927dd8f737fd",
+      "id": "1097278e-0acd-4506-be83-4db3233fdb4c",
       "name": "OpenAI Chat Model",
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
@@ -70,8 +71,8 @@
       ],
       "credentials": {
         "openAiApi": {
-          "id": "MjjYLoIl0GDk3Exw",
-          "name": "OpenAi account 2"
+          "id": "HJg3oCSrlKPoW35V",
+          "name": "OpenAI account n8nlaisla"
         }
       }
     },
@@ -81,7 +82,7 @@
         "sessionKey": "={{ $('When Executed by Another Workflow').first().json.restaurante_id + '_' + String($('When Executed by Another Workflow').first().json.telefono) }}",
         "contextWindowLength": 10
       },
-      "id": "fd2fab54-fe2c-419f-a307-6d2da36d7454",
+      "id": "cb7823f6-4c3c-4422-9a48-5fb4e113534a",
       "name": "Postgres Chat Memory",
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
@@ -91,7 +92,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -103,7 +104,7 @@
         "width": 600,
         "color": 4
       },
-      "id": "0ff6309f-cd67-4513-ae75-b605a1f14367",
+      "id": "99b0890c-7518-4176-a7b0-fcc40991de77",
       "name": "SN_0a5581",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
@@ -120,7 +121,7 @@
         "query": "SELECT pregunta, respuesta FROM public.faqs WHERE restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }} ORDER BY COALESCE(orden,0), pregunta",
         "options": {}
       },
-      "id": "0c2fba30-3f39-496c-a0bb-976cb9835992",
+      "id": "95ea4a4c-b2f8-4fc6-bb4d-62a6d6eb3a09",
       "name": "Preguntas",
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
@@ -130,7 +131,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -143,7 +144,7 @@
         "query": "SELECT categoria, producto, descripcion, variante AS tamano, precio, extras_disponibles, disponible, tags, is_pizza, producto_display\nFROM public.fn_menu_lookup(NULL, {{ $('When Executed by Another Workflow').first().json.restaurante_id }})\nORDER BY categoria, producto, precio",
         "options": {}
       },
-      "id": "727fbce1-08a2-4d82-ab43-98a4dec8d4f7",
+      "id": "9c4306d2-a317-4031-8ec6-b6ea6733c0a1",
       "name": "Menu",
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
@@ -153,7 +154,7 @@
       ],
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -170,62 +171,62 @@
         704,
         640
       ],
-      "id": "4e568069-f8c7-46fa-b76a-6323edf9ea00",
+      "id": "5fdbf8bd-d32c-43d4-b71f-55a2db877a9d",
       "name": "Horarios",
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
     },
     {
-      "id": "error-sistema-preguntas-001",
+      "parameters": {
+        "jsCode": "// Nodo de catch global para Preguntas\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Preguntas',\n    mensaje: `Error técnico en Preguntas (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Preguntas (${origen}): ${detalle}`\n  }\n}];"
+      },
+      "id": "3315c948-d896-4713-b3ce-0243c13f5d9f",
       "name": "Respuesta Error Sistema",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         800,
         400
-      ],
-      "parameters": {
-        "jsCode": "// Nodo de catch global para Preguntas\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Preguntas',\n    mensaje: `Error técnico en Preguntas (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Preguntas (${origen}): ${detalle}`\n  }\n}];"
-      }
+      ]
     },
     {
-      "id": "registrar-escalacion-preguntas-001",
-      "name": "Registrar Escalacion Error",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        1100,
-        400
-      ],
-      "continueOnFail": true,
       "parameters": {
         "operation": "executeQuery",
         "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $('When Executed by Another Workflow').first().json.restaurante_id }},\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Preguntas\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
         "options": {}
       },
+      "id": "e0f434e9-6535-4677-ae22-782d63303331",
+      "name": "Registrar Escalacion Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1104,
+        400
+      ],
       "credentials": {
         "postgres": {
-          "id": "BqJnEVb3yFVjGaAz",
-          "name": "Postgres La Isla"
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
-      "id": "devolver-error-preguntas-001",
+      "parameters": {
+        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
+      },
+      "id": "bb297ac4-9a20-4672-9731-d064bb9a3aed",
       "name": "Devolver Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1400,
+        1408,
         400
-      ],
-      "parameters": {
-        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
-      }
+      ]
     }
   ],
   "pinData": {},
@@ -334,18 +335,20 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
-  "versionId": "469cd8b8-96a3-42e3-ad44-e828b1a5225d",
+  "versionId": "02c83d59-34e3-4a36-8f29-477d31afe03c",
   "meta": {
-    "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
+    "instanceId": "3e9e2731a8d5bb19fd4086b1e0521bd627f7d1fd4fb35cc0a5387b699bc723b0"
   },
-  "id": "pZNufuNN7dzq46Os",
+  "nodeGroups": [],
+  "id": "rt7yh6MKsbONNawJ",
   "tags": [
     {
-      "updatedAt": "2026-03-04T02:24:25.093Z",
-      "createdAt": "2026-03-04T02:24:25.093Z",
-      "id": "FE12HW9lZW84kfFV",
+      "updatedAt": "2026-06-25T02:29:10.983Z",
+      "createdAt": "2026-06-25T02:29:10.983Z",
+      "id": "iHY0ViJCwGX9jPB8",
       "name": "MVP"
     }
   ]

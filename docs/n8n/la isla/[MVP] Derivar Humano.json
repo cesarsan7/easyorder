@@ -29,7 +29,7 @@
           ]
         }
       },
-      "id": "f3e6f20d-48a2-4ee8-9ec0-9c15b4bde2f9",
+      "id": "5993cdb8-b803-46ea-9edd-aedb33bff64e",
       "typeVersion": 1.1,
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -57,19 +57,19 @@
         320,
         224
       ],
-      "id": "5c7af49f-cce1-49e3-a973-c94626909552",
+      "id": "b156184a-7d13-4d45-b6ae-545bbf11f205",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "iQIEdjfflw5sGyn1",
-          "name": "OpenAi account"
+          "id": "HJg3oCSrlKPoW35V",
+          "name": "OpenAI account n8nlaisla"
         }
       }
     },
     {
       "parameters": {
         "method": "PUT",
-        "url": "=https://n8nlearning-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/contacts/{{ $('Variables').first().json.contact_id }}",
+        "url": "=https://la-isla-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/contacts/{{ $('Variables').first().json.contact_id }}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
@@ -83,15 +83,15 @@
         1264,
         0
       ],
-      "id": "c51ab5b9-8654-4b47-896c-485dcf5dbb64",
+      "id": "76a35cbc-4415-4552-87aa-542a1d1bf553",
       "name": "Apagar bot",
-      "continueOnFail": true,
       "credentials": {
         "httpHeaderAuth": {
-          "id": "GQGObUBKIPim8MDs",
+          "id": "TRpswqZMEVt7LNy8",
           "name": "Header Auth account"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -108,7 +108,7 @@
         1456,
         0
       ],
-      "id": "8fefe869-2bfa-4a89-bd91-993796a8408b",
+      "id": "39ec61cc-68df-4840-a978-b0b8e373e187",
       "name": "noti lovable",
       "disabled": true
     },
@@ -126,7 +126,7 @@
         368,
         0
       ],
-      "id": "1ede9ae6-4e66-4feb-ad35-178d9f06eaee",
+      "id": "e7a6c8ee-0fd8-4a05-95eb-de6683f6116a",
       "name": "Resuelve Problemas"
     },
     {
@@ -167,7 +167,7 @@
         768,
         0
       ],
-      "id": "c2f28c75-85a4-4ac6-98f3-d5c4ca7e7010",
+      "id": "f7059d29-2077-4cfc-8609-bc86b27577af",
       "name": "Variables"
     },
     {
@@ -180,16 +180,16 @@
         1056,
         0
       ],
-      "id": "9e51780f-0361-4f1e-af07-3f4df7fa27ab",
+      "id": "8e3f05d1-eb99-4b55-a890-3999c5f1aadf",
       "name": "Limit"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "MKeEjy4NbORRNCvP",
+          "value": "OXJWtkzaDC1D4SJt",
           "mode": "list",
-          "cachedResultUrl": "/workflow/MKeEjy4NbORRNCvP",
+          "cachedResultUrl": "/workflow/OXJWtkzaDC1D4SJt",
           "cachedResultName": "[MVP] Contexto"
         },
         "workflowInputs": {
@@ -198,9 +198,7 @@
             "Contexto Actual": "={{ $('When Executed by Another Workflow').item.json.contexto_actual || 'sin datos' }}",
             "Mensaje del Cliente": "={{ $('When Executed by Another Workflow').item.json.problema }}",
             "Respuesta del Agente": "={{ $('Resuelve Problemas').item.json.output }}",
-            "Telefono": "={{ $('When Executed by Another Workflow').item.json.telefono }}",
-            "Session ID": "={{ $('When Executed by Another Workflow').item.json.conversation_id }}",
-            "Session Started At": "={{ $now.toISO() }}"
+            "Telefono": "={{ $('When Executed by Another Workflow').item.json.telefono }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -243,26 +241,6 @@
               "canBeUsedToMatch": true,
               "type": "string",
               "removed": false
-            },
-            {
-              "id": "Session ID",
-              "displayName": "Session ID",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string",
-              "removed": false
-            },
-            {
-              "id": "Session Started At",
-              "displayName": "Session Started At",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "canBeUsedToMatch": true,
-              "type": "string",
-              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -276,7 +254,7 @@
         1664,
         0
       ],
-      "id": "9698f1fb-9bc8-440d-9d75-a6fc3870fe14",
+      "id": "bfc6d0c5-5658-4eb8-aa25-95bea9988ca7",
       "name": "Crear Contexto1",
       "notesInFlow": true
     },
@@ -284,12 +262,12 @@
       "parameters": {
         "jsCode": "// Prepara el payload para INSERT en escalaciones.\n// Tomamos los valores del trigger original para evitar referencias rotas.\nconst trigger = $('When Executed by Another Workflow').first().json;\nconst respuesta = (() => { try { return $('Resuelve Problemas').first().json.output || ''; } catch { return ''; } })();\n\nconst contexto = {\n  contexto_actual: trigger.contexto_actual || null,\n  respuesta_agente: respuesta\n};\n\nreturn [{\n  json: {\n    telefono:        String(trigger.telefono || ''),\n    problema:        String(trigger.problema  || '').substring(0, 1000),\n    contexto_str:    JSON.stringify(contexto),\n    conversation_id: String(trigger.conversation_id || ''),\n    account_id:      String(trigger.account_id      || ''),\n    contact_id:      String(trigger.contact_id      || ''),\n    tipo_escalacion: String(trigger.tipo_escalacion || 'derivacion_cliente')\n  }\n}];"
       },
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "id": "aa2be734-f730-4843-a5bc-e6a0e6d0915f",
       "name": "Preparar Escalacion",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1900,
+        1904,
         0
       ]
     },
@@ -299,22 +277,22 @@
         "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $json.problema.replace(/'/g, \"''\") }}',\n  '{{ $json.contexto_str.replace(/'/g, \"''\") }}'::jsonb,\n  '{{ $json.conversation_id }}',\n  '{{ $json.account_id }}',\n  '{{ $json.contact_id }}',\n  '{{ $json.tipo_escalacion }}',\n  'pendiente'\n)\nRETURNING id, created_at",
         "options": {}
       },
-      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "id": "bff4e5eb-0d48-46cf-b162-e0de90b3c20c",
       "name": "Registrar Escalacion",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        2130,
+        2144,
         0
       ],
       "alwaysOutputData": true,
-      "continueOnFail": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "continueOnFail": true
     }
   ],
   "pinData": {
@@ -438,12 +416,14 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
-  "versionId": "d5f5fb07-0890-473c-8f08-a45e5fea22d4",
+  "versionId": "05e7adea-6cd2-4a47-9a9e-6eb681957395",
   "meta": {
-    "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
+    "instanceId": "3e9e2731a8d5bb19fd4086b1e0521bd627f7d1fd4fb35cc0a5387b699bc723b0"
   },
-  "id": "pySGUs18QoDJf4Ie",
+  "nodeGroups": [],
+  "id": "W4uBBY9mfZ207X3M",
   "tags": []
 }

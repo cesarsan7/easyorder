@@ -20,7 +20,7 @@
           ]
         }
       },
-      "id": "34719e09-9924-4dc3-a045-b4a96bbc7fb0",
+      "id": "7cb428c5-763e-4402-9a66-34e1ea9e293e",
       "typeVersion": 1.1,
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -49,12 +49,12 @@
         240,
         144
       ],
-      "id": "ee5bf047-2a2a-48a0-ac47-f1535d749e9e",
+      "id": "e2ff808a-d517-4f72-a881-fad1cd9279c6",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "iQIEdjfflw5sGyn1",
-          "name": "OpenAi account"
+          "id": "HJg3oCSrlKPoW35V",
+          "name": "OpenAI account n8nlaisla"
         }
       }
     },
@@ -154,11 +154,11 @@
         560,
         0
       ],
-      "id": "c442bd47-65ec-49e6-990f-8a67c41c53ce",
+      "id": "41592fa5-f6c2-4ee6-8ce6-fbae5af69a0d",
       "name": "Actualizar Contexto",
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -183,57 +183,57 @@
         240,
         0
       ],
-      "id": "35b60d5f-a96b-4f0b-b13d-45319a5ab0ad",
+      "id": "5004400a-2c96-4994-a596-61e854d62bfd",
       "name": "Generar contexto",
       "onError": "continueErrorOutput"
     },
     {
-      "id": "error-sistema-contexto-001",
+      "parameters": {
+        "jsCode": "// Nodo de catch global para Contexto\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Contexto',\n    mensaje: `Error técnico en Contexto (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Contexto (${origen}): ${detalle}`\n  }\n}];"
+      },
+      "id": "cfe774f5-ed7b-4b2b-a0a9-bdf0e0c2b32e",
       "name": "Respuesta Error Sistema",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         800,
         400
-      ],
-      "parameters": {
-        "jsCode": "// Nodo de catch global para Contexto\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Contexto',\n    mensaje: `Error técnico en Contexto (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Contexto (${origen}): ${detalle}`\n  }\n}];"
-      }
+      ]
     },
     {
-      "id": "registrar-escalacion-contexto-001",
-      "name": "Registrar Escalacion Error",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        1100,
-        400
-      ],
-      "continueOnFail": true,
       "parameters": {
         "operation": "executeQuery",
         "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Contexto\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
         "options": {}
       },
+      "id": "ed3c9997-3987-4104-b09e-da5b42f9e5ec",
+      "name": "Registrar Escalacion Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1104,
+        400
+      ],
       "credentials": {
         "postgres": {
-          "id": "BqJnEVb3yFVjGaAz",
-          "name": "Postgres La Isla"
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
-      "id": "devolver-error-contexto-001",
+      "parameters": {
+        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
+      },
+      "id": "93051bfa-ac98-4583-8194-4491af37ed52",
       "name": "Devolver Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1400,
+        1408,
         400
-      ],
-      "parameters": {
-        "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
-      }
+      ]
     }
   ],
   "pinData": {},
@@ -316,12 +316,14 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "availableInMCP": false
   },
-  "versionId": "f3e46574-f324-4d6a-9b7e-f34daf74e213",
+  "versionId": "a12dd5fc-7dc8-4a6d-89a3-be9992e2533c",
   "meta": {
-    "instanceId": "d5ff1dfbe938dd1df5f04ecb5cda709a5ed90c849285e445f339251dbf18d613"
+    "instanceId": "3e9e2731a8d5bb19fd4086b1e0521bd627f7d1fd4fb35cc0a5387b699bc723b0"
   },
-  "id": "MKeEjy4NbORRNCvP",
+  "nodeGroups": [],
+  "id": "OXJWtkzaDC1D4SJt",
   "tags": []
 }
