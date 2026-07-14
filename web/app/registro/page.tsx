@@ -81,13 +81,13 @@ function toSlug(nombre: string): string {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type RegistroStep = 'account' | 'restaurant' | 'done'
+type RegistroStep = 'account' | 'restaurant' | 'bot' | 'done'
 type SlugStatus   = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StepDots({ step }: { step: RegistroStep }) {
-  const steps: RegistroStep[] = ['account', 'restaurant', 'done']
+  const steps: RegistroStep[] = ['account', 'restaurant', 'bot', 'done']
   const current = steps.indexOf(step)
   return (
     <div className="flex items-center gap-2 mb-6">
@@ -540,7 +540,187 @@ function StepRestaurant({ onDone }: { onDone: (slug: string, nombre: string) => 
   )
 }
 
-// ─── Step 2: Done ─────────────────────────────────────────────────────────────
+// ─── Step 2: Bot / WhatsApp configuration ────────────────────────────────────
+
+interface BotConfig {
+  bot_activo:             boolean
+  whatsapp_number:        string
+  chatwoot_webhook_prod:  string
+  chatwoot_webhook_test:  string
+  chatwoot_inbox_id:      string
+}
+
+function StepBot({
+  slug,
+  onDone,
+  onSkip,
+}: {
+  slug:   string
+  onDone: () => void
+  onSkip: () => void
+}) {
+  const [botActivo,            setBotActivo]            = useState(false)
+  const [whatsappNumber,       setWhatsappNumber]       = useState('')
+  const [chatwootWebhookProd,  setChatwootWebhookProd]  = useState('')
+  const [chatwootWebhookTest,  setChatwootWebhookTest]  = useState('')
+  const [chatwootInboxId,      setChatwootInboxId]      = useState('')
+  const [loading,              setLoading]              = useState(false)
+  const [error,                setError]                = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    try {
+      const supabase = createClient()
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) { setError('Sesión expirada. Recarga la página.'); setLoading(false); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { setError('No se pudo obtener la sesión.'); setLoading(false); return }
+
+      const botConfig: BotConfig = {
+        bot_activo:            botActivo,
+        whatsapp_number:       whatsappNumber.trim(),
+        chatwoot_webhook_prod: chatwootWebhookProd.trim(),
+        chatwoot_webhook_test: chatwootWebhookTest.trim(),
+        chatwoot_inbox_id:     chatwootInboxId.trim(),
+      }
+
+      const res = await fetch(`${API_URL}/onboarding/bot-config`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ slug, ...botConfig }),
+      })
+
+      if (!res.ok) {
+        const err: { error?: string; detail?: string } = await res.json().catch(() => ({}))
+        setError(err.detail ?? err.error ?? `Error ${res.status}`)
+        setLoading(false)
+        return
+      }
+
+      onDone()
+    } catch {
+      setError('Error de conexión. Intenta de nuevo.')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Agente WhatsApp</h2>
+        <p className="text-sm text-gray-500">
+          Si ya tienes el bot configurado por el equipo de EasyOrder, ingresa los datos de conexión.
+          Puedes omitir este paso y configurarlo después desde el dashboard.
+        </p>
+      </div>
+
+      {/* Toggle bot activo */}
+      <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+        <div>
+          <p className="text-sm font-medium text-gray-800">Activar agente WhatsApp</p>
+          <p className="text-xs text-gray-400 mt-0.5">El bot gestionará los pedidos automáticamente</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setBotActivo(v => !v)}
+          className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+          style={{ backgroundColor: botActivo ? ACCENT : '#D1D5DB' }}
+        >
+          <span
+            className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+            style={{ transform: botActivo ? 'translateX(22px)' : 'translateX(2px)' }}
+          />
+        </button>
+      </div>
+
+      {botActivo && (
+        <div className="space-y-3 animate-in fade-in duration-200">
+          {/* Número WhatsApp del restaurante */}
+          <div>
+            <Label htmlFor="wa_number">Número WhatsApp del restaurante</Label>
+            <Input
+              id="wa_number"
+              type="tel"
+              placeholder="+34613598934"
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value)}
+            />
+            <p className="text-xs mt-1 text-gray-400">Número registrado en Meta Business (con código de país)</p>
+          </div>
+
+          {/* Chatwoot Webhook Producción */}
+          <div>
+            <Label htmlFor="cw_prod">Webhook Chatwoot — Producción</Label>
+            <Input
+              id="cw_prod"
+              type="url"
+              placeholder="https://tu-n8n.easypanel.host/webhook/chatwootnew"
+              value={chatwootWebhookProd}
+              onChange={(e) => setChatwootWebhookProd(e.target.value)}
+            />
+          </div>
+
+          {/* Chatwoot Webhook Test */}
+          <div>
+            <Label htmlFor="cw_test">Webhook Chatwoot — Test</Label>
+            <Input
+              id="cw_test"
+              type="url"
+              placeholder="https://tu-n8n.easypanel.host/webhook-test/chatwootnew"
+              value={chatwootWebhookTest}
+              onChange={(e) => setChatwootWebhookTest(e.target.value)}
+            />
+            <p className="text-xs mt-1 text-gray-400">Para pruebas sin afectar clientes reales</p>
+          </div>
+
+          {/* Chatwoot Inbox ID */}
+          <div>
+            <Label htmlFor="cw_inbox">Chatwoot Inbox ID</Label>
+            <Input
+              id="cw_inbox"
+              type="number"
+              placeholder="5"
+              value={chatwootInboxId}
+              onChange={(e) => setChatwootInboxId(e.target.value)}
+            />
+            <p className="text-xs mt-1 text-gray-400">
+              Encuéntralo en Chatwoot → Configuración → Bandejas de entrada
+            </p>
+          </div>
+
+          {/* Nota informativa */}
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 space-y-1">
+            <p className="font-semibold">⚠️ Requiere configuración previa</p>
+            <p>El agente WhatsApp debe haber sido configurado por el equipo de EasyOrder antes de activarlo.</p>
+            <p>Una vez guardado, el bot estará operativo para el número indicado.</p>
+          </div>
+        </div>
+      )}
+
+      {error && <ErrorBox msg={error} />}
+
+      <PrimaryBtn loading={loading}>
+        {loading ? 'Guardando…' : botActivo ? 'Guardar configuración →' : 'Continuar sin bot →'}
+      </PrimaryBtn>
+
+      <button
+        type="button"
+        onClick={onSkip}
+        className="w-full text-xs text-gray-400 hover:text-gray-600 transition-colors py-1"
+      >
+        Omitir por ahora — configuraré el bot desde el dashboard
+      </button>
+    </form>
+  )
+}
+
+// ─── Step 3: Done ─────────────────────────────────────────────────────────────
 
 function StepDone({ slug, nombre }: { slug: string; nombre: string }) {
   const publicUrl    = `${PUBLIC_DOMAIN}/${slug}`
@@ -607,8 +787,6 @@ export default function RegistroPage() {
   const [checkingAuth, setCheckingAuth] = useState(true)
 
   // On mount: check if user is already authenticated — skip account step.
-  // getUser() valida con el servidor y maneja el canje PKCE (?code=xxx) si viene
-  // de un link de confirmación de email redirigido por /auth/callback.
   useEffect(() => {
     async function check() {
       const supabase = createClient()
@@ -626,6 +804,10 @@ export default function RegistroPage() {
   function handleRestaurantDone(slug: string, nombre: string) {
     setResultSlug(slug)
     setResultNombre(nombre)
+    setStep('bot')
+  }
+
+  function handleBotDone() {
     setStep('done')
   }
 
@@ -663,6 +845,14 @@ export default function RegistroPage() {
 
           {step === 'restaurant' && (
             <StepRestaurant onDone={handleRestaurantDone} />
+          )}
+
+          {step === 'bot' && (
+            <StepBot
+              slug={resultSlug}
+              onDone={handleBotDone}
+              onSkip={handleBotDone}
+            />
           )}
 
           {step === 'done' && (

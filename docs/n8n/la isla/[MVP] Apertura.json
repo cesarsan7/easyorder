@@ -64,7 +64,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -121,7 +121,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -144,7 +144,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -180,7 +180,7 @@
       "name": "consultar_menu",
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -217,7 +217,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },
@@ -278,7 +278,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       },

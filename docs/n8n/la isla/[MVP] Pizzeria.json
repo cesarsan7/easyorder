@@ -642,7 +642,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -800,7 +800,7 @@
       "name": "Nuevo usuario",
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -858,7 +858,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -995,7 +995,8 @@
         "promptType": "define",
         "text": "={{ $input.first().json.input }}",
         "options": {
-          "systemMessage": "=Eres el asistente virtual de La Isla Pizzería por WhatsApp.\n\nESTADO DEL LOCAL:\n- Estado: {{ $json.estado }}\n- Motivo: {{ $json.tipo }}\n- Detalle: {{ $json.mensaje }}\n\nCONTEXTO DEL CLIENTE:\n{{ $json.contexto }}\n\nOBJETIVO:\n- informar que el local está cerrado\n- decir cuándo abre usando el detalle disponible\n- responder dudas informativas con Preguntas\n- derivar a humano con Derivar Humano si el cliente lo pide, reclama o hay un problema sensible\n- no tomar pedidos mientras esté cerrado\n\nREGLAS:\n1. Español neutro, tuteo, texto plano.\n2. Máximo 2 frases.\n3. No inventes datos.\n4. Si preguntan menú, precios, horarios, delivery, métodos de pago o promociones, usa Preguntas.\n5. Si el cliente quiere pedir, indica que ahora estamos cerrados y cuándo puede escribir.\n6. Si pide humano o reporta cobro incorrecto, reclamo o urgencia, usa Derivar Humano.\n7. No prometas tiempos exactos.\n8. No digas que no puedes derivar si la tool Derivar Humano está disponible; úsala."
+          "systemMessage": "=Eres el asistente virtual de La Isla Pizzería por WhatsApp.\n\nESTADO DEL LOCAL:\n- Estado: {{ $json.estado }}\n- Motivo: {{ $json.tipo }}\n- Detalle: {{ $json.mensaje }}\n\nCONTEXTO DEL CLIENTE:\n{{ $json.contexto }}\n\nOBJETIVO:\n- informar que el local está cerrado\n- decir cuándo abre usando el detalle disponible\n- responder dudas informativas con Preguntas\n- derivar a humano con Derivar Humano si el cliente lo pide, reclama o hay un problema sensible\n- no tomar pedidos mientras esté cerrado\n\nREGLAS:\n1. Español neutro, tuteo, texto plano.\n2. Máximo 2 frases.\n3. No inventes datos.\n4. Si preguntan menú, precios, horarios, delivery, métodos de pago o promociones, usa Preguntas.\n5. Si el cliente quiere pedir, indica que ahora estamos cerrados y cuándo puede escribir.\n6. Si pide humano o reporta cobro incorrecto, reclamo o urgencia, usa Derivar Humano.\n7. No prometas tiempos exactos.\n8. No digas que no puedes derivar si la tool Derivar Humano está disponible; úsala.",
+          "maxIterations": 10
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -1174,7 +1175,7 @@
       "name": "Memory",
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -1883,7 +1884,7 @@
       "name": "Obtener Config Restaurante",
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -1905,7 +1906,7 @@
       "alwaysOutputData": true,
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -2096,7 +2097,7 @@
       "name": "Horarios",
       "credentials": {
         "postgres": {
-          "id": "tud2wJu4FrMUtnqd",
+          "id": "cfmYSBh3ClVgSqjm",
           "name": "postgres restaurante_mvp"
         }
       }
@@ -2562,7 +2563,7 @@
       "main": [
         [
           {
-            "node": "Horarios",
+            "node": "Obtener Config Restaurante",
             "type": "main",
             "index": 0
           }
@@ -2754,7 +2755,7 @@
       "main": [
         [
           {
-            "node": "Variables",
+            "node": "Horarios",
             "type": "main",
             "index": 0
           }

@@ -2562,7 +2562,7 @@
       "main": [
         [
           {
-            "node": "Horarios",
+            "node": "Obtener Config Restaurante",
             "type": "main",
             "index": 0
           }
@@ -2754,7 +2754,7 @@
       "main": [
         [
           {
-            "node": "Variables",
+            "node": "Horarios",
             "type": "main",
             "index": 0
           }

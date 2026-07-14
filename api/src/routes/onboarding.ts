@@ -190,4 +190,65 @@ onboardingRoutes.post('/complete', async (c) => {
   }
 });
 
+// ─── POST /onboarding/bot-config ─────────────────────────────────────────────
+// Saves WhatsApp / Chatwoot bot configuration for an existing restaurant.
+// The user must be owner/admin of the restaurant identified by slug.
+onboardingRoutes.post('/bot-config', async (c) => {
+  const user = await validateBearerToken(c.req.header('Authorization'));
+  if (!user) return c.json({ error: 'unauthorized' }, 401);
+
+  let body: unknown;
+  try { body = await c.req.json(); } catch {
+    return c.json({ error: 'invalid_body' }, 400);
+  }
+  const b = body as Record<string, unknown>;
+
+  const slug = typeof b.slug === 'string' ? b.slug.toLowerCase().trim() : '';
+  if (!slug) return c.json({ error: 'missing_slug' }, 400);
+
+  try {
+    // Verify the user owns this restaurant
+    const rows = await sql<{ id: number }[]>`
+      SELECT r.id FROM public.restaurante r
+      JOIN public.local_memberships lm ON lm.restaurante_id = r.id
+      WHERE r.slug     = ${slug}
+        AND lm.user_id = ${user.id}
+        AND lm.activo  = true
+      LIMIT 1
+    `;
+    if (!rows.length) return c.json({ error: 'forbidden' }, 403);
+
+    const restaurante_id = rows[0].id;
+
+    const botConfig: Record<string, string> = {
+      bot_activo:            b.bot_activo === true ? 'true' : 'false',
+      whatsapp_number:       typeof b.whatsapp_number       === 'string' ? b.whatsapp_number.trim()       : '',
+      chatwoot_webhook_prod: typeof b.chatwoot_webhook_prod === 'string' ? b.chatwoot_webhook_prod.trim() : '',
+      chatwoot_webhook_test: typeof b.chatwoot_webhook_test === 'string' ? b.chatwoot_webhook_test.trim() : '',
+      chatwoot_inbox_id:     typeof b.chatwoot_inbox_id     === 'string' ? b.chatwoot_inbox_id.trim()     : '',
+    };
+
+    // Upsert each key into restaurante_config
+    for (const [key, value] of Object.entries(botConfig)) {
+      await sql`
+        INSERT INTO public.restaurante_config
+          (restaurante_id, config_key, config_value, description, updated_at)
+        VALUES (
+          ${restaurante_id}, ${key}, ${value},
+          ${'Configuración del agente WhatsApp — establecida en onboarding'},
+          NOW()
+        )
+        ON CONFLICT (config_key, restaurante_id)
+        DO UPDATE SET config_value = EXCLUDED.config_value, updated_at = NOW()
+      `;
+    }
+
+    return c.json({ ok: true, restaurante_id }, 200);
+
+  } catch (err: unknown) {
+    console.error('[POST /onboarding/bot-config]', (err as Error).message ?? err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
 export default onboardingRoutes;
