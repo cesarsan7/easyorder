@@ -3,47 +3,47 @@
 --         al restaurante destino recién creado en onboarding.
 --
 -- USO:
---   1. Cambia SOURCE_ID y TARGET_SLUG en el bloque de variables (líneas ~20-21)
+--   1. Ajusta v_source_id y v_target_slug (líneas ~20-21)
 --   2. Ejecuta completo en Supabase SQL Editor
---
--- QUÉ COPIA: restaurante_config, config_operativa, horarios,
---            delivery_zone, faqs, menu_category, menu_item,
---            menu_variant, extra, menu_item_extra
--- QUÉ NO COPIA: pedidos, usuarios, contexto, n8n_chat_histories,
---               local_memberships, config bot (whatsapp/chatwoot)
 -- ============================================================
 
 DO $$
 DECLARE
-  SOURCE_ID   INT  := 1;                  -- ← CAMBIAR: id del restaurante origen
-  TARGET_SLUG TEXT := 'la-isla-pizzeria'; -- ← CAMBIAR: slug del restaurante destino
+  v_source_id   INT  := 1;                  -- ← CAMBIAR si es necesario
+  v_target_slug TEXT := 'la-isla-pizzeria'; -- ← CAMBIAR si es necesario
 
-  TARGET_ID   INT;
-  old_id      BIGINT;
-  new_id      BIGINT;
-  r           RECORD;
+  v_target_id   INT;
+  v_new_cat_id  BIGINT;
+  v_new_item_id BIGINT;
+  v_new_xtra_id BIGINT;
+  v_mapped_cat  BIGINT;
+  v_mapped_item BIGINT;
+  v_mapped_xtra BIGINT;
+  r             RECORD;
 BEGIN
 
-  -- ── 0. Resolver TARGET_ID ─────────────────────────────────────────────────
-  SELECT id INTO TARGET_ID FROM public.restaurante WHERE slug = TARGET_SLUG;
-  IF TARGET_ID IS NULL THEN
-    RAISE EXCEPTION 'No se encontró ningún restaurante con slug = %', TARGET_SLUG;
+  -- 0. Resolver target ──────────────────────────────────────────────────────
+  SELECT id INTO v_target_id
+  FROM public.restaurante WHERE slug = v_target_slug;
+
+  IF v_target_id IS NULL THEN
+    RAISE EXCEPTION 'No se encontró restaurante con slug = %', v_target_slug;
   END IF;
-  RAISE NOTICE 'Copiando restaurante_id=% → id=% (%)', SOURCE_ID, TARGET_ID, TARGET_SLUG;
 
-  -- Tablas temporales para mapeo old_id → new_id (sin hstore)
-  CREATE TEMP TABLE IF NOT EXISTS _cat_map   (old_id BIGINT, new_id BIGINT) ON COMMIT DROP;
-  CREATE TEMP TABLE IF NOT EXISTS _item_map  (old_id BIGINT, new_id BIGINT) ON COMMIT DROP;
-  CREATE TEMP TABLE IF NOT EXISTS _extra_map (old_id BIGINT, new_id BIGINT) ON COMMIT DROP;
-  TRUNCATE _cat_map, _item_map, _extra_map;
+  RAISE NOTICE 'Copiando id=% → id=% (%)', v_source_id, v_target_id, v_target_slug;
 
-  -- ── 1. restaurante_config ─────────────────────────────────────────────────
+  -- Tablas temporales con nombres de columna distintos al de la variable
+  CREATE TEMP TABLE IF NOT EXISTS _map_cat   (src BIGINT, dst BIGINT) ON COMMIT DROP;
+  CREATE TEMP TABLE IF NOT EXISTS _map_item  (src BIGINT, dst BIGINT) ON COMMIT DROP;
+  CREATE TEMP TABLE IF NOT EXISTS _map_extra (src BIGINT, dst BIGINT) ON COMMIT DROP;
+  TRUNCATE _map_cat, _map_item, _map_extra;
+
+  -- 1. restaurante_config ───────────────────────────────────────────────────
   INSERT INTO public.restaurante_config
     (restaurante_id, config_key, config_value, description, updated_at)
-  SELECT
-    TARGET_ID, config_key, config_value, description, NOW()
+  SELECT v_target_id, config_key, config_value, description, NOW()
   FROM public.restaurante_config
-  WHERE restaurante_id = SOURCE_ID
+  WHERE restaurante_id = v_source_id
     AND config_key NOT IN (
       'bot_activo','whatsapp_number',
       'chatwoot_webhook_prod','chatwoot_webhook_test','chatwoot_inbox_id'
@@ -53,22 +53,22 @@ BEGIN
 
   RAISE NOTICE '✓ restaurante_config';
 
-  -- ── 2. config_operativa ───────────────────────────────────────────────────
+  -- 2. config_operativa ─────────────────────────────────────────────────────
   INSERT INTO public.config_operativa
     (restaurante_id, tiempo_espera_minutos, mensaje_tiempo_espera)
-  SELECT TARGET_ID, tiempo_espera_minutos, mensaje_tiempo_espera
+  SELECT v_target_id, tiempo_espera_minutos, mensaje_tiempo_espera
   FROM public.config_operativa
-  WHERE restaurante_id = SOURCE_ID
+  WHERE restaurante_id = v_source_id
   ON CONFLICT DO NOTHING;
 
   RAISE NOTICE '✓ config_operativa';
 
-  -- ── 3. horarios ───────────────────────────────────────────────────────────
+  -- 3. horarios ─────────────────────────────────────────────────────────────
   INSERT INTO public.horarios
     (restaurante_id, dia, disponible, apertura_1, cierre_1, apertura_2, cierre_2)
-  SELECT TARGET_ID, dia, disponible, apertura_1, cierre_1, apertura_2, cierre_2
+  SELECT v_target_id, dia, disponible, apertura_1, cierre_1, apertura_2, cierre_2
   FROM public.horarios
-  WHERE restaurante_id = SOURCE_ID
+  WHERE restaurante_id = v_source_id
   ON CONFLICT (restaurante_id, dia)
     DO UPDATE SET
       disponible = EXCLUDED.disponible,
@@ -79,87 +79,85 @@ BEGIN
 
   RAISE NOTICE '✓ horarios';
 
-  -- ── 4. delivery_zone ──────────────────────────────────────────────────────
+  -- 4. delivery_zone ────────────────────────────────────────────────────────
   INSERT INTO public.delivery_zone (
     restaurante_id, postal_code, zone_name, fee, is_active,
     description, min_order_amount, estimated_minutes_min, estimated_minutes_max
   )
   SELECT
-    TARGET_ID, postal_code, zone_name, fee, is_active,
+    v_target_id, postal_code, zone_name, fee, is_active,
     description, min_order_amount, estimated_minutes_min, estimated_minutes_max
   FROM public.delivery_zone
-  WHERE restaurante_id = SOURCE_ID
+  WHERE restaurante_id = v_source_id
   ON CONFLICT DO NOTHING;
 
   RAISE NOTICE '✓ delivery_zone';
 
-  -- ── 5. faqs ───────────────────────────────────────────────────────────────
-  INSERT INTO public.faqs (restaurante_id, pregunta, respuesta, activo, created_at)
-  SELECT TARGET_ID, pregunta, respuesta, activo, NOW()
+  -- 5. faqs ─────────────────────────────────────────────────────────────────
+  INSERT INTO public.faqs (restaurante_id, pregunta, respuesta, orden)
+  SELECT v_target_id, pregunta, respuesta, orden
   FROM public.faqs
-  WHERE restaurante_id = SOURCE_ID
+  WHERE restaurante_id = v_source_id
   ON CONFLICT DO NOTHING;
 
   RAISE NOTICE '✓ faqs';
 
-  -- ── 6. menu_category ──────────────────────────────────────────────────────
+  -- 6. menu_category ────────────────────────────────────────────────────────
   FOR r IN
     SELECT * FROM public.menu_category
-    WHERE restaurante_id = SOURCE_ID
+    WHERE restaurante_id = v_source_id
     ORDER BY sort_order
   LOOP
     INSERT INTO public.menu_category
       (restaurante_id, name, sort_order, is_active, created_at)
-    VALUES (TARGET_ID, r.name, r.sort_order, r.is_active, NOW())
-    RETURNING menu_category_id INTO new_id;
+    VALUES (v_target_id, r.name, r.sort_order, r.is_active, NOW())
+    RETURNING menu_category_id INTO v_new_cat_id;
 
-    INSERT INTO _cat_map VALUES (r.menu_category_id, new_id);
+    INSERT INTO _map_cat (src, dst) VALUES (r.menu_category_id, v_new_cat_id);
   END LOOP;
 
-  RAISE NOTICE '✓ menu_category (% categorías)', (SELECT COUNT(*) FROM _cat_map);
+  RAISE NOTICE '✓ menu_category (% categorías)', (SELECT COUNT(*) FROM _map_cat);
 
-  -- ── 7. menu_item ──────────────────────────────────────────────────────────
+  -- 7. menu_item ────────────────────────────────────────────────────────────
   FOR r IN
     SELECT * FROM public.menu_item
-    WHERE restaurante_id = SOURCE_ID
+    WHERE restaurante_id = v_source_id
     ORDER BY menu_item_id
   LOOP
-    SELECT new_id INTO new_id
-    FROM _cat_map WHERE old_id = r.menu_category_id;
+    SELECT dst INTO v_mapped_cat FROM _map_cat WHERE src = r.menu_category_id;
 
     INSERT INTO public.menu_item (
       restaurante_id, menu_category_id, name, description,
-      price, is_active, allergens, tags, image_url, created_at
+      is_active, tags, created_at
     )
     VALUES (
-      TARGET_ID, new_id, r.name, r.description,
-      r.price, r.is_active, r.allergens, r.tags, r.image_url, NOW()
+      v_target_id, v_mapped_cat, r.name, r.description,
+      r.is_active, r.tags, NOW()
     )
-    RETURNING menu_item_id INTO new_id;
+    RETURNING menu_item_id INTO v_new_item_id;
 
-    INSERT INTO _item_map VALUES (r.menu_item_id, new_id);
+    INSERT INTO _map_item (src, dst) VALUES (r.menu_item_id, v_new_item_id);
   END LOOP;
 
-  RAISE NOTICE '✓ menu_item (% productos)', (SELECT COUNT(*) FROM _item_map);
+  RAISE NOTICE '✓ menu_item (% productos)', (SELECT COUNT(*) FROM _map_item);
 
-  -- ── 8. menu_variant ───────────────────────────────────────────────────────
+  -- 8. menu_variant ─────────────────────────────────────────────────────────
   FOR r IN
     SELECT mv.*
     FROM public.menu_variant mv
     JOIN public.menu_item mi ON mi.menu_item_id = mv.menu_item_id
-    WHERE mi.restaurante_id = SOURCE_ID
+    WHERE mi.restaurante_id = v_source_id
     ORDER BY mv.menu_variant_id
   LOOP
-    SELECT new_id INTO new_id
-    FROM _item_map WHERE old_id = r.menu_item_id;
+    SELECT dst INTO v_mapped_item FROM _map_item WHERE src = r.menu_item_id;
 
-    IF new_id IS NOT NULL THEN
+    IF v_mapped_item IS NOT NULL THEN
       INSERT INTO public.menu_variant (
         menu_item_id, restaurante_id, variant_name, price,
         sku, is_default, is_active, created_at
       )
       VALUES (
-        new_id, TARGET_ID, r.variant_name, r.price,
+        v_mapped_item, v_target_id, r.variant_name, r.price,
         r.sku, r.is_default, r.is_active, NOW()
       );
     END IF;
@@ -167,47 +165,42 @@ BEGIN
 
   RAISE NOTICE '✓ menu_variant';
 
-  -- ── 9. extra ──────────────────────────────────────────────────────────────
+  -- 9. extra ────────────────────────────────────────────────────────────────
   FOR r IN
     SELECT * FROM public.extra
-    WHERE restaurante_id = SOURCE_ID
+    WHERE restaurante_id = v_source_id
     ORDER BY extra_id
   LOOP
     INSERT INTO public.extra
       (restaurante_id, name, price, is_active, allergens, created_at)
-    VALUES (TARGET_ID, r.name, r.price, r.is_active, r.allergens, NOW())
-    RETURNING extra_id INTO new_id;
+    VALUES (v_target_id, r.name, r.price, r.is_active, r.allergens, NOW())
+    RETURNING extra_id INTO v_new_xtra_id;
 
-    INSERT INTO _extra_map VALUES (r.extra_id, new_id);
+    INSERT INTO _map_extra (src, dst) VALUES (r.extra_id, v_new_xtra_id);
   END LOOP;
 
-  RAISE NOTICE '✓ extra (% extras)', (SELECT COUNT(*) FROM _extra_map);
+  RAISE NOTICE '✓ extra (% extras)', (SELECT COUNT(*) FROM _map_extra);
 
-  -- ── 10. menu_item_extra ───────────────────────────────────────────────────
+  -- 10. menu_item_extra ─────────────────────────────────────────────────────
   FOR r IN
     SELECT mie.*
     FROM public.menu_item_extra mie
     JOIN public.menu_item mi ON mi.menu_item_id = mie.menu_item_id
-    WHERE mi.restaurante_id = SOURCE_ID
+    WHERE mi.restaurante_id = v_source_id
   LOOP
-    DECLARE
-      new_item_id  BIGINT;
-      new_extra_id BIGINT;
-    BEGIN
-      SELECT new_id INTO new_item_id  FROM _item_map  WHERE old_id = r.menu_item_id;
-      SELECT new_id INTO new_extra_id FROM _extra_map WHERE old_id = r.extra_id;
+    SELECT dst INTO v_mapped_item FROM _map_item  WHERE src = r.menu_item_id;
+    SELECT dst INTO v_mapped_xtra FROM _map_extra WHERE src = r.extra_id;
 
-      IF new_item_id IS NOT NULL AND new_extra_id IS NOT NULL THEN
-        INSERT INTO public.menu_item_extra (menu_item_id, extra_id)
-        VALUES (new_item_id, new_extra_id)
-        ON CONFLICT DO NOTHING;
-      END IF;
-    END;
+    IF v_mapped_item IS NOT NULL AND v_mapped_xtra IS NOT NULL THEN
+      INSERT INTO public.menu_item_extra (menu_item_id, extra_id)
+      VALUES (v_mapped_item, v_mapped_xtra)
+      ON CONFLICT DO NOTHING;
+    END IF;
   END LOOP;
 
   RAISE NOTICE '✓ menu_item_extra';
-  RAISE NOTICE '══════════════════════════════════════════════';
-  RAISE NOTICE '✅  Listo: id=% → id=% (%)', SOURCE_ID, TARGET_ID, TARGET_SLUG;
-  RAISE NOTICE '══════════════════════════════════════════════';
+  RAISE NOTICE '══════════════════════════════════════════════════';
+  RAISE NOTICE '✅  Listo: id=% → id=% (%)', v_source_id, v_target_id, v_target_slug;
+  RAISE NOTICE '══════════════════════════════════════════════════';
 
 END $$;
