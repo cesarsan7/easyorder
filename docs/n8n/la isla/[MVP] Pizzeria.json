@@ -494,7 +494,13 @@
             {
               "id": "rid-multitenant-001",
               "name": "restaurante_id",
-              "value": "={{ Number($json.body.conversation.meta.sender.custom_attributes.p_restaurante_id || $json.body.sender.custom_attributes.p_restaurante_id || 1) }}",
+              "value": "={{ Number($json.body.conversation.meta.sender.custom_attributes.p_restaurante_id || $json.body.sender.custom_attributes.p_restaurante_id || 11) }}",
+              "type": "number"
+            },
+            {
+              "id": "b1c2d3e4-f5a6-7890-abcd-ef1234567890",
+              "name": "inbox_id",
+              "value": "={{ $json.body.conversation.inbox_id }}",
               "type": "number"
             }
           ]
@@ -2101,6 +2107,33 @@
           "name": "postgres restaurante_mvp"
         }
       }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://la-isla-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/contacts/{{ $('Variables').first().json.contact_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify({ custom_attributes: { p_restaurante_id: $('Variables').first().json.restaurante_id } }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        666,
+        1124
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-111222333444",
+      "name": "Set p_restaurante_id Chatwoot",
+      "continueOnFail": true
     }
   ],
   "pinData": {
@@ -2446,7 +2479,7 @@
       "main": [
         [
           {
-            "node": "Bot",
+            "node": "Set p_restaurante_id Chatwoot",
             "type": "main",
             "index": 0
           }
@@ -2811,6 +2844,17 @@
         [
           {
             "node": "Validacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set p_restaurante_id Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Bot",
             "type": "main",
             "index": 0
           }

@@ -924,6 +924,10 @@ export default function MenuPage() {
   const [loadingItems, setLoadingItems] = useState(true)
   const [addCatModal, setAddCatModal] = useState(false)
   const [expandedCats, setExpandedCats] = useState<Set<number>>(new Set())
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState<string | null>(null)
+  const importRef = useRef<HTMLInputElement>(null)
 
   const loadCategories = useCallback(async () => {
     setLoadingCats(true)
@@ -962,6 +966,56 @@ export default function MenuPage() {
     })
     if (!res.ok) throw new Error('Error al crear categoría')
     await loadCategories()
+  }
+
+  async function handleExport() {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const res = await authFetch(`${apiBase}/dashboard/${slug}/menu/export-excel`)
+      if (!res.ok) throw new Error('Error al exportar')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `menu-${slug}-${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('No se pudo exportar el menú. Intenta de nuevo.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImporting(true)
+    setImportMsg(null)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await authFetch(`${apiBase}/dashboard/${slug}/menu/import-excel`, {
+        method: 'POST',
+        body: form,
+      })
+      const data = await res.json() as { ok?: boolean; stats?: { categorias: number; productos: number; variantes: number; extras: number; errores: string[] }; error?: string }
+      if (!res.ok || !data.ok) {
+        setImportMsg(`Error: ${data.error ?? 'No se pudo importar'}`)
+        return
+      }
+      const s = data.stats!
+      const warnSuffix = s.errores.length ? ` — ${s.errores.length} advertencias` : ''
+      setImportMsg(`✓ ${s.categorias} cat · ${s.productos} prod · ${s.variantes} var · ${s.extras} ext${warnSuffix}`)
+      await loadCategories()
+      await loadItems()
+    } catch {
+      setImportMsg('Error de red al importar.')
+    } finally {
+      setImporting(false)
+    }
   }
 
   const loading = loadingCats || loadingItems
@@ -1035,28 +1089,41 @@ export default function MenuPage() {
         {/* ── Productos tab ── */}
         {tab === 'productos' && (
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <p className="text-xs text-gray-500">
                 {loading ? 'Cargando…' : `${categories.length} categorías · ${items.length} productos`}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFile} />
+                <button onClick={() => importRef.current?.click()} disabled={importing}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  title="Importar menú desde Excel">
+                  {importing ? 'Importando…' : '↑ Excel'}
+                </button>
+                <button onClick={handleExport} disabled={exporting}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  title="Descargar menú en Excel">
+                  {exporting ? 'Exportando…' : '↓ Excel'}
+                </button>
                 {!loading && sortedCategories.length > 0 && (
-                  <button
-                    onClick={allExpanded ? collapseAll : expandAll}
-                    className="px-3 py-2 rounded-xl text-xs font-semibold border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
-                  >
+                  <button onClick={allExpanded ? collapseAll : expandAll}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors">
                     {allExpanded ? 'Colapsar todo' : 'Expandir todo'}
                   </button>
                 )}
-                <button
-                  onClick={() => setAddCatModal(true)}
+                <button onClick={() => setAddCatModal(true)}
                   className="px-3 py-2 rounded-xl text-xs font-semibold text-white"
-                  style={{ backgroundColor: accent }}
-                >
+                  style={{ backgroundColor: accent }}>
                   + Categoría
                 </button>
               </div>
             </div>
+            {importMsg && (
+              <div className={`mb-3 px-3 py-2 rounded-xl text-xs ${importMsg.startsWith('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+                {importMsg}
+                <button onClick={() => setImportMsg(null)} className="ml-2 text-gray-400 hover:text-gray-600">×</button>
+              </div>
+            )}
 
             {loading ? (
               <div className="flex flex-col gap-3">

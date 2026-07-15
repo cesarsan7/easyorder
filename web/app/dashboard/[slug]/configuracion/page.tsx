@@ -14,6 +14,7 @@ import { THEME_LIST, type ThemeId } from '@/lib/themes'
 import type { ZoneMapZone } from './ZoneMap'
 
 const ZoneMap = dynamic(() => import('./ZoneMap'), { ssr: false })
+const QrMenuPanel = dynamic(() => import('./QrMenuPanel'), { ssr: false })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ const REDES_OPTS: { key: string; label: string; placeholder: string }[] = [
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
-type Tab = 'branding' | 'config' | 'pago'
+type Tab = 'branding' | 'config' | 'pago' | 'bot'
 
 // ─── Shared components ────────────────────────────────────────────────────────
 
@@ -281,6 +282,14 @@ export default function ConfiguracionPage() {
   const [opEdits,         setOpEdits]         = useState<{ tiempo_espera_minutos: string; mensaje_tiempo_espera: string }>({ tiempo_espera_minutos: '', mensaje_tiempo_espera: '' })
   const [configState,     setConfigState]     = useState<SaveState>('idle')
 
+  // ── Bot / WhatsApp config
+  const [botActivo,    setBotActivo]    = useState(false)
+  const [wpNumber,     setWpNumber]     = useState('')
+  const [webhookProd,  setWebhookProd]  = useState('')
+  const [webhookTest,  setWebhookTest]  = useState('')
+  const [inboxId,      setInboxId]      = useState('')
+  const [botState,     setBotState]     = useState<SaveState>('idle')
+
   // ── Horarios / Zonas
   const [horarios,         setHorarios]         = useState<HorarioLocal[]>([])
   const [horariosState,    setHorariosState]    = useState<SaveState>('idle')
@@ -344,6 +353,14 @@ export default function ConfiguracionPage() {
         const ck: { restaurante_config: ConfigRow[]; config_operativa: ConfigOpRow | null } = await configKeysRes.json()
         setConfigRows(ck.restaurante_config ?? [])
         setConfigOp(ck.config_operativa)
+
+        // Bot config from restaurante_config
+        const toVal = (key: string) => (ck.restaurante_config ?? []).find((r: ConfigRow) => r.config_key === key)?.config_value ?? ''
+        setBotActivo(toVal('bot_activo') === 'true')
+        setWpNumber(toVal('whatsapp_number'))
+        setWebhookProd(toVal('chatwoot_webhook_prod'))
+        setWebhookTest(toVal('chatwoot_webhook_test'))
+        setInboxId(toVal('chatwoot_inbox_id'))
         const edits: Record<string, string> = {}
         for (const r of ck.restaurante_config ?? []) edits[r.config_key] = r.config_value
         setConfigEdits(edits)
@@ -535,7 +552,20 @@ export default function ConfiguracionPage() {
     { key: 'branding', label: '🎨 Branding' },
     { key: 'config',   label: '⚙️ Configuración' },
     { key: 'pago',     label: '💳 Pago' },
+    { key: 'bot',      label: '🤖 Bot' },
   ]
+
+  async function saveBotConfig() {
+    setBotState('saving')
+    try {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/bot-config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, bot_activo: botActivo, whatsapp_number: wpNumber, chatwoot_webhook_prod: webhookProd, chatwoot_webhook_test: webhookTest, chatwoot_inbox_id: inboxId }),
+      })
+      setBotState(res.ok ? 'saved' : 'error')
+    } catch { setBotState('error') }
+  }
 
   return (
     <AccentCtx.Provider value={accent}>
@@ -727,6 +757,8 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* ── Redes sociales ────────────────────────────────────────── */}
+            <SectionTitle>QR del menú</SectionTitle>
+            <QrMenuPanel slug={slug} accent={accent} />
             <SectionTitle>Redes sociales</SectionTitle>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-3">
               <p className="text-xs text-gray-400">Agrega las redes que quieras mostrar en el menú público.</p>
@@ -1089,6 +1121,60 @@ export default function ConfiguracionPage() {
 
               <div className="flex justify-end pt-2 border-t border-gray-100">
                 <SaveButton state={configState} onClick={saveConfigKeys} />
+              </div>
+            </div>
+          </>
+        )}
+        {/* ── Bot tab ───────────────────────────────────────────────── */}
+        {!loading && !fetchError && tab === 'bot' && (
+          <>
+            <SectionTitle>Configuración del Agente WhatsApp</SectionTitle>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
+              <p className="text-xs text-gray-400">
+                Conecta el agente WhatsApp de n8n con este restaurante. Requiere configuración previa del equipo técnico.
+              </p>
+              <div className="flex items-center justify-between py-1">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Agente activo</p>
+                  <p className="text-xs text-gray-400">Habilita el bot de WhatsApp para este restaurante</p>
+                </div>
+                <button type="button"
+                  onClick={() => { setBotActivo(v => !v); setBotState('idle') }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${botActivo ? 'bg-indigo-500' : 'bg-gray-200'}`}
+                >
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${botActivo ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Número WhatsApp</label>
+                  <input type="text" value={wpNumber} onChange={e => { setWpNumber(e.target.value); setBotState('idle') }}
+                    placeholder="+34613598934"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Webhook n8n producción</label>
+                  <input type="url" value={webhookProd} onChange={e => { setWebhookProd(e.target.value); setBotState('idle') }}
+                    placeholder="https://n8n.ai2nomous.com/webhook/..."
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white" />
+                  <p className="text-xs text-gray-400 mt-1">URL del webhook de producción en n8n</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Webhook n8n pruebas</label>
+                  <input type="url" value={webhookTest} onChange={e => { setWebhookTest(e.target.value); setBotState('idle') }}
+                    placeholder="https://n8n.ai2nomous.com/webhook-test/..."
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Chatwoot Inbox ID</label>
+                  <input type="text" value={inboxId} onChange={e => { setInboxId(e.target.value); setBotState('idle') }}
+                    placeholder="12"
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white" />
+                  <p className="text-xs text-gray-400 mt-1">ID del inbox en Chatwoot asociado a este restaurante</p>
+                </div>
+              </div>
+              <div className="flex justify-end pt-2 border-t border-gray-100">
+                <SaveButton state={botState} onClick={saveBotConfig} />
               </div>
             </div>
           </>

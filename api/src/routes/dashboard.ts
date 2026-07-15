@@ -9,11 +9,11 @@ const dashboardRoutes = new Hono<{ Variables: Variables }>();
 
 // ---------------------------------------------------------------------------
 // Notification helper — fire-and-forget POST to n8n webhook.
-// URL is read from N8N_WEBHOOK_NOTIFICACION env var.
-// If the var is empty or unset, all notifications are silently skipped.
-// Never throws — errors are caught and logged so API responses are never blocked.
+// Priority: chatwoot_webhook_prod from restaurante_config (per-restaurant).
+// Fallback: N8N_WEBHOOK_NOTIFICACION env var (global default).
+// Never throws — errors are caught so API responses are never blocked.
 // ---------------------------------------------------------------------------
-const N8N_NOTIFICACION_URL = process.env['N8N_WEBHOOK_NOTIFICACION'] ?? '';
+const N8N_NOTIFICACION_URL_DEFAULT = process.env['N8N_WEBHOOK_NOTIFICACION'] ?? '';
 
 interface NotificationPayload {
   event_type:      string;
@@ -26,9 +26,27 @@ interface NotificationPayload {
   datos_bancarios?: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null;
 }
 
-function fireNotification(payload: NotificationPayload): void {
-  if (!N8N_NOTIFICACION_URL) return;
-  fetch(N8N_NOTIFICACION_URL, {
+// Resolves the webhook URL for a restaurant: reads chatwoot_webhook_prod from
+// restaurante_config, falling back to the global env var.
+async function resolveWebhookUrl(restaurante_id: number): Promise<string> {
+  try {
+    const rows = await sql<{ config_value: string }[]>`
+      SELECT config_value FROM public.restaurante_config
+      WHERE restaurante_id = ${restaurante_id}
+        AND config_key = 'chatwoot_webhook_prod'
+      LIMIT 1
+    `;
+    const url = rows[0]?.config_value?.trim() ?? '';
+    return url || N8N_NOTIFICACION_URL_DEFAULT;
+  } catch {
+    return N8N_NOTIFICACION_URL_DEFAULT;
+  }
+}
+
+async function fireNotification(payload: NotificationPayload, restaurante_id: number): Promise<void> {
+  const webhookUrl = await resolveWebhookUrl(restaurante_id);
+  if (!webhookUrl) return;
+  fetch(webhookUrl, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(payload),
@@ -926,7 +944,7 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
         tipo_despacho:   pedido.tipo_despacho,
         tiempo_estimado: pedido.tiempo_estimado,
         datos_bancarios: datosBancarios,
-      });
+      }, restaurante_id);
     }
 
     // Step 5 — respond 200 with the diff the frontend needs to re-render.
@@ -1000,7 +1018,7 @@ dashboardRoutes.patch('/:slug/orders/:id/payment', requireAuth, async (c) => {
         telefono:        u.telefono,
         tipo_despacho:   u.tipo_despacho,
         tiempo_estimado: u.tiempo_estimado,
-      });
+      }, restaurante_id);
     }
 
     return c.json({ id: u.id, estado_pago: u.estado_pago, updated_at: u.updated_at });
@@ -2656,7 +2674,7 @@ dashboardRoutes.patch('/:slug/config-keys', async (c) => {
             VALUES (
               ${restaurante_id},
               ${eta ?? 30},
-              ${msg ?? 'Tu pedido estara listo en aproximadamente {minutos} minutos.'}
+              ${msg ?? 'Tu pedido estara listo en aproximadamente [minutos] minutos.'}
             )
             ON CONFLICT (restaurante_id) DO UPDATE
               SET tiempo_espera_minutos = COALESCE(EXCLUDED.tiempo_espera_minutos, config_operativa.tiempo_espera_minutos),
