@@ -1039,7 +1039,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nlet texto = String(items[0].json.output || '').trim();\n\n// Filtro defensivo: descartar tool calls crudos\nif (/^(Calling|Llamando|Using|Usando)\\s+\\w+/i.test(texto) || \n    (texto.startsWith('{') && texto.includes('\"accion\"'))) {\n  texto = '';\n}\n\ntexto = texto\n  .replace(/^[\"']|[\"']$/g, '')\n  .replace(/[¿¡]/g, '')\n  .replace(/\\r/g, '')\n  .replace(/\\n{2,}/g, '\\n')\n  .replace(/[ \\t]+/g, ' ')\n  .trim();\n\n// Detectar preguntas que requieren botones interactivos\nlet interactive = null;\n\nif (/delivery[^?]*retiro|retiro[^?]*delivery|como.*recib|como.*quier.*pedido|para.*delivery.*retiro|modo.*entrega|tipo.*entrega/i.test(texto)) {\n  interactive = {\n    items: [\n      { title: 'Delivery', value: 'delivery' },\n      { title: 'Retiro en local', value: 'retiro' }\n    ]\n  };\n}\n\nif (/efectivo[^?]*transferencia|transferencia[^?]*efectivo|como.*pag|metodo.*pago|forma.*pago|vas.*pagar/i.test(texto)) {\n  interactive = {\n    items: [\n      { title: 'Efectivo', value: 'efectivo' },\n      { title: 'Transferencia', value: 'transferencia' }\n    ]\n  };\n}\n\nreturn [{\n  json: {\n    mensaje: texto,\n    outputOriginal: texto,\n    interactive\n  }\n}];\n"
+        "jsCode": "\n// Leer texto del predecesor inmediato — cubre 3 caminos:\n// · Director        → items[0].json.output\n// · Agente Cerrado  → items[0].json.output\n// · Respuesta Error → items[0].json.respuesta\nlet texto = String(items[0].json.output || items[0].json.respuesta || '').trim();\n\n// Filtro defensivo: descartar tool calls crudos\nif (/^(Calling|Llamando|Using|Usando)\\s+\\w+/i.test(texto) || \n    (texto.startsWith('{') && texto.includes('\"accion\"'))) {\n  texto = '';\n}\n\ntexto = texto\n  .replace(/^[\"']|[\"']$/g, '')\n  .replace(/[¿¡]/g, '')\n  .replace(/\\r/g, '')\n  .replace(/\\n{2,}/g, '\\n')\n  .replace(/[ \\t]+/g, ' ')\n  .trim();\n\n// Normalizar sin tildes para comparación (no modifica el texto enviado)\nconst norm = texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\n\nlet interactive = null;\n\n// ── 1. Variantes / tamaños ───────────────────────────────────────────────────\n// Detecta: \"tamaño\" o \"variante\" + lista de opciones separadas por coma/o\nconst esTamano = /(tamano|variante|talla|tipo de pizza).{0,60}:/.test(norm);\n\nif (esTamano) {\n  // Extraer la lista de opciones que viene después del \":\"\n  // Ej: \"mediana (32 cm), personal (25 cm) o familiar (45 cm)\"\n  const colonMatch = texto.match(/[:\\-]\\s*([^.!?\\n]{5,120}?)(?:\\.\\s|\\?\\s|$|\\. [A-Z])/);\n  if (colonMatch) {\n    const optStr = colonMatch[1];\n    // Separar por coma y \" o \"\n    const parts = optStr.split(/,\\s*|\\s+[oO]\\s+/).map(s => s.trim()).filter(Boolean);\n    // Tomar solo la primera palabra (el nombre de la variante) para el título\n    const items = parts.slice(0, 3).map(p => {\n      const word = p.split(/\\s+/)[0].replace(/[^\\wáéíóúñÁÉÍÓÚÑ]/g, '');\n      return {\n        title: word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),\n        value: word.toLowerCase()\n      };\n    }).filter(i => i.title.length > 1);\n    if (items.length >= 2) {\n      interactive = { items };\n    }\n  }\n}\n\n// ── 2. Tipo de entrega (delivery vs retiro) ──────────────────────────────────\nif (!interactive) {\n  const esDeliveryRetiro =\n    (/(delivery|retiro|recoger|domicilio|enviamos|enviarte|llevarte)/.test(norm)) &&\n    (/(o |prefiere|quiere|desea|opcion|\\?)/.test(norm)) &&\n    !/(el pedido|mantengo|confirmado|tu pedido|va por)/.test(norm);\n\n  if (esDeliveryRetiro) {\n    interactive = {\n      items: [\n        { title: 'Delivery', value: 'delivery' },\n        { title: 'Retiro en local', value: 'retiro' }\n      ]\n    };\n  }\n}\n\n// ── 3. Método de pago ────────────────────────────────────────────────────────\nif (!interactive) {\n  const esPreguntaPago =\n    /(como|de que forma|como vas|como quieres|que metodo).{0,20}pag/.test(norm) ||\n    /pag.{0,20}(efectivo|transferencia).{0,20}(o ).{0,20}(efectivo|transferencia)/.test(norm);\n\n  if (esPreguntaPago) {\n    let paymentMethods = ['efectivo'];\n    try {\n      const raw = $('Obtener Config Local').first().json.payment_methods;\n      if (Array.isArray(raw)) {\n        paymentMethods = raw;\n      } else if (typeof raw === 'string') {\n        paymentMethods = JSON.parse(raw);\n      }\n    } catch(e) { /* fallback */ }\n\n    if (paymentMethods.length >= 2) {\n      const labels = { efectivo: 'Efectivo', transferencia: 'Transferencia', bizum: 'Bizum', tarjeta: 'Tarjeta' };\n      interactive = {\n        items: paymentMethods.slice(0, 3).map(m => ({\n          title: labels[m] || m,\n          value: m\n        }))\n      };\n    }\n  }\n}\n\nreturn [{\n  json: {\n    mensaje: texto,\n    outputOriginal: texto,\n    interactive\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -2227,17 +2227,24 @@
       }
     },
     {
-      "id": "e35dae40-9fd1-479c-b231-ee98675e8cb9",
-      "name": "Merge Envío",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
+      "id": "57a80360-ae5e-4a6a-9cfe-b44567af6fac",
+      "name": "Obtener Config Local",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
       "position": [
-        6436,
-        1360
+        3648,
+        1120
       ],
       "parameters": {
-        "mode": "passThrough",
-        "output": "first"
+        "operation": "executeQuery",
+        "query": "SELECT payment_methods FROM public.restaurante WHERE id = {{ $('Variables').first().json.restaurante_id }} LIMIT 1",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "cfmYSBh3ClVgSqjm",
+          "name": "postgres restaurante_mvp"
+        }
       }
     }
   ],
@@ -2870,6 +2877,11 @@
             "node": "Asegurar Usuario Maestro",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Obtener Config Local",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -2995,7 +3007,7 @@
       "main": [
         [
           {
-            "node": "Merge Envío",
+            "node": "Crear Contexto",
             "type": "main",
             "index": 0
           }
@@ -3003,17 +3015,6 @@
       ]
     },
     "Mensaje Chatwoot": {
-      "main": [
-        [
-          {
-            "node": "Merge Envío",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Envío": {
       "main": [
         [
           {
