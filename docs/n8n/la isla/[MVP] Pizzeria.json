@@ -328,7 +328,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $('Variables').first().json.bot_status || \"\"}}",
+                    "leftValue": "={{ $json.bot_status || \"\"}}",
                     "rightValue": "on",
                     "operator": {
                       "type": "string",
@@ -353,7 +353,7 @@
                 "conditions": [
                   {
                     "id": "d7df03fb-af2e-4744-aa6c-3579cfa3591e",
-                    "leftValue": "={{ $('Variables').first().json.bot_status }}",
+                    "leftValue": "={{ $json.bot_status }}",
                     "rightValue": "Off",
                     "operator": {
                       "type": "string",
@@ -495,12 +495,6 @@
               "id": "rid-multitenant-001",
               "name": "restaurante_id",
               "value": "={{ Number($json.body.conversation.meta.sender.custom_attributes.p_restaurante_id || $json.body.sender.custom_attributes.p_restaurante_id || 11) }}",
-              "type": "number"
-            },
-            {
-              "id": "b1c2d3e4-f5a6-7890-abcd-ef1234567890",
-              "name": "inbox_id",
-              "value": "={{ $json.body.conversation.inbox_id }}",
               "type": "number"
             }
           ]
@@ -882,7 +876,7 @@
             {
               "id": "994c6774-06a0-4a07-90b7-00fe3045bb59",
               "name": "contexto",
-              "value": "={{ $('Session Manager').first().json.contexto || '' }}",
+              "value": "={{ $json.contexto }}",
               "type": "string"
             },
             {
@@ -1045,7 +1039,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let texto = String(items[0].json.output || '').trim();\n\n// Filtro defensivo: descartar tool calls crudos que el LLM emitió como texto\nif (/^(Calling|Llamando|Using|Usando)\\s+\\w+/i.test(texto) || \n    (texto.startsWith('{') && texto.includes('\"accion\"'))) {\n  // El modelo generó un tool call como texto — no enviar al usuario\n  texto = '';\n}\n\nconst outputOriginal = texto; \n\ntexto = texto\n  .replace(/^[\"']|[\"']$/g, '')\n  .replace(/[¿¡]/g, '')\n  .replace(/\\r/g, '')\n  .replace(/\\n{2,}/g, '\\n')\n  .replace(/[ \\t]+/g, ' ')\n  .trim();\n\nreturn [{\n  json: {\n    mensaje: texto,\n    outputOriginal\n  }\n}];"
+        "jsCode": "\nlet texto = String(items[0].json.output || '').trim();\n\n// Filtro defensivo: descartar tool calls crudos\nif (/^(Calling|Llamando|Using|Usando)\\s+\\w+/i.test(texto) || \n    (texto.startsWith('{') && texto.includes('\"accion\"'))) {\n  texto = '';\n}\n\ntexto = texto\n  .replace(/^[\"']|[\"']$/g, '')\n  .replace(/[¿¡]/g, '')\n  .replace(/\\r/g, '')\n  .replace(/\\n{2,}/g, '\\n')\n  .replace(/[ \\t]+/g, ' ')\n  .trim();\n\n// Detectar preguntas que requieren botones interactivos\nlet interactive = null;\n\nif (/delivery[^?]*retiro|retiro[^?]*delivery|como.*recib|como.*quier.*pedido|para.*delivery.*retiro|modo.*entrega|tipo.*entrega/i.test(texto)) {\n  interactive = {\n    items: [\n      { title: 'Delivery', value: 'delivery' },\n      { title: 'Retiro en local', value: 'retiro' }\n    ]\n  };\n}\n\nif (/efectivo[^?]*transferencia|transferencia[^?]*efectivo|como.*pag|metodo.*pago|forma.*pago|vas.*pagar/i.test(texto)) {\n  interactive = {\n    items: [\n      { title: 'Efectivo', value: 'efectivo' },\n      { title: 'Transferencia', value: 'transferencia' }\n    ]\n  };\n}\n\nreturn [{\n  json: {\n    mensaje: texto,\n    outputOriginal: texto,\n    interactive\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1072,7 +1066,8 @@
         832
       ],
       "id": "f8f28b72-2fcb-406a-93c4-f8b10b1f96c4",
-      "name": "Director"
+      "name": "Director",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -1125,7 +1120,7 @@
       "typeVersion": 4.2,
       "position": [
         6192,
-        1456
+        1476
       ],
       "id": "7868399b-0164-4a0c-91ad-3b0c80c836ff",
       "name": "Mensaje Chatwoot",
@@ -1631,7 +1626,8 @@
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
-        }
+        },
+        "description": "Úsala cuando el cliente indique el tipo de entrega (delivery o retiro) O una dirección de entrega. Esta tool valida la zona de cobertura, calcula el costo de envío y actualiza tipo_despacho en el pedido. SIEMPRE llama esta tool cuando el cliente mencione 'delivery', 'retiro', una dirección postal o una zona de entrega. NO uses Perfil Cliente para esto."
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
@@ -1749,7 +1745,8 @@
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
-        }
+        },
+        "description": "Úsala cuando el cliente quiere AGREGAR, QUITAR o MODIFICAR ítems del pedido (ejemplo: 'quiero una pizza margarita', 'quita la bebida', 'agrega extra queso'). NO la uses para preguntas sobre la carta, precios ni horarios — para eso usa Preguntas."
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
@@ -1832,7 +1829,8 @@
           ],
           "attemptToConvertTypes": false,
           "convertFieldsToString": false
-        }
+        },
+        "description": "Úsala cuando el cliente especifica el método de pago (efectivo, transferencia, bizum). Solo llamar después de que Despacho haya definido el tipo de entrega (delivery o retiro)."
       },
       "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
       "typeVersion": 2.2,
@@ -1919,7 +1917,7 @@
     },
     {
       "parameters": {
-        "description": "Actualiza o confirma datos del cliente. Úsala para guardar el nombre del pedido y la dirección frecuente cuando el cliente la confirme o la cambie. También puedes usarla si el cliente actualiza su nombre.",
+        "description": "Úsala SOLO para guardar o actualizar el nombre del cliente o su dirección frecuente cuando el cliente la confirme FUERA del contexto de un pedido activo. NO la uses cuando el cliente está especificando dónde quiere recibir su pedido actual — para eso usa Despacho.",
         "workflowId": {
           "__rl": true,
           "value": "bWbJQPndHG56RRHn",
@@ -2109,31 +2107,138 @@
       }
     },
     {
+      "id": "68768dc7-5b1e-4df4-ae6f-68520ad9ff59",
+      "name": "Limpiar Historial Corrupto",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        5532,
+        1032
+      ],
       "parameters": {
-        "method": "PATCH",
-        "url": "=https://la-isla-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/contacts/{{ $('Variables').first().json.contact_id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "string",
-        "body": "={{ JSON.stringify({ custom_attributes: { p_restaurante_id: $('Variables').first().json.restaurante_id } }) }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
+        "operation": "executeQuery",
+        "query": "DELETE FROM public.n8n_chat_histories\nWHERE session_id = '{{ $('Variables').first().json.restaurante_id }}_{{ $('Variables').first().json.conversation_id }}'",
+        "options": {}
       },
+      "continueOnFail": true
+    },
+    {
+      "id": "4d3772c0-eea6-497b-9bf6-b3bb06b001e4",
+      "name": "Respuesta Error Historial",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        5812,
+        1032
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fe7ca62f-df99-4142-b15b-93405ff582ba",
+              "name": "respuesta",
+              "value": "Disculpa, tuve un problema técnico. Puedes repetir tu último mensaje?",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "86829fee-6be1-4ec8-90b7-b0068fabfce6",
+      "name": "¿Hay Botones?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        5992,
+        1360
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-interactive",
+              "leftValue": "={{ $json.interactive !== null && $json.interactive !== undefined }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "e07beed8-9662-4721-984f-1953642bf1a5",
+      "name": "Mensaje Interactivo Chatwoot",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        666,
-        1124
+        6192,
+        1236
       ],
-      "id": "a1b2c3d4-e5f6-7890-abcd-111222333444",
-      "name": "Set p_restaurante_id Chatwoot",
-      "continueOnFail": true
+      "parameters": {
+        "method": "POST",
+        "url": "=https://la-isla-chatwoot.avtsif.easypanel.host/api/v1/accounts/{{ $('Variables').first().json.account_id }}/conversations/{{ $('Variables').first().json.conversation_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('Seteo respuesta').first().json.mensaje }}"
+            },
+            {
+              "name": "content_type",
+              "value": "input_select"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={{ JSON.stringify({ items: $('Seteo respuesta').first().json.interactive.items }) }}"
+            },
+            {
+              "name": "message_type",
+              "value": "outgoing"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GQGObUBKIPim8MDs",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "e35dae40-9fd1-479c-b231-ee98675e8cb9",
+      "name": "Merge Envío",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        6436,
+        1360
+      ],
+      "parameters": {
+        "mode": "passThrough",
+        "output": "first"
+      }
     }
   ],
   "pinData": {
@@ -2479,7 +2584,7 @@
       "main": [
         [
           {
-            "node": "Set p_restaurante_id Chatwoot",
+            "node": "Bot",
             "type": "main",
             "index": 0
           }
@@ -2643,17 +2748,6 @@
         ]
       ]
     },
-    "Seteo respuesta": {
-      "main": [
-        [
-          {
-            "node": "Mensaje Chatwoot",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Director": {
       "main": [
         [
@@ -2662,14 +2756,10 @@
             "type": "main",
             "index": 0
           }
-        ]
-      ]
-    },
-    "Mensaje Chatwoot": {
-      "main": [
+        ],
         [
           {
-            "node": "Crear Contexto",
+            "node": "Limpiar Historial Corrupto",
             "type": "main",
             "index": 0
           }
@@ -2850,11 +2940,84 @@
         ]
       ]
     },
-    "Set p_restaurante_id Chatwoot": {
+    "Limpiar Historial Corrupto": {
       "main": [
         [
           {
-            "node": "Bot",
+            "node": "Respuesta Error Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Error Historial": {
+      "main": [
+        [
+          {
+            "node": "Seteo respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seteo respuesta": {
+      "main": [
+        [
+          {
+            "node": "¿Hay Botones?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Botones?": {
+      "main": [
+        [
+          {
+            "node": "Mensaje Interactivo Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensaje Chatwoot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje Interactivo Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Merge Envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje Chatwoot": {
+      "main": [
+        [
+          {
+            "node": "Merge Envío",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Envío": {
+      "main": [
+        [
+          {
+            "node": "Crear Contexto",
             "type": "main",
             "index": 0
           }
