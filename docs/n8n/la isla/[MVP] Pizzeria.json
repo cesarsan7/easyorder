@@ -496,6 +496,12 @@
               "name": "restaurante_id",
               "value": "={{ Number($json.body.conversation.meta.sender.custom_attributes.p_restaurante_id || $json.body.sender.custom_attributes.p_restaurante_id || 11) }}",
               "type": "number"
+            },
+            {
+              "id": "9c639eea",
+              "name": "message_id",
+              "value": "={{ $json.body.conversation.messages[0].id || '' }}",
+              "type": "string"
             }
           ]
         },
@@ -2264,6 +2270,84 @@
           "name": "postgres restaurante_mvp"
         }
       }
+    },
+    {
+      "id": "674e8f9c-ae7d-41a7-a54e-99678a553b4a",
+      "name": "Redis Dedup Check",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        496,
+        1024
+      ],
+      "parameters": {
+        "operation": "get",
+        "propertyName": "dedup_exists",
+        "key": "={{ 'dedup_' + $('Variables').item.json.restaurante_id + '_' + $('Variables').item.json.message_id }}"
+      },
+      "credentials": {
+        "redis": {
+          "id": "KHlGLPxHsn0uxbtL",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "id": "737fce43-cad2-43f1-a3bc-876336c45c69",
+      "name": "¿Mensaje Duplicado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        636,
+        1024
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0242d53f",
+              "leftValue": "={{ $json.dedup_exists }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ff701153-67db-4b23-9a43-8f2930d02625",
+      "name": "Redis Marcar Procesado",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        796,
+        924
+      ],
+      "parameters": {
+        "operation": "set",
+        "key": "={{ 'dedup_' + $('Variables').item.json.restaurante_id + '_' + $('Variables').item.json.message_id }}",
+        "value": "1",
+        "expire": true,
+        "ttl": 60
+      },
+      "credentials": {
+        "redis": {
+          "id": "KHlGLPxHsn0uxbtL",
+          "name": "Redis account"
+        }
+      }
     }
   ],
   "pinData": {
@@ -2609,7 +2693,7 @@
       "main": [
         [
           {
-            "node": "Bot",
+            "node": "Redis Dedup Check",
             "type": "main",
             "index": 0
           }
@@ -2784,7 +2868,7 @@
         ],
         [
           {
-            "node": "Limpiar Historial Corrupto",
+            "node": "Respuesta Error Historial",
             "type": "main",
             "index": 0
           }
@@ -2965,17 +3049,6 @@
         ]
       ]
     },
-    "Limpiar Historial Corrupto": {
-      "main": [
-        [
-          {
-            "node": "Respuesta Error Historial",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Respuesta Error Historial": {
       "main": [
         [
@@ -3043,6 +3116,40 @@
         [
           {
             "node": "Input Agente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Dedup Check": {
+      "main": [
+        [
+          {
+            "node": "¿Mensaje Duplicado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Mensaje Duplicado?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Redis Marcar Procesado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Marcar Procesado": {
+      "main": [
+        [
+          {
+            "node": "Bot",
             "type": "main",
             "index": 0
           }
