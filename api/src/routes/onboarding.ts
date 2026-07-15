@@ -213,7 +213,6 @@ onboardingRoutes.post('/bot-config', async (c) => {
       JOIN public.local_memberships lm ON lm.restaurante_id = r.id
       WHERE r.slug     = ${slug}
         AND lm.user_id = ${user.id}
-        AND lm.activo  = true
       LIMIT 1
     `;
     if (!rows.length) return c.json({ error: 'forbidden' }, 403);
