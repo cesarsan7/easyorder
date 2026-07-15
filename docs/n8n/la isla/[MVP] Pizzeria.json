@@ -328,7 +328,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $json.bot_status || \"\"}}",
+                    "leftValue": "={{ $('Variables').first().json.bot_status || \"\"}}",
                     "rightValue": "on",
                     "operator": {
                       "type": "string",
@@ -353,7 +353,7 @@
                 "conditions": [
                   {
                     "id": "d7df03fb-af2e-4744-aa6c-3579cfa3591e",
-                    "leftValue": "={{ $json.bot_status }}",
+                    "leftValue": "={{ $('Variables').first().json.bot_status }}",
                     "rightValue": "Off",
                     "operator": {
                       "type": "string",
@@ -882,7 +882,7 @@
             {
               "id": "994c6774-06a0-4a07-90b7-00fe3045bb59",
               "name": "contexto",
-              "value": "={{ $json.contexto }}",
+              "value": "={{ $('Session Manager').first().json.contexto || '' }}",
               "type": "string"
             },
             {
