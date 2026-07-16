@@ -335,6 +335,15 @@
                       "operation": "equals"
                     },
                     "id": "7d017a90-f18f-4781-aed2-d731e97fbe0f"
+                  },
+                  {
+                    "id": "dir_filter",
+                    "leftValue": "={{ $('Variables').item.json.message_direction }}",
+                    "rightValue": 1,
+                    "operator": {
+                      "type": "number",
+                      "operation": "notEquals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -495,6 +504,12 @@
               "id": "rid-multitenant-001",
               "name": "restaurante_id",
               "value": "={{ Number($json.body.conversation.meta.sender.custom_attributes.p_restaurante_id || $json.body.sender.custom_attributes.p_restaurante_id || 11) }}",
+              "type": "number"
+            },
+            {
+              "id": "46de5974",
+              "name": "message_direction",
+              "value": "={{ $json.body.conversation.messages[0].message_type ?? 0 }}",
               "type": "number"
             }
           ]
@@ -2135,7 +2150,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "DELETE FROM public.n8n_chat_histories\nWHERE id IN (\n  SELECT id FROM public.n8n_chat_histories\n  WHERE session_id = '{{ $('Variables').first().json.restaurante_id }}_{{ $('Variables').first().json.conversation_id }}'\n  ORDER BY id DESC\n  LIMIT 4\n)",
+        "query": "DELETE FROM public.n8n_chat_histories\nWHERE id IN (\n  SELECT id FROM public.n8n_chat_histories\n  WHERE session_id = '{{ $('Variables').first().json.restaurante_id }}_{{ $('Variables').first().json.conversation_id }}'\n  ORDER BY id DESC\n  LIMIT 2\n)",
         "options": {}
       },
       "continueOnFail": true
@@ -2784,7 +2799,7 @@
         ],
         [
           {
-            "node": "Respuesta Error Historial",
+            "node": "Limpiar Historial Corrupto",
             "type": "main",
             "index": 0
           }
@@ -3032,6 +3047,17 @@
         [
           {
             "node": "Input Agente1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Historial Corrupto": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Error Historial",
             "type": "main",
             "index": 0
           }
