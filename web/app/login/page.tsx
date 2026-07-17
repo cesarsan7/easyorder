@@ -93,8 +93,8 @@ function LoginInner() {
       password,
       options: {
         emailRedirectTo: nextUrl
-          ? `${window.location.origin}${nextUrl}`
-          : `${window.location.origin}/dashboard`,
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextUrl)}`
+          : `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     })
 
