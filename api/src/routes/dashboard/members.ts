@@ -108,8 +108,8 @@ membersRoutes.patch('/:slug/members/:target_user_id/rol', async (c) => {
   const b = body as Record<string, unknown>;
   const new_rol = b['rol'] as string | undefined;
 
-  if (!new_rol || !['manager', 'viewer'].includes(new_rol)) {
-    return c.json({ error: 'invalid_rol', detail: "rol must be 'manager' or 'viewer'" }, 400);
+  if (!new_rol || !['owner', 'manager', 'viewer'].includes(new_rol)) {
+    return c.json({ error: 'invalid_rol', detail: "rol must be 'owner', 'manager' or 'viewer'" }, 400);
   }
 
   try {
@@ -118,7 +118,6 @@ membersRoutes.patch('/:slug/members/:target_user_id/rol', async (c) => {
       SET    rol = ${new_rol}
       WHERE  user_id        = ${target_user_id}
         AND  restaurante_id = ${restaurante_id}
-        AND  rol            != 'owner'
       RETURNING user_id
     `;
 
@@ -158,12 +157,11 @@ membersRoutes.delete('/:slug/members/:target_user_id', async (c) => {
       DELETE FROM local_memberships
       WHERE  user_id        = ${target_user_id}
         AND  restaurante_id = ${restaurante_id}
-        AND  rol            != 'owner'
       RETURNING user_id
     `;
 
     if ((rows as unknown[]).length === 0) {
-      return c.json({ error: 'member_not_found_or_is_owner' }, 404);
+      return c.json({ error: 'member_not_found' }, 404);
     }
 
     return c.json({ ok: true });

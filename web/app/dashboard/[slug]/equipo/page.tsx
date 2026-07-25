@@ -97,11 +97,12 @@ function EquipoInner({
 
   const [members, setMembers]         = useState<Member[]>([])
   const [myRol, setMyRol]             = useState<string | null>(null)
+  const [myUserId, setMyUserId]       = useState<string | null>(null)
   const [loading, setLoading]         = useState(true)
   const [error, setError]             = useState('')
 
   // Invite form
-  const [inviteRol, setInviteRol]     = useState<'manager' | 'viewer'>('viewer')
+  const [inviteRol, setInviteRol]     = useState<'owner' | 'manager' | 'viewer'>('viewer')
   const [inviteState, setInviteState] = useState<SaveState>('idle')
   const [inviteResult, setInviteResult] = useState<InviteResult | null>(null)
   const [copied, setCopied]           = useState(false)
@@ -142,6 +143,7 @@ function EquipoInner({
       const restaurant = (data.restaurants as { slug: string; rol: string }[] | undefined)
         ?.find(r => r.slug === slug)
       if (restaurant) setMyRol(restaurant.rol)
+      if (data.user_id) setMyUserId(data.user_id)
     } catch { /* silent */ }
   }, [slug, authFetch, apiBase])
 
@@ -259,9 +261,12 @@ function EquipoInner({
             <label className="text-sm text-gray-600 font-medium">Rol:</label>
             <select
               value={inviteRol}
-              onChange={e => setInviteRol(e.target.value as 'manager' | 'viewer')}
+              onChange={e => setInviteRol(e.target.value as 'owner' | 'manager' | 'viewer')}
               className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none"
             >
+              {myRol === 'owner' && (
+                <option value="owner">Propietario</option>
+              )}
               {myRol === 'owner' && (
                 <option value="manager">Gerente</option>
               )}
@@ -340,13 +345,14 @@ function EquipoInner({
                 </div>
 
                 {/* Role badge / selector */}
-                {canManage && m.rol !== 'owner' ? (
+                {canManage && m.user_id !== myUserId ? (
                   <select
                     value={m.rol}
                     disabled={changingRol === m.user_id}
                     onChange={e => changeRol(m.user_id, e.target.value)}
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none"
                   >
+                    <option value="owner">Propietario</option>
                     <option value="manager">Gerente</option>
                     <option value="viewer">Personal</option>
                   </select>
@@ -354,8 +360,8 @@ function EquipoInner({
                   <RolBadge rol={m.rol} />
                 )}
 
-                {/* Remove button */}
-                {canManage && m.rol !== 'owner' && (
+                {/* Remove button — owner puede eliminar a cualquier otro miembro, incluso otros owners */}
+                {canManage && m.user_id !== myUserId && (
                   <button
                     onClick={() => removeMember(m.user_id)}
                     disabled={removing === m.user_id}

@@ -100,7 +100,7 @@ dashboardRoutes.get('/me', async (c) => {
     LIMIT  10
   `;
 
-  return c.json({ restaurants: rows });
+  return c.json({ user_id: user.id, restaurants: rows });
 });
 
 // ----------------------------------------------------------------------------
@@ -2498,9 +2498,14 @@ dashboardRoutes.post('/:slug/members/invite', async (c) => {
   let body: { rol?: string };
   try { body = await c.req.json(); } catch { body = {}; }
 
-  const invited_rol = body.rol === 'manager' ? 'manager' : 'viewer';
+  const invited_rol = body.rol === 'owner' ? 'owner' : body.rol === 'manager' ? 'manager' : 'viewer';
 
-  if (rol_caller === 'manager' && invited_rol === 'manager') {
+  // Manager solo puede invitar viewer. Owner puede invitar cualquier rol.
+  if (rol_caller === 'manager' && invited_rol !== 'viewer') {
+    return c.json({ error: 'forbidden' }, 403);
+  }
+  // Solo owner puede invitar otro owner
+  if (invited_rol === 'owner' && rol_caller !== 'owner') {
     return c.json({ error: 'forbidden' }, 403);
   }
 
