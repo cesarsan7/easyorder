@@ -37,6 +37,10 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL('/login', request.nextUrl.origin)
     const originalPath = request.nextUrl.pathname + request.nextUrl.search
     loginUrl.searchParams.set('next', originalPath)
+    // Si viene de un enlace de invitación, abrir directamente en modo registro
+    if (request.nextUrl.pathname === '/dashboard/join') {
+      loginUrl.searchParams.set('mode', 'register')
+    }
     return NextResponse.redirect(loginUrl)
   }
 
