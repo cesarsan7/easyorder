@@ -1,10 +1,12 @@
 'use client'
 
 import { useParams, usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 import { BrandingProvider, useBranding } from '@/lib/context/branding'
 import { createClient } from '@/lib/supabase/client'
+
+const DashboardTour = lazy(() => import('@/components/DashboardTour'))
 
 const SIDEBAR_BG   = '#FFFFFF'
 const SIDEBAR_BDR  = '#E5E7EB'
@@ -12,14 +14,14 @@ const SIDEBAR_TEXT = '#6B7280'
 const SIDEBAR_HOVER = '#F9FAFB'
 
 const NAV = [
-  { path: '',               icon: '◈', label: 'Pedidos'        },
-  { path: '/metricas',      icon: '▦', label: 'Métricas'       },
-  { path: '/menu',          icon: '≡', label: 'Menú'           },
-  { path: '/clientes',      icon: '⊙', label: 'Clientes'       },
-  { path: '/configuracion', icon: '⚙', label: 'Configuración'  },
-  { path: '/escalaciones',  icon: '⚑', label: 'Derivados'      },
-  { path: '/equipo',        icon: '⊞', label: 'Equipo'          },
-  { path: '/perfil',        icon: '👤', label: 'Mi perfil'       },
+  { path: '',               icon: '◈', label: 'Pedidos',       tourId: 'tour-nav-pedidos'       },
+  { path: '/metricas',      icon: '▦', label: 'Métricas',      tourId: 'tour-nav-metricas'      },
+  { path: '/menu',          icon: '≡', label: 'Menú',          tourId: 'tour-nav-menu'          },
+  { path: '/clientes',      icon: '⊙', label: 'Clientes',      tourId: 'tour-nav-clientes'      },
+  { path: '/configuracion', icon: '⚙', label: 'Configuración', tourId: 'tour-nav-configuracion' },
+  { path: '/escalaciones',  icon: '⚑', label: 'Derivados',     tourId: 'tour-nav-escalaciones'  },
+  { path: '/equipo',        icon: '⊞', label: 'Equipo',        tourId: 'tour-nav-equipo'        },
+  { path: '/perfil',        icon: '👤', label: 'Mi perfil',     tourId: 'tour-nav-perfil'        },
 ]
 
 const ROL_LABEL: Record<string, string> = {
@@ -98,10 +100,12 @@ function DesktopTopBar({
   email,
   rol,
   onLogout,
+  onTour,
 }: {
   email: string | null
   rol:   string | null
   onLogout: () => void
+  onTour:   () => void
 }) {
   const { theme } = useBranding()
   const ACCENT       = theme.accent
@@ -137,6 +141,15 @@ function DesktopTopBar({
         <span className="text-sm font-medium" style={{ color: '#374151' }}>
           {username}
         </span>
+        <button
+          id="tour-help-btn"
+          onClick={onTour}
+          className="flex items-center justify-center h-7 w-7 rounded-full text-xs font-bold transition-colors"
+          style={{ color: ACCENT, backgroundColor: ACCENT_LIGHT }}
+          title="Ver tour de la aplicación"
+        >
+          ?
+        </button>
         <button
           onClick={onLogout}
           className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
@@ -177,6 +190,7 @@ function DashboardSidebar({ slug, notifBadge, onLogout }: { slug: string; notifB
 
   return (
     <aside
+      id="tour-sidebar"
       className="hidden lg:flex flex-col shrink-0 h-screen sticky top-0 overflow-y-auto"
       style={{ width: 220, backgroundColor: SIDEBAR_BG, borderRight: `1px solid ${SIDEBAR_BDR}` }}
     >
@@ -221,6 +235,7 @@ function DashboardSidebar({ slug, notifBadge, onLogout }: { slug: string; notifB
           return (
             <button
               key={item.path}
+              id={item.tourId}
               onClick={() => router.push(`/dashboard/${slug}${item.path}`)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left"
               style={{
@@ -253,6 +268,7 @@ function DashboardSidebar({ slug, notifBadge, onLogout }: { slug: string; notifB
       {/* Footer */}
       <div className="px-4 pb-5 pt-3" style={{ borderTop: `1px solid ${SIDEBAR_BDR}` }}>
         <a
+          id="tour-menu-publico"
           href={`/${slug}/menu`}
           target="_blank"
           rel="noopener noreferrer"
@@ -474,6 +490,7 @@ export default function DashboardSlugLayout({ children }: { children: React.Reac
   const notifData = useLayoutNotifs(slug, authFetch)
   const { email, rol } = useCurrentUser(slug, authFetch)
   const logout    = useLogout()
+  const [tourActive, setTourActive] = useState(false)
 
   return (
     <BrandingProvider slug={slug} authFetch={authFetch}>
@@ -481,10 +498,20 @@ export default function DashboardSlugLayout({ children }: { children: React.Reac
         <DashboardSidebar slug={slug} notifBadge={notifData.badge} onLogout={logout} />
         <div className="flex-1 flex flex-col min-w-0">
           <MobileTopBar slug={slug} notifBadge={notifData.badge} email={email} rol={rol} onLogout={logout} />
-          <DesktopTopBar email={email} rol={rol} onLogout={logout} />
+          <DesktopTopBar email={email} rol={rol} onLogout={logout} onTour={() => setTourActive(true)} />
           {children}
         </div>
+        {tourActive && (
+          <Suspense fallback={null}>
+            <TourWithAccent onClose={() => setTourActive(false)} />
+          </Suspense>
+        )}
       </div>
     </BrandingProvider>
   )
+}
+
+function TourWithAccent({ onClose }: { onClose: () => void }) {
+  const { theme } = useBranding()
+  return <DashboardTour accent={theme.accent} onClose={onClose} />
 }
