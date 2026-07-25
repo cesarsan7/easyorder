@@ -2535,7 +2535,7 @@ dashboardRoutes.patch('/:slug/members/:target_user_id/rol', async (c) => {
   let body: { rol?: string };
   try { body = await c.req.json(); } catch { body = {}; }
 
-  const allowed_roles = ['manager', 'viewer'];
+  const allowed_roles = ['owner', 'manager', 'viewer'];
   const new_rol = body.rol;
   if (!new_rol || !allowed_roles.includes(new_rol)) {
     return c.json({ error: 'invalid_rol' }, 400);
@@ -2549,7 +2549,6 @@ dashboardRoutes.patch('/:slug/members/:target_user_id/rol', async (c) => {
       LIMIT 1
     `;
     if (!target) return c.json({ error: 'member_not_found' }, 404);
-    if (target.rol === 'owner') return c.json({ error: 'cannot_change_owner' }, 400);
 
     await sql`
       UPDATE local_memberships
@@ -2582,7 +2581,6 @@ dashboardRoutes.delete('/:slug/members/:target_user_id', async (c) => {
       LIMIT 1
     `;
     if (!target) return c.json({ error: 'member_not_found' }, 404);
-    if (target.rol === 'owner') return c.json({ error: 'cannot_remove_owner' }, 400);
 
     await sql`
       DELETE FROM local_memberships
