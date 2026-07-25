@@ -89,7 +89,7 @@ function useLogout() {
   const router = useRouter()
   return async () => {
     await createClient().auth.signOut()
-    router.push('/registro')
+    router.push('/login')
   }
 }
 
