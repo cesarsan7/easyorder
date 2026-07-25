@@ -92,8 +92,8 @@ export default function DashboardTour({ accent, onClose }: Props) {
         {
           element:  '#tour-nav-equipo',
           popover: {
-            title:       '⊞ Equipo',
-            description: 'Invita a tu personal y asígnales roles: Propietario, Gerente o Personal. Genera un enlace de invitación y compártelo — se unen en segundos.',
+            title:       '⊞ Equipo — Cómo invitar a alguien',
+            description: '<b>Paso 1:</b> Selecciona el rol (Personal, Gerente o Propietario) y haz clic en <b>Generar enlace</b>.<br><br><b>Paso 2:</b> Copia el enlace y envíalo por WhatsApp o email. Es válido 7 días.<br><br><b>Paso 3:</b> La persona abre el enlace, crea su cuenta con email y contraseña.<br><br><b>Paso 4:</b> Queda agregada automáticamente al equipo con el rol que asignaste.',
             side:        'right',
             align:       'center',
           },
