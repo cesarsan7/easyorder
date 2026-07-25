@@ -19,6 +19,7 @@ const NAV = [
   { path: '/configuracion', icon: '⚙', label: 'Configuración'  },
   { path: '/escalaciones',  icon: '⚑', label: 'Derivados'      },
   { path: '/equipo',        icon: '⊞', label: 'Equipo'          },
+  { path: '/perfil',        icon: '👤', label: 'Mi perfil'       },
 ]
 
 const ROL_LABEL: Record<string, string> = {
