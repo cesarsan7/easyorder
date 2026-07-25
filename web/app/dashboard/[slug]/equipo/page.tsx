@@ -137,13 +137,17 @@ function EquipoInner({
 
   const fetchMyRol = useCallback(async () => {
     try {
+      // Obtener user_id directamente desde Supabase (no depende del API)
+      const { createClient } = await import('@/lib/supabase/client')
+      const { data: { user } } = await createClient().auth.getUser()
+      if (user?.id) setMyUserId(user.id)
+
       const res = await authFetch(`${apiBase}/dashboard/me`)
       if (!res.ok) return
       const data = await res.json()
       const restaurant = (data.restaurants as { slug: string; rol: string }[] | undefined)
         ?.find(r => r.slug === slug)
       if (restaurant) setMyRol(restaurant.rol)
-      if (data.user_id) setMyUserId(data.user_id)
     } catch { /* silent */ }
   }, [slug, authFetch, apiBase])
 
@@ -344,8 +348,8 @@ function EquipoInner({
                   <p className="text-xs text-gray-400">Desde {fmtDate(m.created_at)}</p>
                 </div>
 
-                {/* Role badge / selector */}
-                {canManage && m.user_id !== myUserId ? (
+                {/* Role badge / selector — owner puede cambiar rol de cualquier otro */}
+                {canManage && m.user_id !== (myUserId ?? '') ? (
                   <select
                     value={m.rol}
                     disabled={changingRol === m.user_id}
@@ -361,7 +365,7 @@ function EquipoInner({
                 )}
 
                 {/* Remove button — owner puede eliminar a cualquier otro miembro, incluso otros owners */}
-                {canManage && m.user_id !== myUserId && (
+                {canManage && m.user_id !== (myUserId ?? '') && (
                   <button
                     onClick={() => removeMember(m.user_id)}
                     disabled={removing === m.user_id}
