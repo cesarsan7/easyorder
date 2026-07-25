@@ -91,9 +91,9 @@ function JoinInner() {
     const supabase = createClient()
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        // Sin sesión → ir a login, conservando el token de invite en ?next=
+        // Sin sesión → ir a login en modo registro, conservando el token de invite en ?next=
         const next = encodeURIComponent(`/dashboard/join?token=${token}`)
-        window.location.href = `/login?next=${next}`
+        window.location.href = `/login?mode=register&next=${next}`
         return
       }
       // Sesión activa → aceptar automáticamente, sin botón intermedio

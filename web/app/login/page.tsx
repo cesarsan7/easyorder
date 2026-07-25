@@ -12,7 +12,8 @@ function LoginInner() {
   const searchParams = useSearchParams()
   const nextUrl      = searchParams.get('next') ?? ''
 
-  const [mode, setMode]       = useState<'login' | 'register'>('login')
+  const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login'
+  const [mode, setMode]       = useState<'login' | 'register'>(initialMode)
   const [email, setEmail]     = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
