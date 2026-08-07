@@ -337,11 +337,10 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
           </div>
         )}
 
-        {/* Closed banner */}
-        {!isOpen && (
+        {/* Closed banner — solo un indicador sutil en el header */}
+        {!isOpen && restaurant.mensaje_cerrado && (
           <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-800">
-            <span className="font-semibold">Local cerrado.</span>
-            {restaurant.next_opening && <>{' '}Vuelve a abrir: <span className="font-semibold">{restaurant.next_opening}</span></>}
+            {restaurant.mensaje_cerrado}
           </div>
         )}
 
@@ -420,8 +419,82 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
         )}
       </header>
 
+      {/* ── Closed screen ────────────────────────────────────────────────────── */}
+      {!isOpen && (
+        <div className="max-w-lg mx-auto px-6 py-16 flex flex-col items-center text-center gap-6">
+          {/* Ilustración */}
+          <div
+            className="w-24 h-24 rounded-full flex items-center justify-center text-5xl"
+            style={{ backgroundColor: `${accent}18` }}
+          >
+            🌙
+          </div>
+
+          {/* Título */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {restaurant.name} está cerrado ahora
+            </h2>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              {restaurant.mensaje_cerrado
+                ? restaurant.mensaje_cerrado
+                : 'En este momento no estamos tomando pedidos. ¡Gracias por tu paciencia!'}
+            </p>
+          </div>
+
+          {/* Próxima apertura */}
+          {restaurant.next_opening && (
+            <div
+              className="rounded-2xl px-6 py-4 flex items-center gap-3"
+              style={{ backgroundColor: `${accent}12`, border: `1.5px solid ${accent}30` }}
+            >
+              <span className="text-2xl">🕐</span>
+              <div className="text-left">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Próxima apertura</p>
+                <p className="text-base font-bold" style={{ color: accent }}>
+                  Volvemos {restaurant.next_opening}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Redes sociales */}
+          {(() => {
+            const validRedes = (restaurant.redes_sociales ?? []).filter(r => r.url?.trim())
+            return validRedes.length > 0 ? (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-xs text-gray-400">Síguenos mientras tanto</p>
+                <div className="flex items-center gap-2">
+                  {validRedes.slice(0, 5).map(r => (
+                    <a key={r.red} href={r.url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center h-9 w-9 rounded-full border border-gray-200 text-gray-400 hover:text-gray-600 transition-colors bg-white"
+                      style={{ color: accent }}
+                    >
+                      {SOCIAL_ICONS[r.red] ?? SOCIAL_ICONS['web']}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null
+          })()}
+
+          {/* Horarios del día si están configurados */}
+          {restaurant.horario_hoy?.disponible && (
+            <div className="text-xs text-gray-400 space-y-0.5">
+              <p className="font-medium text-gray-500">Horario de hoy</p>
+              {restaurant.horario_hoy.apertura_1 && restaurant.horario_hoy.cierre_1 && (
+                <p>{restaurant.horario_hoy.apertura_1.slice(0,5)} – {restaurant.horario_hoy.cierre_1.slice(0,5)}</p>
+              )}
+              {restaurant.horario_hoy.apertura_2 && restaurant.horario_hoy.cierre_2 && (
+                <p>{restaurant.horario_hoy.apertura_2.slice(0,5)} – {restaurant.horario_hoy.cierre_2.slice(0,5)}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Content ──────────────────────────────────────────────────────────── */}
-      <div className="max-w-5xl mx-auto px-4 py-5 md:py-7 flex gap-6 items-start">
+      {isOpen && <div className="max-w-5xl mx-auto px-4 py-5 md:py-7 flex gap-6 items-start">
         <div className="flex-1 min-w-0 space-y-8 md:space-y-10">
           {activeCategories.map((cat) => {
             const visibleItems = cat.items.filter((i) => i.is_active)
@@ -451,7 +524,7 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
           )}
         </div>
         <CartSidebar slug={slug} deliveryMinOrder={deliveryMinOrder} accent={accent} />
-      </div>
+      </div>}
 
       <SocialFooter name={restaurant.name} />
       <div className="h-20 md:hidden" />

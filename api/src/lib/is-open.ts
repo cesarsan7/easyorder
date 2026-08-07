@@ -59,6 +59,47 @@ export function getHorarioHoy(horarios: Horario[], zona_horaria: string): Horari
   return horarios.find(h => h.dia === diaEs) ?? null;
 }
 
+// Orden de días en español para calcular el siguiente día disponible
+const DIAS_ES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+function fmtTime(t: string): string {
+  // "14:30:00" → "14:30", "08:00" → "8:00"
+  const [h, m] = t.split(':');
+  return `${parseInt(h, 10)}:${m}`;
+}
+
+// Devuelve un string amigable con la próxima apertura, ej:
+// "hoy a las 19:00" / "mañana a las 8:00" / "el Miércoles a las 9:00"
+// Devuelve null si no hay horarios disponibles configurados.
+export function getNextOpening(horarios: Horario[], zona_horaria: string): string | null {
+  const { diaEs, currentMins } = getLocalDayAndMinutes(zona_horaria);
+  const todayIdx = DIAS_ES.indexOf(diaEs);
+  if (todayIdx === -1) return null;
+
+  // Buscar el próximo turno disponible empezando desde hoy
+  for (let offset = 0; offset < 7; offset++) {
+    const idx = (todayIdx + offset) % 7;
+    const dia = DIAS_ES[idx];
+    const horario = horarios.find(h => h.dia === dia && h.disponible);
+    if (!horario) continue;
+
+    const slots = [
+      { apertura: horario.apertura_1, cierre: horario.cierre_1 },
+      { apertura: horario.apertura_2, cierre: horario.cierre_2 },
+    ];
+
+    for (const slot of slots) {
+      if (!slot.apertura || !slot.cierre) continue;
+      const openMins = timeToMinutes(slot.apertura);
+      // Si es hoy, solo contar si aún no ha pasado la apertura
+      if (offset === 0 && openMins <= currentMins) continue;
+      const label = offset === 0 ? 'hoy' : offset === 1 ? 'mañana' : `el ${dia}`;
+      return `${label} a las ${fmtTime(slot.apertura)}`;
+    }
+  }
+  return null;
+}
+
 // Returns the local time context for a given timezone:
 // diaEs — current weekday name in Spanish (e.g. "Lunes")
 // horaLocal — current local time as "HH:MM" (e.g. "14:32")

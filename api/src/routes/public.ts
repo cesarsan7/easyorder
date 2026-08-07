@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Variables } from '../types.js';
 import sql from '../lib/db.js';
-import { calcIsOpen, getHorarioHoy, type Horario } from '../lib/is-open.js';
+import { calcIsOpen, getHorarioHoy, getNextOpening, type Horario } from '../lib/is-open.js';
 import { resolveTenant } from '../middleware/tenant.js';
 import { checkRateLimit } from '../lib/rate-limit.js';
 
@@ -147,7 +147,8 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
   const isOpenCalculated = calcIsOpen(horariosRows, r.zona_horaria);
   const isOpen = isOpenOverride !== null ? isOpenOverride : isOpenCalculated;
 
-  const horarioHoy = getHorarioHoy(horariosRows, r.zona_horaria);
+  const horarioHoy    = getHorarioHoy(horariosRows, r.zona_horaria);
+  const nextOpening   = isOpen ? null : getNextOpening(horariosRows, r.zona_horaria);
 
   return c.json({
     id:                  r.id,
@@ -177,6 +178,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
     datos_bancarios:     r.datos_bancarios ?? null,
     is_open:             isOpen,
     is_open_override:    isOpenOverride,
+    next_opening:        nextOpening,
     horario_hoy:         horarioHoy
       ? {
           dia:        horarioHoy.dia,
