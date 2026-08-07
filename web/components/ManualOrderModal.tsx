@@ -11,7 +11,7 @@ interface Variant {
 
 interface MenuItem {
   menu_item_id: number
-  item_name:    string
+  name:         string   // API returns 'name', not 'item_name'
   variants:     Variant[]
 }
 
@@ -125,7 +125,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
       return [...prev, {
         menu_variant_id: variant.menu_variant_id,
         menu_item_id:    item.menu_item_id,
-        item_name:       item.item_name,
+        item_name:       item.name,
         variant_name:    variant.variant_name,
         quantity:        1,
         unit_price:      Number(variant.price),
@@ -152,7 +152,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
     .map(cat => ({
       ...cat,
       items: cat.items.filter(i =>
-        !search || i.item_name.toLowerCase().includes(search.toLowerCase())
+        !search || i.name.toLowerCase().includes(search.toLowerCase())
       ),
     }))
     .filter(cat => cat.items.length > 0)
@@ -332,7 +332,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                             <div key={v.menu_variant_id}
                               className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{item.item_name}</p>
+                                <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
                                 {item.variants.length > 1 && (
                                   <p className="text-xs text-gray-400">{v.variant_name}</p>
                                 )}
