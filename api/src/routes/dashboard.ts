@@ -2544,8 +2544,8 @@ dashboardRoutes.post('/:slug/members/invite', async (c) => {
         const inviteUrl = `${webBase}/dashboard/join?token=${invite.token}`;
         const nombreLocal = rest?.nombre ?? 'tu restaurante';
 
-        await resend.emails.send({
-          from:    'EasyOrder <noreply@ai2nomous.com>',
+        const sendResult = await resend.emails.send({
+          from:    process.env['RESEND_FROM'] ?? 'EasyOrder <onboarding@resend.dev>',
           to:      invited_email,
           subject: `Te invitaron a unirte a ${nombreLocal} en EasyOrder`,
           html: `
@@ -2611,7 +2611,11 @@ dashboardRoutes.post('/:slug/members/invite', async (c) => {
 </body>
 </html>`,
         });
-        email_sent = true;
+        if (sendResult.error) {
+          console.error('[invite] Resend rechazó el email:', JSON.stringify(sendResult.error));
+        } else {
+          email_sent = true;
+        }
       } catch (emailErr) {
         console.error('[invite] Error enviando email con Resend:', emailErr);
         // No fallar el endpoint si el email falla — el token sigue siendo válido
