@@ -524,6 +524,7 @@ export default function ConfiguracionPage() {
       if (h.disponible && (!h.apertura_1 || !h.cierre_1)) { alert(`${h.dia}: falta 1° turno.`); return }
     }
     setHorariosState('saving')
+    setPatchError(null)
     try {
       const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/horarios`, {
         method: 'PATCH', body: JSON.stringify({ horarios: horarios.map(h => ({
@@ -532,9 +533,25 @@ export default function ConfiguracionPage() {
           apertura_2: h.apertura_2 || null, cierre_2: h.cierre_2 || null,
         })) }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`
+        try {
+          const errBody = await res.json()
+          if (errBody?.error)  detail += ` — ${errBody.error}`
+          if (errBody?.field)  detail += ` (campo: ${errBody.field})`
+          if (errBody?.detail) detail += `: ${errBody.detail}`
+        } catch { /* body no es JSON */ }
+        console.error('[saveHorarios]', detail)
+        setPatchError(`[Horarios] ${detail}`)
+        setHorariosState('error'); setTimeout(() => setHorariosState('idle'), 3000)
+        return
+      }
       setHorariosState('saved'); setTimeout(() => setHorariosState('idle'), 2000)
-    } catch { setHorariosState('error'); setTimeout(() => setHorariosState('idle'), 3000) }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setPatchError(`[Horarios] Error de red: ${msg}`)
+      setHorariosState('error'); setTimeout(() => setHorariosState('idle'), 3000)
+    }
   }
 
   async function seedHorarios() {
