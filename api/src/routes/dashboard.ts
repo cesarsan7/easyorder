@@ -437,7 +437,13 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.updated_at
         FROM   pedidos  p
         LEFT JOIN usuarios       u  ON u.id             = p.usuario_id
-        LEFT JOIN delivery_zone  dz ON dz.postal_code   = p.postal_code
+        LEFT JOIN LATERAL (
+          SELECT zone_name
+          FROM   delivery_zone
+          WHERE  postal_code   = p.postal_code
+            AND  restaurante_id = p.restaurante_id
+          LIMIT 1
+        ) dz ON TRUE
         LEFT JOIN LATERAL (
           SELECT session_id AS conversation_id
           FROM   contexto
