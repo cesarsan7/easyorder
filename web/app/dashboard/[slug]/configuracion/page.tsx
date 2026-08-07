@@ -243,6 +243,7 @@ export default function ConfiguracionPage() {
 
   const [loading,    setLoading]    = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [patchError, setPatchError] = useState<string | null>(null)
 
   // ── Branding
   const [logoUrl,      setLogoUrl]      = useState('')
@@ -377,13 +378,28 @@ export default function ConfiguracionPage() {
 
   async function patch(body: Record<string, unknown>, setState: (s: SaveState) => void) {
     setState('saving')
+    setPatchError(null)
     try {
       const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/settings`, {
         method: 'PATCH', body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        let detail = `HTTP ${res.status}`
+        try {
+          const errBody = await res.json()
+          if (errBody?.error) detail += ` — ${errBody.error}`
+          if (errBody?.field) detail += ` (campo: ${errBody.field})`
+          if (errBody?.detail) detail += `: ${errBody.detail}`
+        } catch { /* body no es JSON */ }
+        console.error('[patch settings]', detail, body)
+        setPatchError(detail)
+        throw new Error(detail)
+      }
       setState('saved'); setTimeout(() => setState('idle'), 2000)
-    } catch { setState('error'); setTimeout(() => setState('idle'), 3000) }
+    } catch (err) {
+      console.error('[patch settings error]', err)
+      setState('error'); setTimeout(() => setState('idle'), 3000)
+    }
   }
 
   function saveBranding() {
@@ -592,6 +608,16 @@ export default function ConfiguracionPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-5">
+        {patchError && (
+          <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-2">
+            <span className="text-red-500 mt-0.5">⚠</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-red-700">Error al guardar</p>
+              <p className="text-xs text-red-600 mt-0.5 break-all">{patchError}</p>
+            </div>
+            <button onClick={() => setPatchError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="h-8 w-8 rounded-full border-4 border-gray-200 animate-spin" style={{ borderTopColor: accent }} />

@@ -2495,7 +2495,7 @@ dashboardRoutes.post('/:slug/members/invite', async (c) => {
     return c.json({ error: 'forbidden' }, 403);
   }
 
-  let body: { rol?: string };
+  let body: { rol?: string; email?: string };
   try { body = await c.req.json(); } catch { body = {}; }
 
   const invited_rol = body.rol === 'owner' ? 'owner' : body.rol === 'manager' ? 'manager' : 'viewer';
@@ -2509,13 +2509,122 @@ dashboardRoutes.post('/:slug/members/invite', async (c) => {
     return c.json({ error: 'forbidden' }, 403);
   }
 
+  // Validar email opcional
+  const invited_email = typeof body.email === 'string' && body.email.trim().includes('@')
+    ? body.email.trim().toLowerCase()
+    : null;
+
   try {
     const [invite] = await sql<{ token: string; expires_at: string; rol: string }[]>`
       INSERT INTO restaurant_invites (restaurante_id, rol, created_by, expires_at)
       VALUES (${restaurante_id}, ${invited_rol}, ${user_id}::uuid, NOW() + INTERVAL '7 days')
       RETURNING token::text, expires_at::text, rol
     `;
-    return c.json({ token: invite.token, expires_at: invite.expires_at, rol: invite.rol });
+
+    // Obtener nombre del restaurante para el email
+    const [rest] = await sql<{ nombre: string; slug: string }[]>`
+      SELECT nombre, slug FROM restaurante WHERE id = ${restaurante_id} LIMIT 1
+    `;
+
+    // Enviar email de invitación si se proporcionó email y RESEND_API_KEY está configurado
+    let email_sent = false;
+    if (invited_email && process.env['RESEND_API_KEY']) {
+      try {
+        const { Resend } = await import('resend');
+        const resend = new Resend(process.env['RESEND_API_KEY']);
+
+        const ROL_LABEL: Record<string, string> = {
+          owner: 'Propietario',
+          manager: 'Gerente',
+          viewer: 'Personal',
+        };
+        const rolLabel = ROL_LABEL[invited_rol] ?? invited_rol;
+
+        const webBase = process.env['WEB_BASE_URL'] ?? 'https://easyorder.ai2nomous.com';
+        const inviteUrl = `${webBase}/dashboard/join?token=${invite.token}`;
+        const nombreLocal = rest?.nombre ?? 'tu restaurante';
+
+        await resend.emails.send({
+          from:    'EasyOrder <noreply@ai2nomous.com>',
+          to:      invited_email,
+          subject: `Te invitaron a unirte a ${nombreLocal} en EasyOrder`,
+          html: `
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F9FAFB;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F9FAFB;padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+        <!-- Header -->
+        <tr>
+          <td style="background:#111827;padding:28px 40px;text-align:center;">
+            <span style="font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.5px;">EasyOrder</span>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:36px 40px;">
+            <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#111827;">
+              Fuiste invitado a ${nombreLocal}
+            </h1>
+            <p style="margin:0 0 8px;font-size:15px;color:#4B5563;line-height:1.6;">
+              Alguien de <strong>${nombreLocal}</strong> te invitó a unirte como <strong>${rolLabel}</strong> en EasyOrder.
+            </p>
+            <p style="margin:0 0 28px;font-size:15px;color:#4B5563;line-height:1.6;">
+              Haz clic en el botón para crear tu cuenta y acceder al dashboard del restaurante.
+            </p>
+            <!-- CTA -->
+            <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+              <tr>
+                <td style="background:#111827;border-radius:10px;padding:0;">
+                  <a href="${inviteUrl}"
+                     style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:600;color:#fff;text-decoration:none;border-radius:10px;">
+                    Aceptar invitación →
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <!-- Info box -->
+            <div style="background:#F3F4F6;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+              <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#374151;">¿Cómo funciona?</p>
+              <ol style="margin:0;padding-left:18px;font-size:13px;color:#6B7280;line-height:1.7;">
+                <li>Abre el enlace y crea tu cuenta con tu email y una contraseña.</li>
+                <li>Quedarás unido automáticamente al equipo con el rol <strong>${rolLabel}</strong>.</li>
+                <li>Podrás acceder al dashboard en cualquier momento desde EasyOrder.</li>
+              </ol>
+            </div>
+            <p style="margin:0;font-size:12px;color:#9CA3AF;">
+              Este enlace es válido por 7 días y solo puede usarse una vez. Si no esperabas esta invitación, puedes ignorar este correo.
+            </p>
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid #F3F4F6;text-align:center;">
+            <p style="margin:0;font-size:12px;color:#9CA3AF;">EasyOrder — Sistema de pedidos para restaurantes</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+        });
+        email_sent = true;
+      } catch (emailErr) {
+        console.error('[invite] Error enviando email con Resend:', emailErr);
+        // No fallar el endpoint si el email falla — el token sigue siendo válido
+      }
+    }
+
+    return c.json({
+      token:      invite.token,
+      expires_at: invite.expires_at,
+      rol:        invite.rol,
+      email_sent,
+      invited_email,
+    });
   } catch (err) {
     console.error('[POST /dashboard/:slug/members/invite]', err);
     return c.json({ error: 'service_unavailable' }, 503);

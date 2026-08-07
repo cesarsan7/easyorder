@@ -20,9 +20,11 @@ interface Member {
 }
 
 interface InviteResult {
-  token:      string
-  expires_at: string
-  rol:        string
+  token:         string
+  expires_at:    string
+  rol:           string
+  email_sent?:   boolean
+  invited_email?: string | null
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
@@ -103,6 +105,7 @@ function EquipoInner({
 
   // Invite form
   const [inviteRol, setInviteRol]     = useState<'owner' | 'manager' | 'viewer'>('viewer')
+  const [inviteEmail, setInviteEmail] = useState('')
   const [inviteState, setInviteState] = useState<SaveState>('idle')
   const [inviteResult, setInviteResult] = useState<InviteResult | null>(null)
   const [copied, setCopied]           = useState(false)
@@ -163,10 +166,14 @@ function EquipoInner({
     setInviteResult(null)
     setCopied(false)
     try {
+      const emailTrimmed = inviteEmail.trim()
       const res = await authFetch(`${apiBase}/dashboard/${slug}/members/invite`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ rol: inviteRol }),
+        body:    JSON.stringify({
+          rol:   inviteRol,
+          ...(emailTrimmed ? { email: emailTrimmed } : {}),
+        }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -261,38 +268,61 @@ function EquipoInner({
         >
           <h2 className="text-base font-semibold text-gray-800">Invitar miembro</h2>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <label className="text-sm text-gray-600 font-medium">Rol:</label>
-            <select
-              value={inviteRol}
-              onChange={e => setInviteRol(e.target.value as 'owner' | 'manager' | 'viewer')}
-              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none"
-            >
-              {myRol === 'owner' && (
-                <option value="owner">Propietario</option>
-              )}
-              {myRol === 'owner' && (
-                <option value="manager">Gerente</option>
-              )}
-              <option value="viewer">Personal</option>
-            </select>
+          <div className="space-y-3">
+            {/* Email (opcional) */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <label className="text-sm text-gray-600 font-medium w-8">Email:</label>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+                placeholder="correo@ejemplo.com (opcional)"
+                className="flex-1 min-w-[220px] text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-offset-1"
+                style={{ '--tw-ring-color': accent } as React.CSSProperties}
+              />
+            </div>
 
-            <button
-              onClick={generateInvite}
-              disabled={inviteState === 'saving'}
-              className="text-sm font-medium px-4 py-1.5 rounded-lg text-white transition-opacity"
-              style={{ backgroundColor: accent, opacity: inviteState === 'saving' ? 0.6 : 1 }}
-            >
-              {inviteState === 'saving' ? 'Generando…' : 'Generar enlace'}
-            </button>
+            {/* Rol + botón */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <label className="text-sm text-gray-600 font-medium w-8">Rol:</label>
+              <select
+                value={inviteRol}
+                onChange={e => setInviteRol(e.target.value as 'owner' | 'manager' | 'viewer')}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:outline-none"
+              >
+                {myRol === 'owner' && (
+                  <option value="owner">Propietario</option>
+                )}
+                {myRol === 'owner' && (
+                  <option value="manager">Gerente</option>
+                )}
+                <option value="viewer">Personal</option>
+              </select>
+
+              <button
+                onClick={generateInvite}
+                disabled={inviteState === 'saving'}
+                className="text-sm font-medium px-4 py-1.5 rounded-lg text-white transition-opacity"
+                style={{ backgroundColor: accent, opacity: inviteState === 'saving' ? 0.6 : 1 }}
+              >
+                {inviteState === 'saving' ? 'Generando…' : 'Generar enlace'}
+              </button>
+            </div>
           </div>
 
           {inviteResult && (
             <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
+              {inviteResult.email_sent && inviteResult.invited_email ? (
+                <p className="text-xs text-green-700 font-medium">
+                  ✓ Enlace enviado a <strong>{inviteResult.invited_email}</strong>
+                </p>
+              ) : null}
               <p className="text-xs text-gray-500">
                 Enlace válido hasta {fmtDate(inviteResult.expires_at)}.
-                Compártelo con quien quieras añadir como{' '}
-                <strong>{ROL_LABEL[inviteResult.rol] ?? inviteResult.rol}</strong>.
+                {!inviteResult.email_sent && (
+                  <> Compártelo con quien quieras añadir como{' '}
+                  <strong>{ROL_LABEL[inviteResult.rol] ?? inviteResult.rol}</strong>.</>
+                )}
               </p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded px-2 py-1 truncate">
