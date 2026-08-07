@@ -128,7 +128,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         item_name:       item.item_name,
         variant_name:    variant.variant_name,
         quantity:        1,
-        unit_price:      variant.price,
+        unit_price:      Number(variant.price),
       }]
     })
   }
@@ -281,7 +281,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
                     {zones.map(z => (
                       <option key={z.delivery_zone_id} value={z.delivery_zone_id}>
-                        {z.zone_name} — envío {sym}{Number(z.fee).toFixed(2)}
+                        {z.zone_name} — envío {sym}{Number(z.fee ?? 0).toFixed(2)}
                         {z.min_order_amount ? ` · mín ${sym}${Number(z.min_order_amount).toFixed(2)}` : ''}
                       </option>
                     ))}
@@ -338,7 +338,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                                 )}
                               </div>
                               <span className="text-xs font-semibold text-gray-600 shrink-0">
-                                {sym}{v.price.toFixed(2)}
+                                {sym}{Number(v.price).toFixed(2)}
                               </span>
                               {inCart ? (
                                 <div className="flex items-center gap-1 shrink-0">
