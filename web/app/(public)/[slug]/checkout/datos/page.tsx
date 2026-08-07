@@ -104,7 +104,8 @@ export default function CheckoutDatosPage() {
     router.push(`/${slug}/checkout/despacho`)
   }
 
-  const canContinue = name.trim().length > 0 && phone.trim().length > 0
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
+  const canContinue = name.trim().length > 0 && phone.trim().length > 0 && privacyAccepted
 
   return (
     <main className="min-h-screen bg-gray-50 pb-36">
@@ -182,8 +183,32 @@ export default function CheckoutDatosPage() {
       </div>
 
       {/* Sticky footer CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 z-20 shadow-lg">
-        <div className="max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-3 pb-5 z-20 shadow-lg">
+        <div className="max-w-lg mx-auto space-y-3">
+          {/* Aceptación de política de privacidad */}
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={privacyAccepted}
+              onChange={e => setPrivacyAccepted(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 shrink-0 cursor-pointer"
+              style={{ accentColor: accent }}
+            />
+            <span className="text-xs text-gray-500 leading-relaxed">
+              He leído y acepto la{' '}
+              <a
+                href={`/${slug}/privacidad`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline underline-offset-2"
+                style={{ color: accent }}
+              >
+                Política de privacidad
+              </a>
+              {' '}y el tratamiento de mis datos para gestionar mi pedido.
+            </span>
+          </label>
+
           <button
             onClick={handleContinue}
             disabled={!canContinue}

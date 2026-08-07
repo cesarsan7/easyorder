@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, createContext, useContext } from 'react'
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 import { useBranding } from '@/lib/context/branding'
@@ -299,6 +299,8 @@ export default function ConfiguracionPage() {
   const [zoneAdding,       setZoneAdding]       = useState(false)
   const [zoneDeleting,     setZoneDeleting]     = useState<Record<number, boolean>>({})
   const [zonasExpanded,    setZonasExpanded]    = useState(true)
+  const [newZoneId,        setNewZoneId]        = useState<number | null>(null)
+  const zonasSectionRef = useRef<HTMLDivElement | null>(null)
 
   // ── GIS — restaurant location + coverage radius
   const [restLat,    setRestLat]    = useState<number | null>(null)
@@ -495,7 +497,14 @@ export default function ConfiguracionPage() {
           delivery_fee: 0, min_order_amount: 0, estimated_minutes_min: null, estimated_minutes_max: null, is_active: false }),
       })
       if (!res.ok) throw new Error()
-      const z: DeliveryZone = await res.json(); setZones(p => [...p, z])
+      const z: DeliveryZone = await res.json()
+      setZones(p => [z, ...p])          // nueva zona aparece ARRIBA
+      setZonasExpanded(true)            // asegurar que la sección esté expandida
+      setNewZoneId(z.delivery_zone_id)  // marcarla como nueva para highlight
+      setTimeout(() => {
+        zonasSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        setTimeout(() => setNewZoneId(null), 2500) // quitar highlight después
+      }, 80)
     } catch { alert('Error al crear la zona.') }
     finally { setZoneAdding(false) }
   }
@@ -912,7 +921,7 @@ export default function ConfiguracionPage() {
             </div>
 
             {/* ── Zonas de delivery ─────────────────────────────────────── */}
-            <div className="flex items-center justify-between mt-6 mb-0 px-1 py-1 border-b border-gray-100">
+            <div ref={zonasSectionRef} className="flex items-center justify-between mt-6 mb-0 px-1 py-1 border-b border-gray-100">
               <button type="button" onClick={() => setZonasExpanded(v => !v)} className="flex items-center gap-2 text-left">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500">
                   {zonasExpanded ? '▼' : '▶'} Zonas de delivery
@@ -931,8 +940,14 @@ export default function ConfiguracionPage() {
             )}
             {zonasExpanded && zones.map(zone => {
               const state = zoneSaving[zone.delivery_zone_id] ?? 'idle'
+              const isNew = newZoneId === zone.delivery_zone_id
               return (
-                <div key={zone.delivery_zone_id} className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-4 mt-3">
+                <div key={zone.delivery_zone_id}
+                  className="rounded-2xl shadow-sm px-5 py-4 mt-3 transition-all duration-500"
+                  style={{
+                    backgroundColor: isNew ? `${accent}0D` : 'white',
+                    border: isNew ? `2px solid ${accent}60` : '1px solid #F3F4F6',
+                  }}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex-1 mr-3">
                       <input type="text" value={zone.zone_name} onChange={e => setZones(p => p.map(z => z.delivery_zone_id === zone.delivery_zone_id ? { ...z, zone_name: e.target.value } : z))}
