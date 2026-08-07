@@ -58,8 +58,9 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const apiBase    = process.env.NEXT_PUBLIC_API_URL ?? ''
 
   // Customer
-  const [nombre,   setNombre]   = useState('')
-  const [telefono, setTelefono] = useState('')
+  const [nombre,      setNombre]      = useState('')
+  const [telefono,    setTelefono]    = useState('')
+  const [phonePrefix, setPhonePrefix] = useState('+34')
 
   // Dispatch
   const [tipoDespacho, setTipoDespacho] = useState<'retiro' | 'delivery'>('retiro')
@@ -96,10 +97,11 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         setCategories(d.categories ?? [])
       }
       if (restRes.ok) {
-        const d: { payment_methods?: string[] } = await restRes.json()
+        const d: { payment_methods?: string[]; phone_prefix?: string } = await restRes.json()
         const methods = d.payment_methods ?? []
         setPaymentMethods(methods)
         if (methods.length > 0) setMetodoPago(methods[0])
+        if (d.phone_prefix) setPhonePrefix(d.phone_prefix)
       }
       if (zonesRes.ok) {
         const d: { zones: DeliveryZone[] } = await zonesRes.json()
@@ -174,7 +176,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre:        nombre.trim(),
-          telefono:      telefono.trim(),
+          telefono:      telefono.trim().startsWith('+') ? telefono.trim() : `${phonePrefix}${telefono.trim().replace(/\D/g, '')}`,
           tipo_despacho: tipoDespacho,
           metodo_pago:   metodoPago,
           direccion:     tipoDespacho === 'delivery' ? direccion.trim() : undefined,
@@ -246,10 +248,15 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Teléfono *</label>
-                <input value={telefono} onChange={e => setTelefono(e.target.value)}
-                  placeholder="+34 600 000 000" type="tel"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2"
-                  style={{ '--tw-ring-color': accent } as React.CSSProperties} />
+                <div className="flex gap-1">
+                  <span className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50 px-2.5 text-xs text-gray-500 shrink-0 select-none">
+                    {phonePrefix}
+                  </span>
+                  <input value={telefono} onChange={e => setTelefono(e.target.value)}
+                    placeholder="600 000 000" type="tel"
+                    className="min-w-0 flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    style={{ '--tw-ring-color': accent } as React.CSSProperties} />
+                </div>
               </div>
             </div>
           </section>
