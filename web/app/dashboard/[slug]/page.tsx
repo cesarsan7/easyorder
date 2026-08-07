@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, createContext, useContext } from 'react'
+import { useEffect, useState, useCallback, useRef, createContext, useContext, lazy, Suspense } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 import { useBranding } from '@/lib/context/branding'
+const ManualOrderModal = lazy(() => import('@/components/ManualOrderModal'))
 
 // Accent context — driven by tenant theme via BrandingProvider
 const AccentCtx = createContext('#6366F1')
@@ -763,6 +764,9 @@ export default function DashboardPage() {
     const supabase = createClient(); await supabase.auth.signOut(); router.replace('/login')
   }
 
+  const [showManualOrder, setShowManualOrder] = useState(false)
+  const [manualMoneda,    setManualMoneda]   = useState('EUR')
+
   const [orders,         setOrders]         = useState<Order[]>([])
   const [total,          setTotal]          = useState(0)
   const [newCount,       setNewCount]       = useState(0)
@@ -800,6 +804,13 @@ export default function DashboardPage() {
       if (range.fecha_desde) p.set('fecha_desde',range.fecha_desde)
       if (range.fecha_hasta) p.set('fecha_hasta',range.fecha_hasta)
       const qs = p.toString()
+      // Cargar moneda para el modal de pedido manual (best-effort)
+      if (!silent) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/${slug}/restaurant`)
+          .then(r => r.ok ? r.json() : null)
+          .then((d: { moneda?: string } | null) => { if (d?.moneda) setManualMoneda(d.moneda) })
+          .catch(() => {})
+      }
       const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/dashboard/${slug}/orders${qs?'?'+qs:''}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data:{orders:Order[];total:number} = await res.json()
@@ -911,6 +922,11 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <StatusToggle slug={slug} authFetch={authFetch} />
+            <button onClick={() => setShowManualOrder(true)}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: accent }}>
+              📞 Crear pedido
+            </button>
             <button onClick={()=>fetchOrders()}
               className="rounded-lg px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600">
               ↻ Actualizar
@@ -1224,6 +1240,22 @@ export default function DashboardPage() {
           settingsRef={soundSettingsRef}
           onClose={() => setShowSoundConfig(false)}
         />
+      )}
+
+      {showManualOrder && (
+        <Suspense fallback={null}>
+          <ManualOrderModal
+            slug={slug}
+            accent={accent}
+            moneda={manualMoneda}
+            onClose={() => setShowManualOrder(false)}
+            onCreated={(codigo) => {
+              setShowManualOrder(false)
+              fetchOrders(true)
+              alert(`✅ Pedido #${codigo} creado correctamente.`)
+            }}
+          />
+        </Suspense>
       )}
     </div>
     </AccentCtx.Provider>

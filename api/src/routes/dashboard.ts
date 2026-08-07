@@ -1029,6 +1029,177 @@ dashboardRoutes.patch('/:slug/orders/:id/payment', requireAuth, async (c) => {
 });
 
 // ----------------------------------------------------------------------------
+// POST /dashboard/:slug/orders/manual
+//
+// Crea un pedido manual desde el dashboard (canal telefónico).
+// Diferencias vs POST /public/:slug/orders:
+//   - No valida is_open (el operador sabe que el local está cerrado)
+//   - No tiene doble-submit check
+//   - canal = 'telefono'
+//   - Requiere auth de operador (owner o manager)
+// ----------------------------------------------------------------------------
+dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const rol            = c.get('rol');
+
+  if (rol !== 'owner' && rol !== 'manager') {
+    return c.json({ error: 'forbidden' }, 403);
+  }
+
+  let body: unknown;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_body' }, 400); }
+  if (!body || typeof body !== 'object') return c.json({ error: 'invalid_body' }, 400);
+
+  const b = body as Record<string, unknown>;
+
+  const telefono = typeof b.telefono === 'string' ? b.telefono.trim() : null;
+  if (!telefono || !/^\+?[0-9]{7,20}$/.test(telefono))
+    return c.json({ error: 'telefono_required' }, 400);
+
+  const nombre = typeof b.nombre === 'string' ? b.nombre.trim() : null;
+  if (!nombre) return c.json({ error: 'nombre_required' }, 400);
+
+  const tipo_despacho = b.tipo_despacho === 'delivery' || b.tipo_despacho === 'retiro'
+    ? b.tipo_despacho : null;
+  if (!tipo_despacho) return c.json({ error: 'invalid_tipo_despacho' }, 400);
+
+  const metodo_pago = typeof b.metodo_pago === 'string' ? b.metodo_pago.trim() : null;
+  if (!metodo_pago) return c.json({ error: 'metodo_pago_required' }, 400);
+
+  const direccion = tipo_despacho === 'delivery'
+    ? (typeof b.direccion === 'string' ? b.direccion.trim() || null : null) : null;
+  if (tipo_despacho === 'delivery' && !direccion)
+    return c.json({ error: 'delivery_requires_address' }, 422);
+
+  const zona_id = tipo_despacho === 'delivery'
+    ? (typeof b.zona_id === 'number' && Number.isInteger(b.zona_id) && b.zona_id >= 1 ? b.zona_id : null)
+    : null;
+  if (tipo_despacho === 'delivery' && zona_id === null)
+    return c.json({ error: 'delivery_requires_zona_id' }, 400);
+
+  const notasStr = typeof b.notas === 'string' ? b.notas.trim() || null : null;
+  const notasJson = notasStr ? [{ item: 'general', nota: notasStr }] : null;
+
+  if (!Array.isArray(b.items) || b.items.length === 0)
+    return c.json({ error: 'items_required' }, 400);
+
+  type RawItem = {
+    menu_variant_id: number; menu_item_id: number;
+    item_name: string; variant_name: string;
+    quantity: number; unit_price: number;
+    extras?: { extra_id: number; name: string; unit_price: number; quantity: number }[];
+  };
+  const items = b.items as RawItem[];
+
+  try {
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    // Subtotal
+    let subtotal = 0;
+    for (const item of items) {
+      subtotal += item.unit_price * item.quantity;
+      for (const ex of item.extras ?? []) subtotal += ex.unit_price * ex.quantity;
+    }
+    subtotal = round2(subtotal);
+
+    let costo_envio = 0;
+    let tiempo_estimado: string | null = null;
+    let zone_postal_code: string | null = null;
+
+    if (tipo_despacho === 'delivery') {
+      const [zoneRows] = await Promise.all([
+        sql<{ delivery_zone_id: number; fee: number | string; estimated_minutes_min: number | null; estimated_minutes_max: number | null; postal_code: string | null }[]>`
+          SELECT delivery_zone_id, fee, estimated_minutes_min, estimated_minutes_max, postal_code
+          FROM   delivery_zone
+          WHERE  delivery_zone_id = ${zona_id!}
+            AND  restaurante_id   = ${restaurante_id}
+          LIMIT  1
+        `,
+      ]);
+      if (zoneRows.length === 0) return c.json({ error: 'zone_not_found' }, 422);
+      const zone = zoneRows[0];
+      costo_envio = parseFloat(String(zone.fee));
+      zone_postal_code = zone.postal_code ?? null;
+      if (zone.estimated_minutes_min !== null && zone.estimated_minutes_max !== null) {
+        tiempo_estimado = `${zone.estimated_minutes_min}-${zone.estimated_minutes_max} min`;
+      }
+    } else {
+      const pickupRows = await sql<{ config_value: string }[]>`
+        SELECT config_value FROM restaurante_config
+        WHERE config_key = 'pickup_eta_minutes' AND restaurante_id = ${restaurante_id} LIMIT 1
+      `.catch(() => [] as { config_value: string }[]);
+      const pickupMins = parseInt(pickupRows[0]?.config_value ?? '20', 10);
+      tiempo_estimado = `${pickupMins} min`;
+    }
+
+    const total = round2(subtotal + costo_envio);
+
+    // Upsert cliente
+    const usuarioRows = await sql<{ id: number }[]>`
+      SELECT id FROM fn_upsert_usuario_perfil(
+        ${telefono}, ${nombre},
+        ${tipo_despacho === 'delivery' ? direccion : null},
+        ${tipo_despacho}, ${restaurante_id}
+      ) LIMIT 1
+    `;
+    const usuario_id = usuarioRows[0]?.id ?? null;
+
+    const itemsSnapshot = items.map(item => ({
+      menu_variant_id: item.menu_variant_id,
+      menu_item_id:    item.menu_item_id,
+      item_name:       item.item_name,
+      variant_name:    item.variant_name,
+      quantity:        item.quantity,
+      unit_price:      item.unit_price,
+      extras: (item.extras ?? []).map(ex => ({
+        extra_id: ex.extra_id, name: ex.name,
+        unit_price: ex.unit_price, quantity: ex.quantity,
+      })),
+    }));
+
+    const inserted = await sql.begin(async (tx) => {
+      await tx`SELECT set_config('app.origen', 'dashboard', true)`;
+      await tx`SELECT set_config('app.actor',  'manual', true)`;
+      return tx<{ id: number; pedido_codigo: string | null; estado: string }[]>`
+        INSERT INTO pedidos (
+          restaurante_id, telefono, usuario_id, items,
+          subtotal, costo_envio, total, tipo_despacho, direccion,
+          postal_code, tiempo_estimado, metodo_pago, estado, estado_pago,
+          notas, canal
+        ) VALUES (
+          ${restaurante_id}, ${telefono}, ${usuario_id},
+          ${sql.json(itemsSnapshot)},
+          ${subtotal}, ${costo_envio}, ${total},
+          ${tipo_despacho},
+          ${tipo_despacho === 'delivery' ? direccion : null},
+          ${zone_postal_code}, ${tiempo_estimado},
+          ${metodo_pago}, 'recibido',
+          ${metodo_pago === 'efectivo' ? 'pagado' : 'pendiente'},
+          ${notasJson !== null ? sql.json(notasJson) : null},
+          'telefono'
+        )
+        RETURNING id, pedido_codigo, estado
+      `;
+    });
+
+    const pedido = inserted[0];
+    if (!pedido) return c.json({ error: 'insert_failed' }, 500);
+
+    return c.json({
+      id:            pedido.id,
+      pedido_codigo: pedido.pedido_codigo,
+      estado:        pedido.estado,
+      total,
+      canal:         'telefono',
+    }, 201);
+
+  } catch (err) {
+    console.error('[POST /dashboard/:slug/orders/manual]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+// ----------------------------------------------------------------------------
 // PATCH /dashboard/:slug/restaurant/status
 //
 // Lets the operator manually override the restaurant's open/closed state,
