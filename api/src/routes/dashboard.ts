@@ -1407,7 +1407,7 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
   const restaurante_id = c.get('restaurante_id');
 
   try {
-    const [rows, brandingRows, chatwootRows] = await Promise.all([
+    const [rows, brandingRows, chatwootRows, chatwootUrlRows] = await Promise.all([
       sql<RestauranteFullRow[]>`
         SELECT nombre, telefono, direccion, mensaje_bienvenida, mensaje_cerrado,
                datos_bancarios, moneda, payment_methods, brand_color, logo_url,
@@ -1431,6 +1431,14 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
           AND  account_id IS NOT NULL
         LIMIT  1
       `.catch(() => [] as { account_id: string }[]),
+      // Chatwoot base URL — per-restaurant config key, fallback to env var
+      sql<{ config_value: string }[]>`
+        SELECT config_value
+        FROM   restaurante_config
+        WHERE  restaurante_id = ${restaurante_id}
+          AND  config_key = 'chatwoot_base_url'
+        LIMIT  1
+      `.catch(() => [] as { config_value: string }[]),
     ]);
 
     if (rows.length === 0) {
@@ -1439,6 +1447,7 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
 
     const r = rows[0];
     const b = brandingRows[0] ?? {};
+    const chatwootBaseUrl = chatwootUrlRows[0]?.config_value || CHATWOOT_BASE_URL || null;
     return c.json({
       nombre:             r.nombre,
       telefono:           r.telefono           ?? null,
@@ -1457,7 +1466,7 @@ dashboardRoutes.get('/:slug/settings', async (c) => {
       lat:                (r as unknown as Record<string, unknown>)['lat']                 ?? null,
       lng:                (r as unknown as Record<string, unknown>)['long']                ?? null,
       radio_cobertura_km: (r as unknown as Record<string, unknown>)['radio_cobertura_km'] ?? null,
-      chatwoot_base_url:  CHATWOOT_BASE_URL || null,
+      chatwoot_base_url:  chatwootBaseUrl,
       chatwoot_account_id: chatwootRows[0]?.account_id ?? null,
       zona_horaria:       (r as unknown as Record<string, unknown>)['zona_horaria'] as string ?? 'UTC',
     });

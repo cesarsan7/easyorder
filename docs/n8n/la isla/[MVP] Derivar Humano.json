@@ -25,11 +25,14 @@
             },
             {
               "name": "tipo_escalacion"
+            },
+            {
+              "name": "restaurante_id"
             }
           ]
         }
       },
-      "id": "5993cdb8-b803-46ea-9edd-aedb33bff64e",
+      "id": "474b1051-edf3-4655-bbad-0793592ba5ac",
       "typeVersion": 1.1,
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -46,10 +49,7 @@
           "mode": "list",
           "cachedResultName": "gpt-4.1-mini"
         },
-        "options": {
-          "parallelToolCalls": false,
-          "useResponsesApi": false
-        }
+        "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
@@ -57,7 +57,7 @@
         320,
         224
       ],
-      "id": "b156184a-7d13-4d45-b6ae-545bbf11f205",
+      "id": "efcb7643-e0fb-42db-be5a-ec38b0796160",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
@@ -83,7 +83,7 @@
         1264,
         0
       ],
-      "id": "76a35cbc-4415-4552-87aa-542a1d1bf553",
+      "id": "b04d9f55-862e-4972-86bf-72e00860bfa0",
       "name": "Apagar bot",
       "credentials": {
         "httpHeaderAuth": {
@@ -99,7 +99,7 @@
         "url": "https://srqnltqkppzoxgxlfuye.supabase.co/functions/v1/webhook-intervention",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"cliente_telefono\": \"{{ $('When Executed by Another Workflow').item.json.telefono }}\",\n  \"mensaje\": \"{{ $('When Executed by Another Workflow').item.json.problema }}\",\n  \"chatwoot_url\": \"https://tacticstudio-chatwoot.cblgis.easypanel.host/app/accounts/{{ $('Variables').item.json.account_id }}/conversations/{{ $('Variables').item.json.conversation_id }}\"\n}\n",
+        "jsonBody": "={\n  \"cliente_telefono\": \"{{ $('When Executed by Another Workflow').item.json.telefono }}\",\n  \"mensaje\": \"{{ $('When Executed by Another Workflow').item.json.problema }}\",\n  \"chatwoot_url\": \"https://la-isla-chatwoot.avtsif.easypanel.host/app/accounts/{{ $('Variables').item.json.account_id }}/conversations/{{ $('Variables').item.json.conversation_id }}\"\n}\n",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -108,7 +108,7 @@
         1456,
         0
       ],
-      "id": "39ec61cc-68df-4840-a978-b0b8e373e187",
+      "id": "1be4dbf0-7862-450f-b81b-89ea2dfff2b0",
       "name": "noti lovable",
       "disabled": true
     },
@@ -126,7 +126,7 @@
         368,
         0
       ],
-      "id": "e7a6c8ee-0fd8-4a05-95eb-de6683f6116a",
+      "id": "6357660b-a78d-48e4-b753-96791630692e",
       "name": "Resuelve Problemas"
     },
     {
@@ -167,7 +167,7 @@
         768,
         0
       ],
-      "id": "f7059d29-2077-4cfc-8609-bc86b27577af",
+      "id": "edbb8116-8c50-4d6e-bd06-e273e601afca",
       "name": "Variables"
     },
     {
@@ -180,16 +180,16 @@
         1056,
         0
       ],
-      "id": "8e3f05d1-eb99-4b55-a890-3999c5f1aadf",
+      "id": "74204e11-6d23-4b11-acad-da1cbc00437e",
       "name": "Limit"
     },
     {
       "parameters": {
         "workflowId": {
           "__rl": true,
-          "value": "OXJWtkzaDC1D4SJt",
+          "value": "x79s9xuF5q9iayoc",
           "mode": "list",
-          "cachedResultUrl": "/workflow/OXJWtkzaDC1D4SJt",
+          "cachedResultUrl": "/workflow/x79s9xuF5q9iayoc",
           "cachedResultName": "[MVP] Contexto"
         },
         "workflowInputs": {
@@ -254,15 +254,15 @@
         1664,
         0
       ],
-      "id": "bfc6d0c5-5658-4eb8-aa25-95bea9988ca7",
+      "id": "c91c8906-5b3a-41e3-aeaf-51cca1646fd0",
       "name": "Crear Contexto1",
       "notesInFlow": true
     },
     {
       "parameters": {
-        "jsCode": "// Prepara el payload para INSERT en escalaciones.\n// Tomamos los valores del trigger original para evitar referencias rotas.\nconst trigger = $('When Executed by Another Workflow').first().json;\nconst respuesta = (() => { try { return $('Resuelve Problemas').first().json.output || ''; } catch { return ''; } })();\n\nconst contexto = {\n  contexto_actual: trigger.contexto_actual || null,\n  respuesta_agente: respuesta\n};\n\nreturn [{\n  json: {\n    telefono:        String(trigger.telefono || ''),\n    problema:        String(trigger.problema  || '').substring(0, 1000),\n    contexto_str:    JSON.stringify(contexto),\n    conversation_id: String(trigger.conversation_id || ''),\n    account_id:      String(trigger.account_id      || ''),\n    contact_id:      String(trigger.contact_id      || ''),\n    tipo_escalacion: String(trigger.tipo_escalacion || 'derivacion_cliente')\n  }\n}];"
+        "jsCode": "// Prepara el payload para INSERT en escalaciones.\n// Tomamos los valores del trigger original para evitar referencias rotas.\nconst trigger = $('When Executed by Another Workflow').first().json;\nconst respuesta = (() => { try { return $('Resuelve Problemas').first().json.output || ''; } catch { return ''; } })();\n\nconst contexto = {\n  contexto_actual: trigger.contexto_actual || null,\n  respuesta_agente: respuesta\n};\n\nreturn [{\n  json: {\n    telefono:        String(trigger.telefono || ''),\n    problema:        String(trigger.problema  || '').substring(0, 1000),\n    contexto_str:    JSON.stringify(contexto),\n    conversation_id: String(trigger.conversation_id || ''),\n    account_id:      String(trigger.account_id      || ''),\n    contact_id:      String(trigger.contact_id      || ''),\n    tipo_escalacion: String(trigger.tipo_escalacion || 'derivacion_cliente'),\n    restaurante_id:  Number(trigger.restaurante_id || 11)\n  }\n}];"
       },
-      "id": "aa2be734-f730-4843-a5bc-e6a0e6d0915f",
+      "id": "261af717-77ce-4e9e-8d98-d4f2e17677b4",
       "name": "Preparar Escalacion",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -274,10 +274,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $json.problema.replace(/'/g, \"''\") }}',\n  '{{ $json.contexto_str.replace(/'/g, \"''\") }}'::jsonb,\n  '{{ $json.conversation_id }}',\n  '{{ $json.account_id }}',\n  '{{ $json.contact_id }}',\n  '{{ $json.tipo_escalacion }}',\n  'pendiente'\n)\nRETURNING id, created_at",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $json.restaurante_id }},\n  '{{ $json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $json.problema.replace(/'/g, \"''\") }}',\n  '{{ $json.contexto_str.replace(/'/g, \"''\") }}'::jsonb,\n  '{{ $json.conversation_id }}',\n  '{{ $json.account_id }}',\n  '{{ $json.contact_id }}',\n  '{{ $json.tipo_escalacion }}',\n  'pendiente'\n)\nRETURNING id, created_at",
         "options": {}
       },
-      "id": "bff4e5eb-0d48-46cf-b162-e0de90b3c20c",
+      "id": "49ba9631-94f6-4482-908b-b0b8d2eb29ef",
       "name": "Registrar Escalacion",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
@@ -419,11 +419,11 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "05e7adea-6cd2-4a47-9a9e-6eb681957395",
+  "versionId": "be621330-7e76-4f29-b940-f2f394a14ef9",
   "meta": {
     "instanceId": "3e9e2731a8d5bb19fd4086b1e0521bd627f7d1fd4fb35cc0a5387b699bc723b0"
   },
   "nodeGroups": [],
-  "id": "W4uBBY9mfZ207X3M",
+  "id": "wdIGv11AtcfG2f3B",
   "tags": []
 }

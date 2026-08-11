@@ -20,7 +20,7 @@
           ]
         }
       },
-      "id": "7cb428c5-763e-4402-9a66-34e1ea9e293e",
+      "id": "67f86a55-1471-4862-9040-6693d7db333b",
       "typeVersion": 1.1,
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
@@ -38,10 +38,7 @@
           "cachedResultName": "gpt-4.1-mini"
         },
         "builtInTools": {},
-        "options": {
-          "parallelToolCalls": false,
-          "useResponsesApi": false
-        }
+        "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
@@ -49,7 +46,7 @@
         240,
         144
       ],
-      "id": "e2ff808a-d517-4f72-a881-fad1cd9279c6",
+      "id": "cd1ef549-b8e2-4342-9648-69bdb9f3fdee",
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
@@ -154,7 +151,7 @@
         560,
         0
       ],
-      "id": "41592fa5-f6c2-4ee6-8ce6-fbae5af69a0d",
+      "id": "c8b69800-a560-4012-ba26-f32acaaa7337",
       "name": "Actualizar Contexto",
       "credentials": {
         "postgres": {
@@ -183,7 +180,7 @@
         240,
         0
       ],
-      "id": "5004400a-2c96-4994-a596-61e854d62bfd",
+      "id": "d9d88031-8034-45fa-8015-1de56759df7b",
       "name": "Generar contexto",
       "onError": "continueErrorOutput"
     },
@@ -191,7 +188,7 @@
       "parameters": {
         "jsCode": "// Nodo de catch global para Contexto\n// Se activa cuando cualquier nodo upstream falla (onError: continueErrorOutput)\nconst err = $input.first();\nconst origen = err?.json?.node || err?.json?.source || 'nodo desconocido';\nconst detalle = err?.json?.message || err?.json?.error || 'sin detalle';\nconst telefono = $('When Executed by Another Workflow').first().json?.telefono || '';\n\nreturn [{\n  json: {\n    success: false,\n    error: true,\n    tipo: 'sistema',\n    subflujo: 'Contexto',\n    mensaje: `Error técnico en Contexto (${origen}): ${detalle}`,\n    puede_continuar: false,\n    mutar_db: false,\n    telefono: telefono,\n    problema_escalacion: `Error técnico en Contexto (${origen}): ${detalle}`\n  }\n}];"
       },
-      "id": "cfe774f5-ed7b-4b2b-a0a9-bdf0e0c2b32e",
+      "id": "ee569a33-0672-44ce-8203-6449172b5715",
       "name": "Respuesta Error Sistema",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -206,7 +203,7 @@
         "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  1,\n  '{{ $input.first().json.telefono.replace(/'/g, \"''\") }}',\n  '{{ $input.first().json.problema_escalacion.replace(/'/g, \"''\") }}',\n  '{\"subflujo\": \"Contexto\", \"tipo\": \"error_sistema\"}'::jsonb,\n  '', '', '', 'error_sistema', 'pendiente'\n)",
         "options": {}
       },
-      "id": "ed3c9997-3987-4104-b09e-da5b42f9e5ec",
+      "id": "21856392-fa6d-4515-8500-54061f7f710a",
       "name": "Registrar Escalacion Error",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
@@ -226,7 +223,7 @@
       "parameters": {
         "jsCode": "// Reenviar la respuesta de error al Director sin modificar\nreturn [$(\"Respuesta Error Sistema\").first()];"
       },
-      "id": "93051bfa-ac98-4583-8194-4491af37ed52",
+      "id": "0b408ae4-6b2f-41cf-a08d-fe90872d0841",
       "name": "Devolver Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -319,11 +316,11 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "a12dd5fc-7dc8-4a6d-89a3-be9992e2533c",
+  "versionId": "7a622b6f-cee0-43aa-95f8-7567d67dc747",
   "meta": {
     "instanceId": "3e9e2731a8d5bb19fd4086b1e0521bd627f7d1fd4fb35cc0a5387b699bc723b0"
   },
   "nodeGroups": [],
-  "id": "OXJWtkzaDC1D4SJt",
+  "id": "x79s9xuF5q9iayoc",
   "tags": []
 }
