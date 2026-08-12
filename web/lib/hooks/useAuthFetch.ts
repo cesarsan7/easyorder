@@ -24,10 +24,13 @@ export function useAuthFetch() {
         return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 })
       }
 
+      // No forzar Content-Type cuando el body es FormData —
+      // el browser lo setea automáticamente con el boundary correcto.
+      const isFormData = init.body instanceof FormData
       return fetch(input, {
         ...init,
         headers: {
-          'Content-Type': 'application/json',
+          ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
           ...init.headers,
           Authorization: `Bearer ${session.access_token}`,
         },
