@@ -9,7 +9,6 @@ import { useBranding } from '@/lib/context/branding'
 const AccentCtx = createContext('#6366F1')
 const useAccent = () => useContext(AccentCtx)
 import dynamic from 'next/dynamic'
-import { createClient } from '@/lib/supabase/client'
 import { THEME_LIST, type ThemeId } from '@/lib/themes'
 import type { ZoneMapZone } from './ZoneMap'
 
@@ -712,25 +711,21 @@ export default function ConfiguracionPage() {
                             setLogoUploading(true)
                             setLogoError(null)
                             try {
-                              const ext = file.name.split('.').pop() ?? 'png'
-                              const filePath = `${slug}/logo.${ext}`
-                              const supabase = createClient()
-                              const { error: upErr } = await supabase.storage
-                                .from('la_isla')
-                                .upload(filePath, file, { upsert: true, contentType: file.type })
-                              if (upErr) throw new Error(upErr.message)
-                              const { data: { publicUrl } } = supabase.storage
-                                .from('la_isla')
-                                .getPublicUrl(filePath)
-                              // Add cache-bust so the browser reloads the image
-                              const bustUrl = publicUrl + '?t=' + Date.now()
-                              setLogoUrl(bustUrl)
+                              const form = new FormData()
+                              form.append('file', file)
+                              const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
+                              const res = await authFetch(`${apiBase}/dashboard/${slug}/upload-logo`, {
+                                method: 'POST',
+                                body: form,
+                              })
+                              const data = await res.json() as { ok?: boolean; logo_url?: string; error?: string; detail?: string }
+                              if (!res.ok || !data.ok) throw new Error(data.detail ?? data.error ?? 'Error al subir imagen')
+                              setLogoUrl(data.logo_url!)
                               setBrandingState('idle')
                             } catch (err) {
                               setLogoError((err as Error).message ?? 'Error al subir la imagen.')
                             } finally {
                               setLogoUploading(false)
-                              // Reset input so same file can be re-uploaded
                               e.target.value = ''
                             }
                           }}

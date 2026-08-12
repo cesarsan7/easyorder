@@ -99,6 +99,63 @@ menuImagesRoutes.delete('/:slug/menu/items/:id/image', async (c) => {
   return c.json({ ok: true });
 });
 
+// ─── POST /dashboard/:slug/upload-logo ───────────────────────────────────────
+// Sube el logo del restaurante al bucket 'logos' y devuelve la URL pública.
+const LOGO_BUCKET      = 'logos';
+const LOGO_ALLOWED     = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+const LOGO_MAX_SIZE_MB = 2;
+
+menuImagesRoutes.post('/:slug/upload-logo', async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const slug           = c.req.param('slug');
+
+  let file: File | null = null;
+  try {
+    const body = await c.req.parseBody({ all: true });
+    const raw  = body['file'];
+    if (!raw || typeof raw === 'string') {
+      return c.json({ error: 'missing_file', detail: 'Envía un campo "file" con la imagen' }, 400);
+    }
+    file = raw as File;
+  } catch {
+    return c.json({ error: 'invalid_body' }, 400);
+  }
+
+  if (!LOGO_ALLOWED.includes(file.type)) {
+    return c.json({ error: 'invalid_type', detail: `Tipo permitido: ${LOGO_ALLOWED.join(', ')}` }, 400);
+  }
+  if (file.size > LOGO_MAX_SIZE_MB * 1024 * 1024) {
+    return c.json({ error: 'file_too_large', detail: `Máximo ${LOGO_MAX_SIZE_MB}MB` }, 400);
+  }
+
+  const ext    = file.type === 'image/svg+xml' ? 'svg' : file.type.split('/')[1].replace('jpeg', 'jpg');
+  const path   = `${restaurante_id}/logo.${ext}`;
+  const buffer = await file.arrayBuffer();
+
+  // Upsert (overwrite) logo
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(LOGO_BUCKET)
+    .upload(path, buffer, { contentType: file.type, cacheControl: '3600', upsert: true });
+
+  if (uploadError) {
+    console.error('[upload-logo] upload error:', uploadError.message);
+    return c.json({ error: 'upload_failed', detail: uploadError.message }, 500);
+  }
+
+  const { data: urlData } = supabaseAdmin.storage.from(LOGO_BUCKET).getPublicUrl(path);
+  const logo_url = urlData.publicUrl + '?t=' + Date.now();
+
+  // Persist logo_url in restaurante table
+  await sql`
+    UPDATE restaurante
+    SET logo_url   = ${urlData.publicUrl},
+        updated_at = NOW()
+    WHERE restaurante_id = ${restaurante_id}
+  `.catch(() => null); // non-fatal if column doesn't exist yet
+
+  return c.json({ ok: true, logo_url, slug });
+});
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 // Extrae el path relativo dentro del bucket desde la URL pública de Supabase
 function extractStoragePath(url: string): string | null {
