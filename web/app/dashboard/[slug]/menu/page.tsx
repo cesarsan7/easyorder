@@ -132,28 +132,31 @@ function TextareaField({ label, value, onChange, placeholder, maxLength }: {
 
 // ─── Image Picker ─────────────────────────────────────────────────────────────
 
-function ImagePickerField({ value, onChange, slug }: {
+function ImagePickerField({ value, onChange, slug, authFetch }: {
   value: string; onChange: (v: string) => void; slug: string
+  authFetch: ReturnType<typeof useAuthFetch>
 }) {
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
 
   async function handleFile(file: File) {
-    if (file.size > 2 * 1024 * 1024) { setUploadErr('Imagen demasiado grande (máx 2 MB)'); return }
+    if (file.size > 5 * 1024 * 1024) { setUploadErr('Imagen demasiado grande (máx 5 MB)'); return }
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
       setUploadErr('Solo se aceptan JPG, PNG o WebP'); return
     }
     setUploadErr(''); setUploading(true)
     try {
-      const { createClient } = await import('@/lib/supabase/client')
-      const supabase = createClient()
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const path = `${slug}/${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('menu-images').upload(path, file, { cacheControl: '3600', upsert: false })
-      if (error) throw error
-      const { data } = supabase.storage.from('menu-images').getPublicUrl(path)
-      onChange(data.publicUrl)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await authFetch(`${apiBase}/dashboard/${slug}/menu/upload-image`, {
+        method: 'POST',
+        body: form,
+      })
+      const data = await res.json() as { ok?: boolean; image_url?: string; error?: string; detail?: string }
+      if (!res.ok || !data.ok) throw new Error(data.detail ?? data.error ?? 'Error al subir imagen')
+      onChange(data.image_url!)
     } catch (e: unknown) {
       setUploadErr(e instanceof Error ? e.message : 'Error al subir imagen')
     } finally {
@@ -253,12 +256,13 @@ function CategoryModal({
 // ─── Item Form Modal ──────────────────────────────────────────────────────────
 
 function ItemModal({
-  initial, categories, slug, onSave, onClose,
+  initial, categories, slug, onSave, onClose, authFetch,
 }: {
   initial?: Item
   categories: Category[]
   slug: string
   onSave: (data: Partial<Item>) => Promise<void>
+  authFetch: ReturnType<typeof useAuthFetch>
   onClose: () => void
 }) {
   const accent = useAccent()
@@ -313,7 +317,7 @@ function ItemModal({
         </div>
         <TextareaField label="Descripción" value={description} onChange={setDescription} maxLength={500} />
         <InputField label="Tags (separados por coma)" value={tags} onChange={setTags} placeholder="pizza, sin gluten, picante" maxLength={300} />
-        <ImagePickerField value={imageUrl} onChange={setImageUrl} slug={slug} />
+        <ImagePickerField value={imageUrl} onChange={setImageUrl} slug={slug} authFetch={authFetch} />
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-gray-600">Es pizza</span>
           <ToggleSwitch value={isPizza} onChange={setIsPizza} />
@@ -733,6 +737,7 @@ function ItemRow({
         <ItemModal
           initial={item} categories={categories} slug={slug}
           onSave={handleSave} onClose={() => setModal(false)}
+          authFetch={authFetch}
         />
       )}
     </div>
@@ -816,6 +821,7 @@ function CategorySection({
           categories={categories} slug={slug}
           onSave={data => handleAddItem({ ...data, menu_category_id: category.menu_category_id })}
           onClose={() => setAddItemModal(false)}
+          authFetch={authFetch}
         />
       )}
     </div>

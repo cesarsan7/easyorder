@@ -156,7 +156,7 @@ menuExcelRoutes.post('/:slug/menu/import-excel', async (c) => {
 
   let fileBuffer: ArrayBuffer;
   try {
-    const body = await c.req.parseBody();
+    const body = await c.req.parseBody({ all: true });
     const file = body['file'];
     if (!file || typeof file === 'string') {
       return c.json({ error: 'missing_file', detail: 'Envía un campo "file" con el XLSX' }, 400);
