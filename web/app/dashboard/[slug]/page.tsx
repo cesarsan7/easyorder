@@ -349,23 +349,65 @@ function sortOrders(orders: Order[], field: SortField, dir: SortDir): Order[] {
 
 // ── Print comanda ─────────────────────────────────────────────────────────────
 
-function printComanda(order:Order, detail:OrderDetail|null, tz:string) {
-  const items = detail?.items??[]
-  const html = `<html><head><title>Comanda #${order.pedido_codigo}</title>
-  <style>body{font-family:monospace;font-size:13px;max-width:280px;margin:0 auto;padding:8px}
-  h2{text-align:center;font-size:15px;border-bottom:1px dashed #000;padding-bottom:6px}
-  .row{display:flex;justify-content:space-between;margin:4px 0}.sep{border-top:1px dashed #000;margin:6px 0}.bold{font-weight:bold}</style></head><body>
+function buildComandaHtml(order:Order, items:OrderDetail['items'], tz:string):string {
+  const despacho = order.tipo_despacho==='delivery'
+    ? `🛵 Delivery${order.zone_name?' · '+order.zone_name:''}${order.direccion?'\n'+order.direccion:''}`
+    : '🏪 Retiro en local'
+  const pago = PAGO_LABEL[order.metodo_pago]??order.metodo_pago
+  return `<html><head><title>Comanda #${order.pedido_codigo}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:monospace;font-size:13px;width:280px;margin:0 auto;padding:8px}
+    h2{text-align:center;font-size:16px;font-weight:bold;margin:0 0 4px}
+    .center{text-align:center}
+    .row{display:flex;justify-content:space-between;margin:3px 0;gap:4px}
+    .row span:first-child{flex:1;word-break:break-word}
+    .sep{border:none;border-top:1px dashed #000;margin:6px 0}
+    .bold{font-weight:bold}
+    .sm{font-size:11px;color:#555}
+    @media print{@page{margin:0;size:80mm auto}}
+  </style></head><body>
   <h2>COMANDA</h2>
-  <div class="row"><span>${order.pedido_codigo}</span><span>${formatTime(order.created_at,tz)}</span></div>
+  <p class="center sm">${order.pedido_codigo} · ${formatTime(order.created_at,tz)}</p>
+  <hr class="sep"/>
   <div class="row bold"><span>${order.nombre_cliente}</span><span>${order.telefono}</span></div>
-  <div class="sep"></div>
-  ${items.map(i=>`<div class="row"><span>${i.quantity}x ${i.item_name}</span><span>€${(i.unit_price*i.quantity).toFixed(2)}</span></div>`).join('')}
-  <div class="sep"></div>
+  <div class="sm">${despacho.replace(/\n/g,'<br/>')}</div>
+  <hr class="sep"/>
+  ${items.length>0
+    ? items.map(i=>`
+      <div class="row">
+        <span>${i.quantity}× ${i.item_name}${i.variant_name?' ('+i.variant_name+')':''}</span>
+        <span>€${(i.unit_price*i.quantity).toFixed(2)}</span>
+      </div>
+      ${i.extras&&i.extras.length>0?`<div class="sm">+ ${i.extras.map((e:{name:string})=>e.name).join(', ')}</div>`:''}
+      ${i.notas?`<div class="sm">📝 ${i.notas}</div>`:''}
+    `).join('')
+    : `<div class="center sm">(sin detalle de ítems)</div>`
+  }
+  <hr class="sep"/>
   <div class="row bold"><span>TOTAL</span><span>€${order.total.toFixed(2)}</span></div>
+  <div class="sm center">${pago}</div>
   </body></html>`
-  const win=window.open('','_blank','width=350,height=600')
-  if (!win) return; win.document.write(html); win.document.close(); win.focus()
-  setTimeout(()=>{win.print();win.close()},300)
+}
+
+async function printComanda(order:Order, detail:OrderDetail|null, tz:string, slug?:string) {
+  let items = detail?.items??[]
+  // Si no tenemos detalle (llamada desde la tarjeta), lo cargamos antes de imprimir
+  if (items.length===0 && slug) {
+    try {
+      const base = process.env.NEXT_PUBLIC_API_URL??''
+      const r = await fetch(`${base}/public/${slug}/orders/${order.pedido_codigo}`)
+      if (r.ok) {
+        const d = await r.json()
+        items = Array.isArray(d.items)?d.items.map(normalizeItem):[]
+      }
+    } catch {}
+  }
+  const html = buildComandaHtml(order, items, tz)
+  const win = window.open('','_blank','width=380,height=650')
+  if (!win) { alert('Permite ventanas emergentes para imprimir'); return }
+  win.document.write(html); win.document.close(); win.focus()
+  setTimeout(()=>{win.print();win.close()},400)
 }
 
 // ── SoundConfigPanel ─────────────────────────────────────────────────────────
@@ -704,9 +746,9 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
         </div>
 
         <div className="flex gap-2 px-5 pb-8 pt-3">
-          <button onClick={()=>printComanda(order,detail,zonaHoraria)}
+          <button onClick={()=>printComanda(order,detail,zonaHoraria,slug)}
             className="rounded-xl px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">
-            🖶 Imprimir
+            🖨️ Imprimir
           </button>
           <button onClick={()=>openChatwootConversation(chatwootBaseUrl, chatwootAccountId, order.chatwoot_conversation_id, order.telefono)}
             className="rounded-xl px-4 py-2.5 text-sm font-medium"
@@ -1199,6 +1241,12 @@ export default function DashboardPage() {
                         {/* Acciones */}
                         <td className="px-3 py-3 whitespace-nowrap" onClick={e=>e.stopPropagation()}>
                           <div className="flex items-center gap-1">
+                            <button onClick={()=>printComanda(order,null,zonaHoraria,slug)}
+                              className="rounded-lg p-1.5 text-xs font-medium"
+                              style={{backgroundColor:'#F3F4F6',color:'#374151'}}
+                              title="Imprimir comanda">
+                              🖨️
+                            </button>
                             <button onClick={()=>openChatwootConversation(chatwootBaseUrl, chatwootAccountId, order.chatwoot_conversation_id, order.telefono)}
                               className="rounded-lg p-1.5 text-xs font-medium"
                               style={{backgroundColor:'#DBEAFE',color:'#1E40AF'}}
