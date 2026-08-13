@@ -54,6 +54,8 @@ interface Order {
   direccion: string | null
   postal_code: string | null
   zone_name: string | null
+  zone_postal_code: string | null
+  zone_description: string | null
   tiempo_estimado: number | null
   items_count: number
   items: unknown[]
@@ -301,8 +303,8 @@ const CANAL_LABELS: Record<string, string> = {
 function extractZona(order: Order): string {
   if (order.tipo_despacho !== 'delivery') return '—'
   if (order.zone_name) {
-    const dir = order.direccion?.trim()
-    return dir ? `${order.zone_name} · ${dir.length > 18 ? dir.slice(0, 16) + '…' : dir}` : order.zone_name
+    const cp = order.zone_postal_code ?? order.postal_code
+    return cp ? `${order.zone_name} (${cp})` : order.zone_name
   }
   if (!order.direccion) return 'Delivery'
   const d = order.direccion.trim()
@@ -673,7 +675,8 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
               <span className="font-medium text-gray-900">{isDelivery?'Delivery':'Retiro en local'}</span>
             </div>
             {order.direccion&&<div className="flex justify-between"><span className="text-gray-500">Dirección</span><span className="font-medium text-gray-900 text-right max-w-[60%]">{order.direccion}</span></div>}
-            {order.zone_name&&<div className="flex justify-between"><span className="text-gray-500">Zona</span><span className="font-medium text-gray-900">{order.zone_name}</span></div>}
+            {order.zone_name&&<div className="flex justify-between"><span className="text-gray-500">Zona</span><span className="font-medium text-gray-900">{order.zone_name}{order.zone_postal_code ? ` (${order.zone_postal_code})` : ''}</span></div>}
+            {order.zone_description&&<div className="flex justify-between"><span className="text-gray-500">Descripción zona</span><span className="font-medium text-gray-900 text-right max-w-[60%]">{order.zone_description}</span></div>}
             <div className="flex justify-between"><span className="text-gray-500">Pago</span><span className="font-medium text-gray-900">{PAGO_LABEL[order.metodo_pago]??order.metodo_pago}</span></div>
             {order.tiempo_estimado&&<div className="flex justify-between"><span className="text-gray-500">Tiempo est.</span><span className="font-medium text-gray-900">{order.tiempo_estimado} min</span></div>}
             {order.canal&&<div className="flex justify-between"><span className="text-gray-500">Canal</span><span className="font-medium text-gray-900">{CANAL_LABELS[order.canal]??order.canal}</span></div>}

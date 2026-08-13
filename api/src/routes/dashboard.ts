@@ -424,6 +424,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.direccion,
           p.postal_code,
           dz.zone_name,
+          dz.zone_postal_code,
+          dz.zone_description,
           p.tiempo_estimado,
           jsonb_array_length(p.items)     AS items_count,
           p.estado_pago,
@@ -438,10 +440,26 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         FROM   pedidos  p
         LEFT JOIN usuarios       u  ON u.id             = p.usuario_id
         LEFT JOIN LATERAL (
-          SELECT zone_name
+          SELECT
+            zone_name,
+            postal_code  AS zone_postal_code,
+            description  AS zone_description
           FROM   delivery_zone
-          WHERE  postal_code   = p.postal_code
-            AND  restaurante_id = p.restaurante_id
+          WHERE  restaurante_id = p.restaurante_id
+            AND  is_active = true
+            AND (
+              -- Estrategia 1: match por postal_code guardado en pedidos
+              (p.postal_code IS NOT NULL AND p.postal_code <> '' AND postal_code = p.postal_code)
+              OR
+              -- Estrategia 2: match por zone_name dentro del texto de dirección (accent-insensitive)
+              (p.tipo_despacho = 'delivery'
+               AND p.postal_code IS NULL
+               AND p.direccion IS NOT NULL
+               AND lower(unaccent(p.direccion)) LIKE '%' || lower(unaccent(zone_name)) || '%')
+            )
+          ORDER BY
+            -- Priorizar match por postal_code sobre match por nombre
+            CASE WHEN postal_code = p.postal_code THEN 0 ELSE 1 END
           LIMIT 1
         ) dz ON TRUE
         LEFT JOIN LATERAL (
@@ -478,9 +496,11 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         notas:           o.notas ?? null,
         telefono:        o.telefono,
         nombre_cliente:  o.nombre_cliente,
-        direccion:       o.direccion ?? null,
-        postal_code:     o.postal_code ?? null,
-        zone_name:       o.zone_name ?? null,
+        direccion:        o.direccion ?? null,
+        postal_code:      o.postal_code ?? null,
+        zone_name:        o.zone_name ?? null,
+        zone_postal_code: o.zone_postal_code ?? null,
+        zone_description: o.zone_description ?? null,
         tiempo_estimado: o.tiempo_estimado ?? null,
         items_count:     Number(o.items_count ?? 0),
         items:                    o.items ?? [],
@@ -2190,6 +2210,8 @@ interface OrderListRow {
   direccion:                 string | null;
   postal_code:               string | null;
   zone_name:                 string | null;
+  zone_postal_code:          string | null;
+  zone_description:          string | null;
   tiempo_estimado:           string | null;
   items_count:               number | null;
   items:                     unknown[] | null;
