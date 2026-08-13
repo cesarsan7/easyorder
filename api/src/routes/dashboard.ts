@@ -446,19 +446,17 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
             description  AS zone_description
           FROM   delivery_zone
           WHERE  restaurante_id = p.restaurante_id
-            AND  is_active = true
             AND (
               -- Estrategia 1: match por postal_code guardado en pedidos
               (p.postal_code IS NOT NULL AND p.postal_code <> '' AND postal_code = p.postal_code)
               OR
-              -- Estrategia 2: match por zone_name dentro del texto de dirección (accent-insensitive)
+              -- Estrategia 2: match por zone_name dentro del texto de dirección (cuando postal_code es NULL)
               (p.tipo_despacho = 'delivery'
-               AND p.postal_code IS NULL
+               AND (p.postal_code IS NULL OR p.postal_code = '')
                AND p.direccion IS NOT NULL
-               AND lower(unaccent(p.direccion)) LIKE '%' || lower(unaccent(zone_name)) || '%')
+               AND lower(p.direccion) LIKE '%' || lower(zone_name) || '%')
             )
           ORDER BY
-            -- Priorizar match por postal_code sobre match por nombre
             CASE WHEN postal_code = p.postal_code THEN 0 ELSE 1 END
           LIMIT 1
         ) dz ON TRUE
