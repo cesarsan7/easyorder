@@ -81,6 +81,7 @@ function buildWhatsAppMessage({
   deliveryCost,
   total,
   moneda,
+  pedidoCodigo,
 }: {
   customerName: string
   customerPhone: string
@@ -92,6 +93,7 @@ function buildWhatsAppMessage({
   deliveryCost: number
   total: number
   moneda: string
+  pedidoCodigo: string
 }): string {
   const fmt = (n: number) => fmtPrice(n, moneda)
 
@@ -116,7 +118,10 @@ function buildWhatsAppMessage({
       ? `\nEnvío: ${fmt(deliveryCost)}`
       : ''
 
+  // EASYORDER_REF: tag para que n8n identifique este mensaje como confirmación
+  // de un pedido ya creado y NO abra uno nuevo.
   return (
+    `[EASYORDER_REF:${pedidoCodigo}]\n` +
     `*Pedido EasyOrder*\n` +
     `Nombre: ${customerName}\n` +
     `Teléfono: ${customerPhone}\n\n` +
@@ -243,6 +248,7 @@ export default function CheckoutConfirmarPage() {
           deliveryCost,
           total: total(),
           moneda,
+          pedidoCodigo,
         })
         const waLink = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
         window.open(waLink, '_blank')

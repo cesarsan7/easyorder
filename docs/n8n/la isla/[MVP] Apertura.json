@@ -40,8 +40,8 @@
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "position": [
-        0,
-        0
+        440,
+        400
       ],
       "alwaysOutputData": false,
       "executeOnce": false,
@@ -58,8 +58,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        224,
-        0
+        920,
+        540
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -331,6 +331,106 @@
         3552,
         240
       ]
+    },
+    {
+      "id": "fb51fad3-312c-449c-9a13-e3a512977374",
+      "name": "Detectar Ref Web",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const trigger = $input.first().json || {};\nconst mensaje = String(trigger.mensaje || trigger.input || '');\n\n// Detectar tag [EASYORDER_REF:260812-1004]\nconst refMatch = mensaje.match(/\\[EASYORDER_REF:([A-Z0-9\\-]+)\\]/i);\nconst esMensajeWeb = !!refMatch;\nconst pedidoCodigoRef = refMatch ? refMatch[1] : null;\n\n// Limpiar el mensaje para el resto del flujo\nconst mensajeLimpio = mensaje.replace(/\\[EASYORDER_REF:[^\\]]+\\]\\n?/, '').trim();\n\nreturn [{\n  json: {\n    ...trigger,\n    mensaje: mensajeLimpio,\n    es_confirmacion_web: esMensajeWeb,\n    pedido_codigo_ref: pedidoCodigoRef\n  }\n}];"
+      }
+    },
+    {
+      "id": "6b7757a6-b59d-45b1-a81c-347f27af2b94",
+      "name": "¿Es Ref Web?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "b103c557-5791-4a75-bd93-70571bd2842f",
+              "leftValue": "={{ $json.es_confirmacion_web }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "dc8453b3-d5a6-4e2b-b9a7-d96d41572e3e",
+      "name": "Buscar Pedido por Codigo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        820,
+        260
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, pedido_codigo, estado, telefono, session_id\nFROM public.pedidos\nWHERE pedido_codigo = '{{ $('Detectar Ref Web').first().json.pedido_codigo_ref }}'\n  AND restaurante_id = {{ $('Detectar Ref Web').first().json.restaurante_id }}\nLIMIT 1",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "c1d635f4-7d8e-4ecb-92a8-e071ac4f722f",
+      "name": "Vincular Session WA",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1020,
+        260
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.pedidos\nSET session_id = '{{ $('Detectar Ref Web').first().json.session_id }}',\n    telefono   = '{{ $('Detectar Ref Web').first().json.telefono }}',\n    updated_at = NOW()\nWHERE pedido_codigo = '{{ $('Detectar Ref Web').first().json.pedido_codigo_ref }}'\n  AND restaurante_id = {{ $('Detectar Ref Web').first().json.restaurante_id }}\nRETURNING id, pedido_codigo, estado",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "3aa70fad-1d24-479d-9dc5-9a6bcaa76b7b",
+      "name": "Respuesta Confirmacion Web",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const pedido = $('Buscar Pedido por Codigo').first().json || {};\nconst codigo = pedido.pedido_codigo || $('Detectar Ref Web').first().json.pedido_codigo_ref || '';\n\nreturn [{\n  json: {\n    respuesta: `✅ Tu pedido *#${codigo}* ha sido registrado. Te notificaremos por aquí cuando cambie el estado. ¡Gracias por elegirnos!`,\n    pedido_id: pedido.id || null,\n    pedido_codigo: codigo,\n    accion: 'confirmacion_web',\n    mutar_db: false\n  }\n}];"
+      }
     }
   ],
   "pinData": {
@@ -361,7 +461,7 @@
       "main": [
         [
           {
-            "node": "Buscar Pedido Activo",
+            "node": "Detectar Ref Web",
             "type": "main",
             "index": 0
           }
@@ -580,6 +680,68 @@
         [
           {
             "node": "Devolver Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar Ref Web": {
+      "main": [
+        [
+          {
+            "node": "¿Es Ref Web?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Ref Web?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Pedido por Codigo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Pedido Activo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Pedido por Codigo": {
+      "main": [
+        [
+          {
+            "node": "Vincular Session WA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vincular Session WA": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Confirmacion Web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respuesta Confirmacion Web": {
+      "main": [
+        [
+          {
+            "node": "Generar Respuesta Final",
             "type": "main",
             "index": 0
           }
