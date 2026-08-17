@@ -1161,7 +1161,7 @@
       "parameters": {
         "sessionIdType": "customKey",
         "sessionKey": "={{ $('Variables').first().json.restaurante_id + '_' + String($input.first().json.conversation_id) }}",
-        "contextWindowLength": 12
+        "contextWindowLength": 20
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
@@ -2368,7 +2368,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "-- Elimina mensajes 'tool' que quedan huérfanos al inicio de la ventana de contexto.\n-- Esto ocurre cuando el recorte a 12 mensajes incluye un 'tool' response\n-- pero deja fuera el 'assistant' con tool_calls que le precede.\nWITH ordered AS (\n  SELECT id,\n         message->>'role' AS role,\n         ROW_NUMBER() OVER (ORDER BY id) AS rn\n  FROM   public.n8n_chat_histories\n  WHERE  session_id = '{{ $('Variables').first().json.restaurante_id }}_{{ $('Variables').first().json.conversation_id }}'\n),\ntotal AS (SELECT COUNT(*) AS cnt FROM ordered),\nin_window AS (\n  SELECT o.id, o.role, o.rn\n  FROM   ordered o, total t\n  WHERE  o.rn >= GREATEST(1, t.cnt - 11)\n),\nbad_tool_ids AS (\n  SELECT t.id\n  FROM   in_window t\n  WHERE  t.role = 'tool'\n    AND  NOT EXISTS (\n           SELECT 1 FROM in_window a\n           WHERE  a.role = 'assistant'\n             AND  a.rn < t.rn\n         )\n)\nDELETE FROM public.n8n_chat_histories\nWHERE  id IN (SELECT id FROM bad_tool_ids)",
+        "query": "-- Elimina tool messages que quedaron huerfanos al inicio de la ventana.\n-- Un tool message es huerfano si no tiene ANTES un assistant CON tool_calls\n-- dentro de la misma ventana de contexto.\n-- Cobre ambos formatos de n8n: additional_kwargs.tool_calls y tool_calls directo.\nWITH ordered AS (\n  SELECT id,\n         message,\n         message->>'role'                              AS role,\n         ROW_NUMBER() OVER (ORDER BY id)               AS rn\n  FROM   public.n8n_chat_histories\n  WHERE  session_id = '{{ $('Variables').first().json.restaurante_id }}_{{ $('Variables').first().json.conversation_id }}'\n),\ntotal AS (SELECT COUNT(*) AS cnt FROM ordered),\nin_window AS (\n  SELECT o.id, o.role, o.rn, o.message\n  FROM   ordered o, total t\n  WHERE  o.rn >= GREATEST(1, t.cnt - 19)\n),\nbad_tool_ids AS (\n  SELECT t.id\n  FROM   in_window t\n  WHERE  t.role = 'tool'\n    AND  NOT EXISTS (\n           SELECT 1\n           FROM   in_window a\n           WHERE  a.role = 'assistant'\n             AND  a.rn < t.rn\n             AND  (\n                    -- formato 1: additional_kwargs.tool_calls (n8n LangChain clásico)\n                    (    a.message->'additional_kwargs' ? 'tool_calls'\n                     AND jsonb_array_length(a.message->'additional_kwargs'->'tool_calls') > 0\n                    )\n                    OR\n                    -- formato 2: tool_calls en raíz del mensaje\n                    (    a.message ? 'tool_calls'\n                     AND jsonb_typeof(a.message->'tool_calls') = 'array'\n                     AND jsonb_array_length(a.message->'tool_calls') > 0\n                    )\n                  )\n         )\n)\nDELETE FROM public.n8n_chat_histories\nWHERE  id IN (SELECT id FROM bad_tool_ids)",
         "options": {}
       },
       "credentials": {
