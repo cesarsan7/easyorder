@@ -25,7 +25,7 @@
       ],
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  mc.category_name,\n  mi.item_name,\n  mi.description,\n  mi.is_available,\n  mv.variant_name,\n  mv.price\nFROM menu_item mi\nJOIN menu_category mc ON mi.menu_category_id = mc.menu_category_id\nLEFT JOIN menu_variant mv ON mi.menu_item_id = mv.menu_item_id AND mv.is_active = true\nWHERE mi.restaurante_id = {{ $json.restaurante_id }}\n  AND mi.is_active = true\n  AND mc.is_active = true\n  AND (\n    '{{ $json.categoria }}' = ''\n    OR unaccent(lower(mc.category_name)) ILIKE '%' || unaccent(lower('{{ $json.categoria }}')) || '%'\n  )\nORDER BY mc.display_order NULLS LAST, mc.category_name, mi.display_order NULLS LAST, mi.item_name, mv.price NULLS LAST",
+        "query": "SELECT\n  mc.category_name,\n  mi.item_name,\n  mi.description,\n  mi.is_available,\n  mv.variant_name,\n  mv.price\nFROM menu_item mi\nJOIN menu_category mc ON mi.menu_category_id = mc.menu_category_id\nLEFT JOIN menu_variant mv ON mi.menu_item_id = mv.menu_item_id AND mv.is_active = true\nWHERE mi.restaurante_id = {{ $json.restaurante_id }}\n  AND mi.is_active = true\n  AND mc.is_active = true\n  AND (\n    '{{ $json.categoria }}' = ''\n    OR lower(mc.category_name) ILIKE '%' || lower('{{ $json.categoria }}') || '%'\n  )\nORDER BY mc.display_order NULLS LAST, mc.category_name, mi.display_order NULLS LAST, mi.item_name, mv.price NULLS LAST",
         "options": {}
       },
       "credentials": {
