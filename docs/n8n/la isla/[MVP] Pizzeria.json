@@ -2335,6 +2335,49 @@
           ]
         }
       }
+    },
+    {
+      "id": "cecfad1e-0b09-4bb6-87bf-0593a3f54cdd",
+      "name": "Registrar Escalacion Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        5980,
+        176
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.escalaciones\n  (restaurante_id, telefono, problema, contexto, conversation_id, account_id, contact_id, tipo_escalacion, estado)\nVALUES (\n  {{ $('Variables').first().json.restaurante_id }},\n  '{{ $('Variables').first().json.telefono }}',\n  'Error técnico del sistema — historial de chat corrupto (tool_calls sin respuesta)',\n  '{\"tipo\": \"error_sistema\"}'::jsonb,\n  '{{ $('Variables').first().json.conversation_id }}',\n  '{{ $('Variables').first().json.account_id }}',\n  '{{ $('Variables').first().json.contact_id }}',\n  'error_sistema',\n  'pendiente'\n)\nON CONFLICT DO NOTHING",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "id": "ecb19278-2293-4c6d-a4fe-dd73cab8e9f0",
+      "name": "Sanitizar Historial",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        5020,
+        832
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Elimina mensajes 'tool' que quedan huérfanos al inicio de la ventana de contexto.\n-- Esto ocurre cuando el recorte a 12 mensajes incluye un 'tool' response\n-- pero deja fuera el 'assistant' con tool_calls que le precede.\nWITH ordered AS (\n  SELECT id,\n         message->>'role' AS role,\n         ROW_NUMBER() OVER (ORDER BY id) AS rn\n  FROM   public.n8n_chat_histories\n  WHERE  session_id = '{{ $('Variables').first().json.restaurante_id }}_{{ $('Variables').first().json.conversation_id }}'\n),\ntotal AS (SELECT COUNT(*) AS cnt FROM ordered),\nin_window AS (\n  SELECT o.id, o.role, o.rn\n  FROM   ordered o, total t\n  WHERE  o.rn >= GREATEST(1, t.cnt - 11)\n),\nbad_tool_ids AS (\n  SELECT t.id\n  FROM   in_window t\n  WHERE  t.role = 'tool'\n    AND  NOT EXISTS (\n           SELECT 1 FROM in_window a\n           WHERE  a.role = 'assistant'\n             AND  a.rn < t.rn\n         )\n)\nDELETE FROM public.n8n_chat_histories\nWHERE  id IN (SELECT id FROM bad_tool_ids)",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "1",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {
@@ -2819,7 +2862,7 @@
       "main": [
         [
           {
-            "node": "Director",
+            "node": "Sanitizar Historial",
             "type": "main",
             "index": 0
           }
@@ -3040,7 +3083,7 @@
       "main": [
         [
           {
-            "node": "Respuesta Error Historial",
+            "node": "Registrar Escalacion Error",
             "type": "main",
             "index": 0
           }
@@ -3137,6 +3180,28 @@
           {
             "node": "Director",
             "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Escalacion Error": {
+      "main": [
+        [
+          {
+            "node": "Respuesta Error Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitizar Historial": {
+      "main": [
+        [
+          {
+            "node": "Director",
+            "type": "main",
             "index": 0
           }
         ]
