@@ -5,17 +5,16 @@
       "id": "23c8b24b-f61a-40c0-a584-66a4807cd875",
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1.2,
+      "typeVersion": 1.1,
       "position": [
         240,
         300
       ],
       "parameters": {
-        "inputSource": "workflowInputData",
         "workflowInputs": {
           "values": [
-            { "name": "categoria", "type": "string" },
-            { "name": "restaurante_id", "type": "number" }
+            { "name": "categoria" },
+            { "name": "restaurante_id" }
           ]
         }
       }
