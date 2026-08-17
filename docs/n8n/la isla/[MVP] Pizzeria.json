@@ -1160,7 +1160,7 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $('Variables').first().json.restaurante_id + '_' + String($input.first().json.conversation_id) }}",
+        "sessionKey": "={{ $('Variables').first().json.restaurante_id + '_' + String($('Variables').first().json.conversation_id) }}",
         "contextWindowLength": 20
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
