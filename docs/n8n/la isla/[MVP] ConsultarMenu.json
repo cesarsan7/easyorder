@@ -5,14 +5,12 @@
       "id": "23c8b24b-f61a-40c0-a584-66a4807cd875",
       "name": "When Executed by Another Workflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1.1,
+      "typeVersion": 1.2,
       "position": [
         240,
         300
       ],
-      "parameters": {
-        "inputSource": "workflowInputData"
-      }
+      "parameters": {}
     },
     {
       "id": "6b284552-dbc8-44fc-8894-c2b658ff71c5",

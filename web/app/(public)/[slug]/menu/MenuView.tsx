@@ -360,9 +360,10 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
             {restaurant.eslogan && <p className="text-xs text-gray-400 truncate leading-tight">{restaurant.eslogan}</p>}
           </div>
 
-          {/* Redes sociales — visible solo en desktop */}
+          {/* Redes sociales — visible solo en desktop; excluir WhatsApp si hay phone */}
           {(() => {
-            const validRedes = (restaurant.redes_sociales ?? []).filter(r => r.url?.trim())
+            const validRedes = (restaurant.redes_sociales ?? [])
+              .filter(r => r.url?.trim() && !(r.red === 'whatsapp' && restaurant.phone))
             return validRedes.length > 0 ? (
               <div className="hidden md:flex items-center gap-1.5 shrink-0">
                 {validRedes.slice(0, 5).map(r => (
@@ -476,7 +477,8 @@ export default function MenuView({ slug, menu, restaurant }: Props) {
 
           {/* Redes sociales */}
           {(() => {
-            const validRedes = (restaurant.redes_sociales ?? []).filter(r => r.url?.trim())
+            const validRedes = (restaurant.redes_sociales ?? [])
+              .filter(r => r.url?.trim() && !(r.red === 'whatsapp' && restaurant.phone))
             return validRedes.length > 0 ? (
               <div className="flex flex-col items-center gap-2">
                 <p className="text-xs text-gray-400">Síguenos mientras tanto</p>
