@@ -3024,7 +3024,7 @@ dashboardRoutes.patch('/:slug/config-keys', async (c) => {
 
 dashboardRoutes.get('/:slug/menu/categories/:category_id/extras', requireAuth, async (c) => {
   const restaurante_id = c.get('restaurante_id');
-  const category_id   = parseInt(c.req.param('category_id'), 10);
+  const category_id   = parseInt(c.req.param('category_id') ?? '', 10);
 
   if (isNaN(category_id)) {
     return c.json({ error: 'invalid_category_id' }, 400);
@@ -3080,7 +3080,7 @@ dashboardRoutes.get('/:slug/menu/categories/:category_id/extras', requireAuth, a
 
 dashboardRoutes.put('/:slug/menu/categories/:category_id/extras', requireAuth, async (c) => {
   const restaurante_id = c.get('restaurante_id');
-  const category_id   = parseInt(c.req.param('category_id'), 10);
+  const category_id   = parseInt(c.req.param('category_id') ?? '', 10);
 
   if (isNaN(category_id)) {
     return c.json({ error: 'invalid_category_id' }, 400);
