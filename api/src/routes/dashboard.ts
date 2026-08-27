@@ -3013,4 +3013,134 @@ dashboardRoutes.patch('/:slug/config-keys', async (c) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// M-17: Extras por categoría
+// GET  /:slug/menu/categories/:category_id/extras
+//   → devuelve todos los extras del restaurante con flag `linked` si están
+//     asociados a esta categoría (para el selector de checkboxes en el dashboard).
+// PUT  /:slug/menu/categories/:category_id/extras
+//   → recibe { extra_ids: number[] } y reemplaza atomicamente la selección.
+// ─────────────────────────────────────────────────────────────────────────────
+
+dashboardRoutes.get('/:slug/menu/categories/:category_id/extras', requireAuth, async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const category_id   = parseInt(c.req.param('category_id'), 10);
+
+  if (isNaN(category_id)) {
+    return c.json({ error: 'invalid_category_id' }, 400);
+  }
+
+  try {
+    // Verificar que la categoría pertenece al tenant
+    const [catRows] = await Promise.all([
+      sql<{ menu_category_id: number }[]>`
+        SELECT menu_category_id
+        FROM   menu_category
+        WHERE  menu_category_id = ${category_id}
+          AND  restaurante_id   = ${restaurante_id}
+        LIMIT  1
+      `,
+    ]);
+    if (!catRows[0]) return c.json({ error: 'category_not_found' }, 404);
+
+    // Todos los extras del restaurante, con flag linked
+    const rows = await sql<{ extra_id: number; name: string; price: string | null; allergens: string | null; linked: boolean }[]>`
+      SELECT
+        e.extra_id,
+        e.name,
+        e.price,
+        e.allergens,
+        EXISTS (
+          SELECT 1
+          FROM   menu_category_extra mce
+          WHERE  mce.extra_id         = e.extra_id
+            AND  mce.menu_category_id = ${category_id}
+        ) AS linked
+      FROM   extra e
+      WHERE  e.restaurante_id = ${restaurante_id}
+        AND  e.is_active      = true
+      ORDER  BY e.name ASC
+    `;
+
+    return c.json({
+      category_id,
+      extras: rows.map((r) => ({
+        extra_id:  r.extra_id,
+        name:      r.name,
+        price:     r.price !== null ? parseFloat(r.price) : null,
+        allergens: r.allergens,
+        linked:    r.linked,
+      })),
+    });
+  } catch (err) {
+    console.error('[GET /dashboard/:slug/menu/categories/:id/extras]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
+dashboardRoutes.put('/:slug/menu/categories/:category_id/extras', requireAuth, async (c) => {
+  const restaurante_id = c.get('restaurante_id');
+  const category_id   = parseInt(c.req.param('category_id'), 10);
+
+  if (isNaN(category_id)) {
+    return c.json({ error: 'invalid_category_id' }, 400);
+  }
+
+  let body: { extra_ids?: unknown };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_json' }, 400);
+  }
+
+  if (!Array.isArray(body.extra_ids) || body.extra_ids.some((id) => typeof id !== 'number' || !Number.isInteger(id) || id < 1)) {
+    return c.json({ error: 'extra_ids must be an array of positive integers' }, 400);
+  }
+  const extra_ids = body.extra_ids as number[];
+
+  try {
+    // Verificar que la categoría pertenece al tenant
+    const catRows = await sql<{ menu_category_id: number }[]>`
+      SELECT menu_category_id
+      FROM   menu_category
+      WHERE  menu_category_id = ${category_id}
+        AND  restaurante_id   = ${restaurante_id}
+      LIMIT  1
+    `;
+    if (!catRows[0]) return c.json({ error: 'category_not_found' }, 404);
+
+    // Verificar que todos los extra_ids pertenecen al tenant
+    if (extra_ids.length > 0) {
+      const validExtras = await sql<{ extra_id: number }[]>`
+        SELECT extra_id FROM extra
+        WHERE  extra_id      = ANY(${extra_ids}::bigint[])
+          AND  restaurante_id = ${restaurante_id}
+      `;
+      if (validExtras.length !== extra_ids.length) {
+        return c.json({ error: 'some extra_ids are invalid or belong to another tenant' }, 400);
+      }
+    }
+
+    // Reemplazar la selección atómicamente dentro de una transacción
+    await sql.begin(async (tx) => {
+      await tx`
+        DELETE FROM menu_category_extra
+        WHERE  menu_category_id = ${category_id}
+      `;
+      if (extra_ids.length > 0) {
+        await tx`
+          INSERT INTO menu_category_extra (menu_category_id, extra_id)
+          SELECT ${category_id}, unnest(${extra_ids}::bigint[])
+          ON CONFLICT DO NOTHING
+        `;
+      }
+    });
+
+    return c.json({ ok: true, category_id, extra_ids });
+  } catch (err) {
+    console.error('[PUT /dashboard/:slug/menu/categories/:id/extras]', err);
+    return c.json({ error: 'service_unavailable' }, 503);
+  }
+});
+
 export default dashboardRoutes;

@@ -258,20 +258,19 @@ publicRoutes.get('/:slug/menu', async (c) => {
           ORDER  BY mv.menu_variant_id ASC
         `,
 
-        // Q4: Extras reachable from this tenant's items.
-        // Double-filtered: both the parent item and the extra must belong to
-        // this restaurante_id, preventing cross-tenant leaks even if
-        // menu_item_extra has no restaurante_id column.
-        // C-2: itemFilter applied in the JOIN condition so extras of inactive
-        // items are excluded consistently, not just implicitly by tree assembly.
+        // Q4: Extras por categoría (M-17: menu_category_extra).
+        // Se asocian extras a la categoría del item, no al item individual.
+        // Un extra puede pertenecer a varias categorías.
+        // Filtro doble: extra.restaurante_id + category.restaurante_id
+        // evita fugas entre tenants aunque menu_category_extra no tenga restaurante_id.
         sql<ExtraRow[]>`
-          SELECT e.extra_id, mie.menu_item_id,
+          SELECT e.extra_id, mc.menu_category_id,
                  e.name, e.price, e.allergens, e.is_active
           FROM   extra e
-          JOIN   menu_item_extra mie ON mie.extra_id    = e.extra_id
-          JOIN   menu_item       mi  ON mi.menu_item_id = mie.menu_item_id
-                                   AND mi.restaurante_id = ${restaurante_id}
-                                   AND mi.is_active = true
+          JOIN   menu_category_extra mce ON mce.extra_id         = e.extra_id
+          JOIN   menu_category       mc  ON mc.menu_category_id  = mce.menu_category_id
+                                       AND mc.restaurante_id     = ${restaurante_id}
+                                       AND mc.is_active          = true
           WHERE  e.restaurante_id = ${restaurante_id}
           ${extraFilter}
           ORDER  BY e.extra_id ASC
@@ -287,7 +286,7 @@ publicRoutes.get('/:slug/menu', async (c) => {
 
     // Build O(n) lookup maps before assembling the tree.
     const variantsByItem  = groupBy<VariantRow>(variantsRows,  (v) => v.menu_item_id);
-    const extrasByItem    = groupBy<ExtraRow>(extrasRows,      (e) => e.menu_item_id);
+    const extrasByCategory = groupBy<ExtraRow>(extrasRows,     (e) => e.menu_category_id);
     const itemsByCategory = groupBy<ItemRow>(itemsRows,        (i) => i.menu_category_id);
 
     // C-1: warn when an active item has no variants — likely a legacy row with
@@ -324,7 +323,7 @@ publicRoutes.get('/:slug/menu', async (c) => {
           is_active:       v.is_active,
           sku:             v.sku,
         })),
-        extras: (extrasByItem.get(item.menu_item_id) ?? []).map((e) => ({
+        extras: (extrasByCategory.get(item.menu_category_id) ?? []).map((e) => ({
           extra_id:  e.extra_id,
           name:      e.name,
           // M-1: same numeric coercion; extra price can be null (free extra).
@@ -991,7 +990,7 @@ interface VariantRow {
 
 interface ExtraRow {
   extra_id: number;
-  menu_item_id: number;
+  menu_category_id: number; // M-17: ahora agrupamos por categoría, no por item
   name: string;
   price: string | null;
   allergens: string | null;

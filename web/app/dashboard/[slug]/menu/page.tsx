@@ -584,6 +584,145 @@ function ItemExtrasPanel({ item, slug, authFetch }: { item: Item; slug: string; 
   )
 }
 
+// ─── Category Extras Sub-panel (M-17) ────────────────────────────────────────
+// Muestra todos los extras del restaurante como checkboxes dentro de una
+// categoría. Al guardar llama PUT /menu/categories/:id/extras con la selección.
+// Reemplaza la lógica item-a-item: ahora el operador vincula extras por categoría.
+
+function CategoryExtrasPanel({
+  category, slug, authFetch,
+}: {
+  category: Category; slug: string; authFetch: ReturnType<typeof useAuthFetch>
+}) {
+  const accent = useAccent()
+  type ExtraLinked = Extra & { linked: boolean }
+  const [allExtras, setAllExtras] = useState<ExtraLinked[]>([])
+  const [pending, setPending]     = useState<Set<number>>(new Set())
+  const [loading, setLoading]     = useState(true)
+  const [saving, setSaving]       = useState(false)
+  const [dirty, setDirty]         = useState(false)
+  const [saveMsg, setSaveMsg]     = useState<string | null>(null)
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await authFetch(
+        `${apiBase}/dashboard/${slug}/menu/categories/${category.menu_category_id}/extras`
+      )
+      if (res.ok) {
+        const data = await res.json() as { extras: ExtraLinked[] }
+        setAllExtras(data.extras)
+        setPending(new Set(data.extras.filter(e => e.linked).map(e => e.extra_id)))
+      }
+      setDirty(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [category.menu_category_id, slug, apiBase, authFetch])
+
+  useEffect(() => { load() }, [load])
+
+  function toggle(id: number) {
+    setPending(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+    setDirty(true)
+    setSaveMsg(null)
+  }
+
+  async function save() {
+    setSaving(true); setSaveMsg(null)
+    try {
+      const res = await authFetch(
+        `${apiBase}/dashboard/${slug}/menu/categories/${category.menu_category_id}/extras`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ extra_ids: Array.from(pending) }),
+        }
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setDirty(false)
+      setSaveMsg('Guardado ✓')
+      setTimeout(() => setSaveMsg(null), 2000)
+    } catch {
+      setSaveMsg('Error al guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <div className="py-2 text-xs text-gray-400">Cargando extras…</div>
+
+  if (allExtras.length === 0) {
+    return (
+      <div className="mt-2 border-t border-gray-100 pt-3">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Extras de la categoría</span>
+        <p className="text-xs text-gray-400 italic mt-1">
+          No hay extras configurados. Créalos primero en la pestaña <strong>Extras</strong>.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-2 border-t border-gray-100 pt-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          Extras de la categoría
+        </span>
+        <div className="flex items-center gap-2">
+          {saveMsg && (
+            <span className={`text-xs font-medium ${saveMsg.startsWith('Error') ? 'text-red-500' : 'text-green-600'}`}>
+              {saveMsg}
+            </span>
+          )}
+          {dirty && (
+            <button
+              onClick={save}
+              disabled={saving}
+              className="text-xs font-semibold px-2 py-1 rounded-lg text-white disabled:opacity-50"
+              style={{ backgroundColor: accent }}
+            >
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="text-[11px] text-gray-400 mb-2">
+        Los extras seleccionados aparecerán en <em>todos los productos</em> de esta categoría.
+      </p>
+      <div className="flex flex-col gap-1">
+        {allExtras.map(extra => {
+          const checked = pending.has(extra.extra_id)
+          return (
+            <label
+              key={extra.extra_id}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2 cursor-pointer transition-colors ${
+                checked ? 'bg-indigo-50 border border-indigo-200' : 'bg-gray-50 border border-transparent hover:border-gray-200'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => toggle(extra.extra_id)}
+                className="accent-indigo-500 h-3.5 w-3.5 shrink-0"
+              />
+              <span className="flex-1 text-sm text-gray-800">{extra.name}</span>
+              <span className="text-xs font-semibold text-gray-600 shrink-0">
+                {extra.price !== null && extra.price !== undefined ? `+${extra.price.toFixed(2)}€` : 'Gratis'}
+              </span>
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Variants Sub-panel ───────────────────────────────────────────────────────
 
 function VariantsPanel({ item, slug, authFetch }: { item: Item; slug: string; authFetch: ReturnType<typeof useAuthFetch> }) {
@@ -756,6 +895,7 @@ function CategorySection({
 }) {
   const [editModal, setEditModal] = useState(false)
   const [addItemModal, setAddItemModal] = useState(false)
+  const [showExtras, setShowExtras] = useState(false)
   const apiBase = process.env.NEXT_PUBLIC_API_URL ?? ''
 
   async function handleCategorySave(data: { name: string; sort_order: number | null; is_active: boolean }) {
@@ -810,6 +950,23 @@ function CategorySection({
           >
             + Agregar producto
           </button>
+
+          {/* M-17: extras vinculados a la categoría */}
+          <div className="mt-2">
+            <button
+              onClick={() => setShowExtras(v => !v)}
+              className="text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1"
+            >
+              {showExtras ? '▾' : '▸'} Gestionar extras de esta categoría
+            </button>
+            {showExtras && (
+              <CategoryExtrasPanel
+                category={category}
+                slug={slug}
+                authFetch={authFetch}
+              />
+            )}
+          </div>
         </div>
       )}
 
