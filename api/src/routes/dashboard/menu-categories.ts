@@ -109,7 +109,10 @@ menuCategoriesRoutes.post('/:slug/menu/categories', async (c) => {
 
     return c.json(mapCategory(rows[0]), 201);
 
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      return c.json({ error: 'category_name_duplicate', detail: 'Ya existe una categoría con ese nombre en este restaurante.' }, 409);
+    }
     console.error('[POST /dashboard/:slug/menu/categories] Unhandled error:', err);
     return c.json({ error: 'service_unavailable' }, 503);
   }
@@ -199,7 +202,10 @@ menuCategoriesRoutes.patch('/:slug/menu/categories/:category_id', async (c) => {
 
     return c.json(mapCategory(rows[0]));
 
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      return c.json({ error: 'category_name_duplicate', detail: 'Ya existe una categoría con ese nombre en este restaurante.' }, 409);
+    }
     console.error('[PATCH /dashboard/:slug/menu/categories/:category_id] Unhandled error:', err);
     return c.json({ error: 'service_unavailable' }, 503);
   }
