@@ -3113,7 +3113,7 @@ dashboardRoutes.put('/:slug/menu/categories/:category_id/extras', requireAuth, a
     if (extra_ids.length > 0) {
       const validExtras = await sql<{ extra_id: number }[]>`
         SELECT extra_id FROM extra
-        WHERE  extra_id      = ANY(${extra_ids}::bigint[])
+        WHERE  extra_id      = ANY(${sql.array(extra_ids)})
           AND  restaurante_id = ${restaurante_id}
       `;
       if (validExtras.length !== extra_ids.length) {
@@ -3130,7 +3130,7 @@ dashboardRoutes.put('/:slug/menu/categories/:category_id/extras', requireAuth, a
       if (extra_ids.length > 0) {
         await tx`
           INSERT INTO menu_category_extra (menu_category_id, extra_id)
-          SELECT ${category_id}, unnest(${extra_ids}::bigint[])
+          SELECT ${category_id}, unnest(${sql.array(extra_ids)})
           ON CONFLICT DO NOTHING
         `;
       }
