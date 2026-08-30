@@ -46,7 +46,8 @@ export default function CheckoutDatosPage() {
   const isCartEmpty   = useCartStore((s) => s.isCartEmpty)
   const customerName  = useCartStore((s) => s.customerName)
   const customerPhone = useCartStore((s) => s.customerPhone)
-  const setCustomer   = useCartStore((s) => s.setCustomer)
+  const setCustomer        = useCartStore((s) => s.setCustomer)
+  const setNombrePedido    = useCartStore((s) => s.setNombrePedido)
   const accent        = useCartStore((s) => s.accentColor)
   const PHONE_PREFIX  = useCartStore((s) => s.phonePrefix) || '+34'
 
