@@ -3,6 +3,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 
+interface Extra {
+  extra_id:  number
+  name:      string
+  price:     number
+  allergens: string | null
+}
+
 interface Variant {
   menu_variant_id: number
   variant_name:    string
@@ -11,8 +18,9 @@ interface Variant {
 
 interface MenuItem {
   menu_item_id: number
-  name:         string   // API returns 'name', not 'item_name'
+  name:         string
   variants:     Variant[]
+  extras?:      Extra[]
 }
 
 interface Category {
@@ -35,13 +43,15 @@ interface CartLine {
   variant_name:    string
   quantity:        number
   unit_price:      number
+  availableExtras: Extra[]
+  selectedExtras:  Extra[]
 }
 
 interface Props {
-  slug:    string
-  accent:  string
-  moneda:  string
-  onClose: () => void
+  slug:      string
+  accent:    string
+  moneda:    string
+  onClose:   () => void
   onCreated: (pedidoCodigo: string) => void
 }
 
@@ -54,8 +64,8 @@ const PAYMENT_LABELS: Record<string, string> = {
 }
 
 export default function ManualOrderModal({ slug, accent, moneda, onClose, onCreated }: Props) {
-  const authFetch  = useAuthFetch()
-  const apiBase    = process.env.NEXT_PUBLIC_API_URL ?? ''
+  const authFetch = useAuthFetch()
+  const apiBase   = process.env.NEXT_PUBLIC_API_URL ?? ''
 
   // Customer
   const [nombre,      setNombre]      = useState('')
@@ -131,6 +141,8 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         variant_name:    variant.variant_name,
         quantity:        1,
         unit_price:      Number(variant.price),
+        availableExtras: item.extras ?? [],
+        selectedExtras:  [],
       }]
     })
   }
@@ -142,9 +154,23 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
     )
   }
 
-  const subtotal = cart.reduce((s, l) => s + l.unit_price * l.quantity, 0)
+  function toggleExtra(variantId: number, extra: Extra) {
+    setCart(prev => prev.map(l => {
+      if (l.menu_variant_id !== variantId) return l
+      const already = l.selectedExtras.some(e => e.extra_id === extra.extra_id)
+      return {
+        ...l,
+        selectedExtras: already
+          ? l.selectedExtras.filter(e => e.extra_id !== extra.extra_id)
+          : [...l.selectedExtras, extra],
+      }
+    }))
+  }
+
+  const lineTotal  = (l: CartLine) => (l.unit_price + l.selectedExtras.reduce((s, e) => s + e.price, 0)) * l.quantity
+  const subtotal   = cart.reduce((s, l) => s + lineTotal(l), 0)
   const selectedZone = zones.find(z => z.delivery_zone_id === zonaId)
-  const costoEnvio = tipoDespacho === 'delivery' ? (selectedZone?.fee ?? 0) : 0
+  const costoEnvio   = tipoDespacho === 'delivery' ? (selectedZone?.fee ?? 0) : 0
   const total = subtotal + costoEnvio
 
   const fmt = (n: number) => `${moneda === 'EUR' ? '€' : moneda} ${n.toFixed(2)}`
@@ -189,7 +215,11 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             variant_name:    l.variant_name,
             quantity:        l.quantity,
             unit_price:      l.unit_price,
-            extras:          [],
+            extras:          l.selectedExtras.map(e => ({
+              name:       e.name,
+              unit_price: e.price,
+              quantity:   1,
+            })),
           })),
         }),
       })
@@ -269,8 +299,8 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                 <button key={t} onClick={() => setTipoDespacho(t)}
                   className="flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-all"
                   style={{
-                    borderColor: tipoDespacho === t ? accent : '#E5E7EB',
-                    color: tipoDespacho === t ? accent : '#6B7280',
+                    borderColor:     tipoDespacho === t ? accent : '#E5E7EB',
+                    color:           tipoDespacho === t ? accent : '#6B7280',
                     backgroundColor: tipoDespacho === t ? `${accent}10` : 'white',
                   }}>
                   {t === 'retiro' ? '🏪 Retiro' : '🛵 Delivery'}
@@ -306,8 +336,8 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                 <button key={m} onClick={() => setMetodoPago(m)}
                   className="px-3 py-1.5 rounded-xl text-sm font-medium border-2 transition-all"
                   style={{
-                    borderColor: metodoPago === m ? accent : '#E5E7EB',
-                    color: metodoPago === m ? accent : '#6B7280',
+                    borderColor:     metodoPago === m ? accent : '#E5E7EB',
+                    color:           metodoPago === m ? accent : '#6B7280',
                     backgroundColor: metodoPago === m ? `${accent}10` : 'white',
                   }}>
                   {PAYMENT_LABELS[m] ?? m}
@@ -327,7 +357,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             {loadingMenu ? (
               <p className="text-sm text-gray-400 text-center py-4">Cargando menú…</p>
             ) : (
-              <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                 {filteredCats.map(cat => (
                   <div key={cat.menu_category_id}>
                     <p className="text-xs font-semibold text-gray-500 mb-1">{cat.name}</p>
@@ -336,30 +366,56 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                         item.variants.map(v => {
                           const inCart = cart.find(l => l.menu_variant_id === v.menu_variant_id)
                           return (
-                            <div key={v.menu_variant_id}
-                              className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                                {item.variants.length > 1 && (
-                                  <p className="text-xs text-gray-400">{v.variant_name}</p>
+                            <div key={v.menu_variant_id} className="bg-gray-50 rounded-xl overflow-hidden">
+                              {/* Fila producto */}
+                              <div className="flex items-center gap-2 px-3 py-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                                  {item.variants.length > 1 && (
+                                    <p className="text-xs text-gray-400">{v.variant_name}</p>
+                                  )}
+                                </div>
+                                <span className="text-xs font-semibold text-gray-600 shrink-0">
+                                  {sym}{Number(v.price).toFixed(2)}
+                                </span>
+                                {inCart ? (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button onClick={() => updateQty(v.menu_variant_id, -1)}
+                                      className="w-6 h-6 rounded-full border border-gray-300 text-sm flex items-center justify-center hover:bg-gray-200">−</button>
+                                    <span className="text-sm font-bold w-4 text-center" style={{ color: accent }}>{inCart.quantity}</span>
+                                    <button onClick={() => updateQty(v.menu_variant_id, 1)}
+                                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm"
+                                      style={{ backgroundColor: accent }}>+</button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => addToCart(item, v)}
+                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm shrink-0"
+                                    style={{ backgroundColor: accent }}>+</button>
                                 )}
                               </div>
-                              <span className="text-xs font-semibold text-gray-600 shrink-0">
-                                {sym}{Number(v.price).toFixed(2)}
-                              </span>
-                              {inCart ? (
-                                <div className="flex items-center gap-1 shrink-0">
-                                  <button onClick={() => updateQty(v.menu_variant_id, -1)}
-                                    className="w-6 h-6 rounded-full border border-gray-300 text-sm flex items-center justify-center hover:bg-gray-200">−</button>
-                                  <span className="text-sm font-bold w-4 text-center" style={{ color: accent }}>{inCart.quantity}</span>
-                                  <button onClick={() => updateQty(v.menu_variant_id, 1)}
-                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm"
-                                    style={{ backgroundColor: accent }}>+</button>
+                              {/* Extras inline — solo si el item está en carrito y tiene extras */}
+                              {inCart && inCart.availableExtras.length > 0 && (
+                                <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+                                  {inCart.availableExtras.map(e => {
+                                    const selected = inCart.selectedExtras.some(s => s.extra_id === e.extra_id)
+                                    return (
+                                      <button
+                                        key={e.extra_id}
+                                        onClick={() => toggleExtra(v.menu_variant_id, e)}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all"
+                                        style={{
+                                          borderColor:     selected ? accent : '#D1D5DB',
+                                          color:           selected ? accent : '#6B7280',
+                                          backgroundColor: selected ? `${accent}15` : 'white',
+                                          fontWeight:      selected ? 600 : 400,
+                                        }}
+                                      >
+                                        {selected ? '✓ ' : '+ '}{e.name}
+                                        {e.price > 0 && ` +${sym}${e.price.toFixed(2)}`}
+                                      </button>
+                                    )
+                                  })}
                                 </div>
-                              ) : (
-                                <button onClick={() => addToCart(item, v)}
-                                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm shrink-0"
-                                  style={{ backgroundColor: accent }}>+</button>
                               )}
                             </div>
                           )
@@ -390,9 +446,18 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             <section className="bg-gray-50 rounded-2xl px-4 py-3 space-y-1.5">
               <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Resumen</p>
               {cart.map(l => (
-                <div key={l.menu_variant_id} className="flex justify-between text-sm text-gray-700">
-                  <span className="truncate flex-1">{l.quantity}× {l.item_name}{l.variant_name !== l.item_name ? ` (${l.variant_name})` : ''}</span>
-                  <span className="font-medium ml-2 shrink-0">{sym}{(l.unit_price * l.quantity).toFixed(2)}</span>
+                <div key={l.menu_variant_id}>
+                  <div className="flex justify-between text-sm text-gray-700">
+                    <span className="truncate flex-1">
+                      {l.quantity}× {l.item_name}{l.variant_name !== l.item_name ? ` (${l.variant_name})` : ''}
+                    </span>
+                    <span className="font-medium ml-2 shrink-0">{sym}{lineTotal(l).toFixed(2)}</span>
+                  </div>
+                  {l.selectedExtras.length > 0 && (
+                    <p className="text-xs text-gray-400 ml-4 mt-0.5">
+                      + {l.selectedExtras.map(e => e.name).join(', ')}
+                    </p>
+                  )}
                 </div>
               ))}
               <div className="border-t border-gray-200 pt-1.5 mt-1.5 space-y-0.5">
