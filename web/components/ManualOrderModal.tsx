@@ -36,6 +36,7 @@ interface Mesa {
   numero: number
   nombre: string
   ocupada: boolean
+  activa: boolean
 }
 
 interface DeliveryZone {
