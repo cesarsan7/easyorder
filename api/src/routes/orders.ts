@@ -637,6 +637,7 @@ interface TrackingRow {
   metodo_pago: string;
   notas: { item: string; nota: string }[] | null;
   created_at: Date;
+  nombre_pedido: string | null;
   updated_at: Date;
   datos_bancarios: unknown | null;
 }

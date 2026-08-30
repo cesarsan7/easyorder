@@ -31,7 +31,7 @@ interface MesaRow {
 
 // GET /:slug/mesas/zonas
 mesasRoutes.get('/:slug/mesas/zonas', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const rows = await sql<ZonaRow[]>`
     SELECT id, nombre, orden, activa
     FROM public.zona_mesa
@@ -48,7 +48,7 @@ mesasRoutes.get('/:slug/mesas/zonas', async (c) => {
 
 // POST /:slug/mesas/zonas
 mesasRoutes.post('/:slug/mesas/zonas', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const b = await c.req.json();
   const nombre = String(b.nombre ?? '').trim().slice(0, 80);
   if (!nombre) return c.json({ error: 'nombre requerido' }, 400);
@@ -66,7 +66,7 @@ mesasRoutes.post('/:slug/mesas/zonas', async (c) => {
 
 // PUT /:slug/mesas/zonas/:zona_id
 mesasRoutes.put('/:slug/mesas/zonas/:zona_id', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const zonaId = Number(c.req.param('zona_id'));
   const b = await c.req.json();
 
@@ -84,10 +84,11 @@ mesasRoutes.put('/:slug/mesas/zonas/:zona_id', async (c) => {
   }
   if (!fields.length) return c.json({ error: 'sin cambios' }, 400);
 
-  const sets = fields.map((f, i) => sql`${sql(f)} = ${values[i]}`);
+  const obj: Record<string,unknown> = {};
+  fields.forEach((f, i) => { obj[f] = values[i]; });
   const [row] = await sql<ZonaRow[]>`
     UPDATE public.zona_mesa
-    SET ${sql.join(sets, sql`, `)}
+    SET ${sql(obj)}
     WHERE id = ${zonaId} AND restaurante_id = ${rid}
     RETURNING id, nombre, orden, activa
   `;
@@ -97,7 +98,7 @@ mesasRoutes.put('/:slug/mesas/zonas/:zona_id', async (c) => {
 
 // DELETE /:slug/mesas/zonas/:zona_id
 mesasRoutes.delete('/:slug/mesas/zonas/:zona_id', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const zonaId = Number(c.req.param('zona_id'));
   await sql`
     UPDATE public.zona_mesa SET activa = false
@@ -110,7 +111,7 @@ mesasRoutes.delete('/:slug/mesas/zonas/:zona_id', async (c) => {
 
 // GET /:slug/mesas  — lista con estado ocupado/libre derivado de pedidos activos
 mesasRoutes.get('/:slug/mesas', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const rows = await sql<(MesaRow & { pedido_id: number | null; pedido_codigo: string | null })[]>`
     SELECT
       m.id, m.zona_id, z.nombre AS zona_nombre,
@@ -146,7 +147,7 @@ mesasRoutes.get('/:slug/mesas', async (c) => {
 
 // POST /:slug/mesas
 mesasRoutes.post('/:slug/mesas', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const b = await c.req.json();
   const nombre = String(b.nombre ?? '').trim().slice(0, 80);
   const numero = Number(b.numero);
@@ -167,7 +168,7 @@ mesasRoutes.post('/:slug/mesas', async (c) => {
 
 // PUT /:slug/mesas/:mesa_id
 mesasRoutes.put('/:slug/mesas/:mesa_id', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const mesaId = Number(c.req.param('mesa_id'));
   const b = await c.req.json();
 
@@ -181,10 +182,11 @@ mesasRoutes.put('/:slug/mesas/:mesa_id', async (c) => {
   if (typeof b.activa === 'boolean') { fields.push('activa'); values.push(b.activa); }
   if (!fields.length) return c.json({ error: 'sin cambios' }, 400);
 
-  const sets = fields.map((f, i) => sql`${sql(f)} = ${values[i]}`);
+  const obj: Record<string,unknown> = {};
+  fields.forEach((f, i) => { obj[f] = values[i]; });
   const [row] = await sql<MesaRow[]>`
     UPDATE public.mesa
-    SET ${sql.join(sets, sql`, `)}
+    SET ${sql(obj)}
     WHERE id = ${mesaId} AND restaurante_id = ${rid}
     RETURNING id, zona_id, numero, nombre, capacidad, activa
   `;
@@ -194,7 +196,7 @@ mesasRoutes.put('/:slug/mesas/:mesa_id', async (c) => {
 
 // DELETE /:slug/mesas/:mesa_id  (desactivar)
 mesasRoutes.delete('/:slug/mesas/:mesa_id', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const mesaId = Number(c.req.param('mesa_id'));
   await sql`UPDATE public.mesa SET activa = false WHERE id = ${mesaId} AND restaurante_id = ${rid}`;
   return c.json({ ok: true });
@@ -204,7 +206,7 @@ mesasRoutes.delete('/:slug/mesas/:mesa_id', async (c) => {
 
 // POST /:slug/orders/:order_id/mesa
 mesasRoutes.post('/:slug/orders/:order_id/mesa', async (c) => {
-  const rid = c.get('restauranteId');
+  const rid = c.get('restaurante_id');
   const orderId = Number(c.req.param('order_id'));
   const b = await c.req.json();
   const mesaId: number | null = b.mesa_id === null ? null : Number(b.mesa_id);

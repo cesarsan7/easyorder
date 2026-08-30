@@ -2225,6 +2225,8 @@ interface OrderListRow {
   telefono:                  string;
   nombre_cliente:            string | null;
   nombre_pedido:             string | null;
+  mesa_id:                   number | null;
+  mesa_nombre:               string | null;
   direccion:                 string | null;
   postal_code:               string | null;
   zone_name:                 string | null;

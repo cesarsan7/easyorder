@@ -956,6 +956,7 @@ interface RestauranteRow {
   tarifa_envio_valor: string | null;
   delivery_enabled: boolean | null;
   pickup_enabled: boolean | null;
+  servicio_mesa_habilitado: boolean | null;
   delivery_min_order: string | null;
   payment_methods: string[] | null;
   datos_bancarios: Record<string, string | null> | null;
