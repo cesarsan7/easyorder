@@ -101,9 +101,11 @@ export default function CheckoutDatosPage() {
     const trimPhone = phone.trim()
     if (!trimName || !trimPhone) return
     setCustomer(trimName, normalizePhone(trimPhone))
+    setNombrePedido(nombrePedidoInput.trim())
     router.push(`/${slug}/checkout/despacho`)
   }
 
+  const [nombrePedidoInput, setNombrePedidoInput] = useState('')
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
   const canContinue = name.trim().length > 0 && phone.trim().length > 0 && privacyAccepted
 

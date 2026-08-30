@@ -61,6 +61,7 @@ interface Order {
   items: unknown[]
   canal: string | null
   chatwoot_conversation_id: string | null
+  nombre_pedido: string | null
   created_at: string
   updated_at: string
 }
@@ -372,7 +373,8 @@ function buildComandaHtml(order:Order, items:OrderDetail['items'], tz:string):st
   <h2>COMANDA</h2>
   <p class="center sm">${order.pedido_codigo} · ${formatTime(order.created_at,tz)}</p>
   <hr class="sep"/>
-  <div class="row bold"><span>${order.nombre_cliente}</span><span>${order.telefono}</span></div>
+  <div class="row bold"><span>${order.nombre_pedido || order.nombre_cliente}</span><span>${order.telefono}</span></div>
+  ${order.nombre_pedido && order.nombre_pedido !== order.nombre_cliente ? `<div class="sm">Titular: ${order.nombre_cliente}</div>` : ''}
   <div class="sm">${despacho.replace(/\n/g,'<br/>')}</div>
   <hr class="sep"/>
   ${items.length>0
@@ -617,7 +619,10 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
         <div className="flex items-center justify-between px-5 pt-2 pb-4 border-b border-gray-100">
           <div>
             <p className="font-mono text-xs text-gray-400">#{order.pedido_codigo}</p>
-            <p className="text-base font-bold text-gray-900 mt-0.5">{order.nombre_cliente}</p>
+            <p className="text-base font-bold text-gray-900 mt-0.5">{order.nombre_pedido || order.nombre_cliente}</p>
+            {order.nombre_pedido && order.nombre_pedido !== order.nombre_cliente && (
+              <p className="text-xs text-amber-600 font-medium">Titular: {order.nombre_cliente}</p>
+            )}
             <p className="text-xs text-gray-500">{order.telefono} · {formatTime(order.created_at,zonaHoraria)}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -1202,7 +1207,10 @@ export default function DashboardPage() {
 
                         {/* Cliente */}
                         <td className="px-3 py-3" style={{maxWidth:150}}>
-                          <p className="text-sm font-medium text-gray-900 truncate">{order.nombre_cliente}</p>
+                          <p className="text-sm font-medium text-gray-900 truncate">{order.nombre_pedido || order.nombre_cliente}</p>
+                          {order.nombre_pedido && order.nombre_pedido !== order.nombre_cliente && (
+                            <p className="text-xs text-amber-600 truncate">Titular: {order.nombre_cliente}</p>
+                          )}
                           <p className="text-xs text-gray-400 truncate">{order.telefono}</p>
                         </td>
 

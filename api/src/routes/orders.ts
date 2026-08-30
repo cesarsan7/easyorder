@@ -79,6 +79,11 @@ ordersRoutes.post('/:slug/orders', async (c) => {
   const notasJson: { item: string; nota: string }[] | null =
     notasStr ? [{ item: 'general', nota: notasStr }] : null;
 
+  // nombre_pedido: opcional, distinto del titular de la cuenta
+  const nombrePedido: string | null = (typeof b.nombre_pedido === 'string' && b.nombre_pedido.trim())
+    ? b.nombre_pedido.trim().slice(0, 120)
+    : null;
+
   // Items array
   if (!Array.isArray(b.items) || b.items.length === 0) {
     return c.json({ error: 'items_required' }, 400);
@@ -408,7 +413,8 @@ ordersRoutes.post('/:slug/orders', async (c) => {
         estado,
         estado_pago,
         notas,
-        canal
+        canal,
+        nombre_pedido
       ) VALUES (
         ${restaurante_id},
         ${telefono},
@@ -425,7 +431,8 @@ ordersRoutes.post('/:slug/orders', async (c) => {
         'recibido',
         'pendiente',
         ${notasJson !== null ? sql.json(notasJson) : null},
-        'web'
+        'web',
+        ${nombrePedido}
       )
       RETURNING
         id,
@@ -507,6 +514,7 @@ ordersRoutes.get('/:slug/orders/:pedido_codigo', async (c) => {
       SELECT
         p.id,
         p.pedido_codigo,
+        p.nombre_pedido,
         p.estado,
         p.tipo_despacho,
         p.items,
@@ -547,6 +555,7 @@ ordersRoutes.get('/:slug/orders/:pedido_codigo', async (c) => {
       tiempo_estimado: p.tiempo_estimado,
       metodo_pago:     p.metodo_pago,
       notas:           p.notas ?? null,
+      nombre_pedido:   p.nombre_pedido ?? null,
       created_at:      p.created_at,
       updated_at:      p.updated_at,
     };
@@ -596,6 +605,7 @@ interface DeliveryZoneRow {
 interface PedidoRow {
   id: number;
   pedido_codigo: string | null;
+  nombre_pedido: string | null;
   estado: string;
   tipo_despacho: string;
   subtotal: string;    // postgres numeric → string

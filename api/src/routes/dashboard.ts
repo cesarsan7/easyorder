@@ -421,6 +421,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.notas,
           p.telefono,
           COALESCE(u.nombre, p.telefono)  AS nombre_cliente,
+          p.nombre_pedido,
           p.direccion,
           p.postal_code,
           dz.zone_name,
@@ -494,6 +495,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         notas:           o.notas ?? null,
         telefono:        o.telefono,
         nombre_cliente:  o.nombre_cliente,
+        nombre_pedido:   o.nombre_pedido ?? null,
         direccion:        o.direccion ?? null,
         postal_code:      o.postal_code ?? null,
         zone_name:        o.zone_name ?? null,
@@ -1104,6 +1106,10 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
   const notasStr = typeof b.notas === 'string' ? b.notas.trim() || null : null;
   const notasJson = notasStr ? [{ item: 'general', nota: notasStr }] : null;
 
+  const nombrePedido: string | null = (typeof b.nombre_pedido === 'string' && b.nombre_pedido.trim())
+    ? b.nombre_pedido.trim().slice(0, 120)
+    : null;
+
   if (!Array.isArray(b.items) || b.items.length === 0)
     return c.json({ error: 'items_required' }, 400);
 
@@ -1189,7 +1195,7 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
           restaurante_id, telefono, usuario_id, items,
           subtotal, costo_envio, total, tipo_despacho, direccion,
           postal_code, tiempo_estimado, metodo_pago, estado, estado_pago,
-          notas, canal
+          notas, canal, nombre_pedido
         ) VALUES (
           ${restaurante_id}, ${telefono}, ${usuario_id},
           ${sql.json(itemsSnapshot)},
@@ -1200,7 +1206,8 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
           ${metodo_pago}, 'recibido',
           ${metodo_pago === 'efectivo' ? 'pagado' : 'pendiente'},
           ${notasJson !== null ? sql.json(notasJson) : null},
-          'telefono'
+          'telefono',
+          ${nombrePedido}
         )
         RETURNING id, pedido_codigo, estado
       `;
@@ -2205,6 +2212,7 @@ interface OrderListRow {
   notas:                     string | null;
   telefono:                  string;
   nombre_cliente:            string | null;
+  nombre_pedido:             string | null;
   direccion:                 string | null;
   postal_code:               string | null;
   zone_name:                 string | null;

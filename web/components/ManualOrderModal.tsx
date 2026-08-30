@@ -70,6 +70,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   // Customer
   const [nombre,      setNombre]      = useState('')
   const [telefono,    setTelefono]    = useState('')
+  const [nombrePedido, setNombrePedido] = useState('')
   const [phonePrefix, setPhonePrefix] = useState('+34')
 
   // Dispatch
@@ -202,6 +203,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre:        nombre.trim(),
+          nombre_pedido: nombrePedido.trim() || undefined,
           telefono:      telefono.trim().startsWith('+') ? telefono.trim() : `${phonePrefix}${telefono.trim().replace(/\D/g, '')}`,
           tipo_despacho: tipoDespacho,
           metodo_pago:   metodoPago,
@@ -288,6 +290,13 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                     style={{ '--tw-ring-color': accent } as React.CSSProperties} />
                 </div>
               </div>
+            </div>
+            <div className="mt-3">
+              <label className="block text-xs text-gray-500 mb-1">Pedido a nombre de <span className="text-gray-400">(opcional)</span></label>
+              <input value={nombrePedido} onChange={e => setNombrePedido(e.target.value)}
+                placeholder="Si el pedido es para otra persona"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': accent } as React.CSSProperties} />
             </div>
           </section>
 

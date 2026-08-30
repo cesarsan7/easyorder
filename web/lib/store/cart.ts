@@ -22,6 +22,7 @@ export type DispatchType = 'delivery' | 'pickup'
 interface CartState {
   items: CartItem[]
   customerName: string
+  nombrePedido: string
   customerPhone: string
   dispatchType: DispatchType | null
   address: string
@@ -51,6 +52,7 @@ interface CartActions {
   updateQty: (itemId: number, variantId: number | null, extras: CartItemExtra[], qty: number) => void
   clearCart: () => void
   setCustomer: (name: string, phone: string) => void
+  setNombrePedido: (nombre: string) => void
   setDispatch: (type: DispatchType, address: string, cost: number, zone?: ZoneInfo | null) => void
   setPaymentMethod: (method: string) => void
   setOrderId: (id: string) => void
@@ -69,6 +71,7 @@ type CartStore = CartState & CartActions
 const initialState: CartState = {
   items: [],
   customerName: '',
+  nombrePedido: '',
   customerPhone: '',
   dispatchType: null,
   address: '',
@@ -140,6 +143,7 @@ export const useCartStore = create<CartStore>()(
       clearCart: () => set(initialState),
 
       setCustomer: (name, phone) => set({ customerName: name, customerPhone: phone }),
+      setNombrePedido: (nombre) => set({ nombrePedido: nombre }),
 
       setDispatch: (type, address, cost, zone) =>
         set({

@@ -140,6 +140,7 @@ export default function CheckoutConfirmarPage() {
   const items = useCartStore((s) => s.items)
   const customerName = useCartStore((s) => s.customerName)
   const customerPhone = useCartStore((s) => s.customerPhone)
+  const nombrePedido   = useCartStore((s) => s.nombrePedido)
   const dispatchType = useCartStore((s) => s.dispatchType)
   const address = useCartStore((s) => s.address)
   const deliveryCost = useCartStore((s) => s.deliveryCost)
@@ -199,6 +200,7 @@ export default function CheckoutConfirmarPage() {
         body: JSON.stringify({
           nombre: customerName,
           telefono: customerPhone,
+          nombre_pedido: nombrePedido || undefined,
           tipo_despacho: dispatchType === 'pickup' ? 'retiro' : 'delivery',
           metodo_pago: paymentMethod,
           ...(dispatchType === 'delivery' && {
@@ -321,6 +323,9 @@ export default function CheckoutConfirmarPage() {
           <div className="bg-white rounded-2xl px-5 py-5 shadow-sm">
             <SectionTitle>Datos del pedido</SectionTitle>
             <Row label="Nombre" value={customerName} />
+            {nombrePedido && nombrePedido !== customerName && (
+              <Row label="Pedido a nombre de" value={nombrePedido} />
+            )}
             <Row label="Teléfono" value={customerPhone} />
             <Row
               label="Despacho"
