@@ -18,6 +18,7 @@ const NAV = [
   { path: '/metricas',      icon: '▦', label: 'Métricas',      tourId: 'tour-nav-metricas'      },
   { path: '/menu',          icon: '≡', label: 'Menú',          tourId: 'tour-nav-menu'          },
   { path: '/clientes',      icon: '⊙', label: 'Clientes',      tourId: 'tour-nav-clientes'      },
+  { path: '/mesas',         icon: '🪑', label: 'Mesas',         tourId: 'tour-nav-mesas'         },
   { path: '/configuracion', icon: '⚙', label: 'Configuración', tourId: 'tour-nav-configuracion' },
   { path: '/escalaciones',  icon: '⚑', label: 'Derivados',     tourId: 'tour-nav-escalaciones'  },
   { path: '/equipo',        icon: '⊞', label: 'Equipo',        tourId: 'tour-nav-equipo'        },

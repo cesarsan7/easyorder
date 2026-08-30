@@ -71,7 +71,8 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
         tarifa_envio_tipo,
         tarifa_envio_valor,
         payment_methods,
-        datos_bancarios
+        datos_bancarios,
+        servicio_mesa_habilitado
       FROM restaurante
       WHERE id = ${restaurante_id}
       LIMIT 1
@@ -175,6 +176,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
     tarifa_envio_tipo:   r.tarifa_envio_tipo,
     tarifa_envio_valor:  r.tarifa_envio_valor,
     payment_methods:     r.payment_methods ?? [],
+    servicio_mesa:       Boolean(r.servicio_mesa_habilitado),
     datos_bancarios:     r.datos_bancarios ?? null,
     is_open:             isOpen,
     is_open_override:    isOpenOverride,

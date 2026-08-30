@@ -14,6 +14,7 @@ import clientesRoutes from './routes/dashboard/clientes.js';
 import membersRoutes from './routes/dashboard/members.js';
 import menuExcelRoutes  from './routes/dashboard/menu-excel.js';
 import menuImagesRoutes from './routes/dashboard/menu-images.js';
+import mesasRoutes from './routes/dashboard/mesas.js';
 import onboardingRoutes from './routes/onboarding.js';
 
 const app = new Hono();
@@ -52,6 +53,7 @@ app.route('/dashboard', clientesRoutes);
 app.route('/dashboard', membersRoutes);
 app.route('/dashboard', menuExcelRoutes);
 app.route('/dashboard', menuImagesRoutes);
+app.route('/dashboard', mesasRoutes);
 app.route('/onboarding', onboardingRoutes);
 
 serve(

@@ -62,6 +62,8 @@ interface Order {
   canal: string | null
   chatwoot_conversation_id: string | null
   nombre_pedido: string | null
+  mesa_id: number | null
+  mesa_nombre: string | null
   created_at: string
   updated_at: string
 }
@@ -620,6 +622,9 @@ function OrderDetailPanel({ slug, order, onClose, onStatusChange, updatingId }:{
           <div>
             <p className="font-mono text-xs text-gray-400">#{order.pedido_codigo}</p>
             <p className="text-base font-bold text-gray-900 mt-0.5">{order.nombre_pedido || order.nombre_cliente}</p>
+            {order.mesa_nombre && (
+              <p className="text-xs font-semibold text-amber-600 mt-0.5">🪑 {order.mesa_nombre}</p>
+            )}
             {order.nombre_pedido && order.nombre_pedido !== order.nombre_cliente && (
               <p className="text-xs text-amber-600 font-medium">Titular: {order.nombre_cliente}</p>
             )}
@@ -1210,6 +1215,9 @@ export default function DashboardPage() {
                           <p className="text-sm font-medium text-gray-900 truncate">{order.nombre_pedido || order.nombre_cliente}</p>
                           {order.nombre_pedido && order.nombre_pedido !== order.nombre_cliente && (
                             <p className="text-xs text-amber-600 truncate">Titular: {order.nombre_cliente}</p>
+                          )}
+                          {order.mesa_nombre && (
+                            <p className="text-xs text-amber-600 truncate">🪑 {order.mesa_nombre}</p>
                           )}
                           <p className="text-xs text-gray-400 truncate">{order.telefono}</p>
                         </td>

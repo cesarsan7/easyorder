@@ -29,6 +29,15 @@ interface Category {
   items:            MenuItem[]
 }
 
+interface Mesa {
+  mesa_id: number
+  zona_id: number | null
+  zona_nombre: string | null
+  numero: number
+  nombre: string
+  ocupada: boolean
+}
+
 interface DeliveryZone {
   delivery_zone_id: number
   zone_name:        string
@@ -74,10 +83,13 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const [phonePrefix, setPhonePrefix] = useState('+34')
 
   // Dispatch
-  const [tipoDespacho, setTipoDespacho] = useState<'retiro' | 'delivery'>('retiro')
+  const [tipoDespacho, setTipoDespacho] = useState<'retiro' | 'delivery' | 'mesa'>('retiro')
   const [direccion,    setDireccion]    = useState('')
   const [zonaId,       setZonaId]       = useState<number | null>(null)
   const [zones,        setZones]        = useState<DeliveryZone[]>([])
+  const [mesas,        setMesas]        = useState<Mesa[]>([])
+  const [mesaId,       setMesaId]       = useState<number | null>(null)
+  const [servicioMesa, setServicioMesa] = useState(false)
 
   // Payment
   const [metodoPago,     setMetodoPago]     = useState('')
@@ -98,27 +110,33 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const loadData = useCallback(async () => {
     setLoadingMenu(true)
     try {
-      const [menuRes, restRes, zonesRes] = await Promise.all([
+      const [menuRes, restRes, zonesRes, mesasRes] = await Promise.all([
         fetch(`${apiBase}/public/${slug}/menu`),
         fetch(`${apiBase}/public/${slug}/restaurant`),
         authFetch(`${apiBase}/dashboard/${slug}/delivery-zones`),
+        authFetch(`${apiBase}/dashboard/${slug}/mesas`),
       ])
       if (menuRes.ok) {
         const d: { categories: Category[] } = await menuRes.json()
         setCategories(d.categories ?? [])
       }
       if (restRes.ok) {
-        const d: { payment_methods?: string[]; phone_prefix?: string } = await restRes.json()
+        const d: { payment_methods?: string[]; phone_prefix?: string; servicio_mesa?: boolean } = await restRes.json()
         const methods = d.payment_methods ?? []
         setPaymentMethods(methods)
         if (methods.length > 0) setMetodoPago(methods[0])
         if (d.phone_prefix) setPhonePrefix(d.phone_prefix)
+        if (d.servicio_mesa) setServicioMesa(true)
       }
       if (zonesRes.ok) {
         const d: { zones: DeliveryZone[] } = await zonesRes.json()
         const activeZones = (d.zones ?? []).filter((z: DeliveryZone & { is_active?: boolean }) => z.is_active !== false)
         setZones(activeZones)
         if (activeZones.length > 0) setZonaId(activeZones[0].delivery_zone_id)
+      }
+      if (mesasRes.ok) {
+        const d: Mesa[] = await mesasRes.json()
+        setMesas(d.filter(m => m.activa !== false))
       }
     } finally {
       setLoadingMenu(false)
@@ -194,6 +212,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
     if (cart.length === 0) { setError('Agrega al menos un producto.'); return }
     if (!metodoPago) { setError('Selecciona un método de pago.'); return }
     if (tipoDespacho === 'delivery' && !direccion.trim()) { setError('Ingresa la dirección.'); return }
+    if (tipoDespacho === 'mesa' && !mesaId) { setError('Selecciona una mesa.'); return }
     if (tipoDespacho === 'delivery' && !zonaId) { setError('Selecciona una zona de delivery.'); return }
 
     setSaving(true)
@@ -206,6 +225,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
           nombre_pedido: nombrePedido.trim() || undefined,
           telefono:      telefono.trim().startsWith('+') ? telefono.trim() : `${phonePrefix}${telefono.trim().replace(/\D/g, '')}`,
           tipo_despacho: tipoDespacho,
+          mesa_id:       tipoDespacho === 'mesa' ? mesaId : undefined,
           metodo_pago:   metodoPago,
           direccion:     tipoDespacho === 'delivery' ? direccion.trim() : undefined,
           zona_id:       tipoDespacho === 'delivery' ? zonaId : undefined,
@@ -304,7 +324,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Despacho</h3>
             <div className="flex gap-2 mb-3">
-              {(['retiro', 'delivery'] as const).map(t => (
+              {(['retiro', 'delivery', ...(servicioMesa ? ['mesa' as const] : [])] as const).map(t => (
                 <button key={t} onClick={() => setTipoDespacho(t)}
                   className="flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-all"
                   style={{
@@ -312,10 +332,28 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                     color:           tipoDespacho === t ? accent : '#6B7280',
                     backgroundColor: tipoDespacho === t ? `${accent}10` : 'white',
                   }}>
-                  {t === 'retiro' ? '🏪 Retiro' : '🛵 Delivery'}
+                  {t === 'retiro' ? '🏪 Retiro' : t === 'delivery' ? '🛵 Delivery' : '🪑 Mesa'}
                 </button>
               ))}
             </div>
+            {tipoDespacho === 'mesa' && (
+              <div>
+                <select value={mesaId ?? ''} onChange={e => setMesaId(Number(e.target.value))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
+                  <option value="">Seleccionar mesa…</option>
+                  {mesas.filter(m => !m.ocupada).map(m => (
+                    <option key={m.mesa_id} value={m.mesa_id}>
+                      {m.zona_nombre ? `[${m.zona_nombre}] ` : ''}{m.nombre} (#{m.numero})
+                    </option>
+                  ))}
+                </select>
+                {mesas.filter(m => m.ocupada).length > 0 && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {mesas.filter(m => m.ocupada).length} mesa(s) ocupada(s) no mostradas
+                  </p>
+                )}
+              </div>
+            )}
             {tipoDespacho === 'delivery' && (
               <div className="space-y-2">
                 <input value={direccion} onChange={e => setDireccion(e.target.value)}

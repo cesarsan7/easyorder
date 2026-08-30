@@ -422,6 +422,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.telefono,
           COALESCE(u.nombre, p.telefono)  AS nombre_cliente,
           p.nombre_pedido,
+          p.mesa_id,
+          m.nombre AS mesa_nombre,
           p.direccion,
           p.postal_code,
           dz.zone_name,
@@ -440,6 +442,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           p.updated_at
         FROM   pedidos  p
         LEFT JOIN usuarios       u  ON u.id             = p.usuario_id
+        LEFT JOIN mesa           m  ON m.id             = p.mesa_id
         LEFT JOIN LATERAL (
           SELECT
             zone_name,
@@ -496,6 +499,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         telefono:        o.telefono,
         nombre_cliente:  o.nombre_cliente,
         nombre_pedido:   o.nombre_pedido ?? null,
+        mesa_id:         o.mesa_id ?? null,
+        mesa_nombre:     o.mesa_nombre ?? null,
         direccion:        o.direccion ?? null,
         postal_code:      o.postal_code ?? null,
         zone_name:        o.zone_name ?? null,
@@ -1085,7 +1090,7 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
   const nombre = typeof b.nombre === 'string' ? b.nombre.trim() : null;
   if (!nombre) return c.json({ error: 'nombre_required' }, 400);
 
-  const tipo_despacho = b.tipo_despacho === 'delivery' || b.tipo_despacho === 'retiro'
+  const tipo_despacho = b.tipo_despacho === 'delivery' || b.tipo_despacho === 'retiro' || b.tipo_despacho === 'mesa'
     ? b.tipo_despacho : null;
   if (!tipo_despacho) return c.json({ error: 'invalid_tipo_despacho' }, 400);
 
@@ -1102,6 +1107,12 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
     : null;
   if (tipo_despacho === 'delivery' && zona_id === null)
     return c.json({ error: 'delivery_requires_zona_id' }, 400);
+
+  const mesa_id: number | null = tipo_despacho === 'mesa'
+    ? (typeof b.mesa_id === 'number' && Number.isInteger(b.mesa_id) && b.mesa_id >= 1 ? b.mesa_id : null)
+    : null;
+  if (tipo_despacho === 'mesa' && mesa_id === null)
+    return c.json({ error: 'mesa_requires_mesa_id' }, 400);
 
   const notasStr = typeof b.notas === 'string' ? b.notas.trim() || null : null;
   const notasJson = notasStr ? [{ item: 'general', nota: notasStr }] : null;
@@ -1153,7 +1164,7 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
       if (zone.estimated_minutes_min !== null && zone.estimated_minutes_max !== null) {
         tiempo_estimado = `${zone.estimated_minutes_min}-${zone.estimated_minutes_max} min`;
       }
-    } else {
+    } else if (tipo_despacho === 'retiro' || tipo_despacho === 'mesa') {
       const pickupRows = await sql<{ config_value: string }[]>`
         SELECT config_value FROM restaurante_config
         WHERE config_key = 'pickup_eta_minutes' AND restaurante_id = ${restaurante_id} LIMIT 1
@@ -1195,7 +1206,7 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
           restaurante_id, telefono, usuario_id, items,
           subtotal, costo_envio, total, tipo_despacho, direccion,
           postal_code, tiempo_estimado, metodo_pago, estado, estado_pago,
-          notas, canal, nombre_pedido
+          notas, canal, nombre_pedido, mesa_id
         ) VALUES (
           ${restaurante_id}, ${telefono}, ${usuario_id},
           ${sql.json(itemsSnapshot)},
@@ -1207,7 +1218,8 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
           ${metodo_pago === 'efectivo' ? 'pagado' : 'pendiente'},
           ${notasJson !== null ? sql.json(notasJson) : null},
           'telefono',
-          ${nombrePedido}
+          ${nombrePedido},
+          ${mesa_id}
         )
         RETURNING id, pedido_codigo, estado
       `;
