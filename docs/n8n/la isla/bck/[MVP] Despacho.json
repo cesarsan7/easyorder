@@ -201,7 +201,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido = $('Obtener Pedido Activo').first().json || {};\n\nreturn [{\n  json: {\n    pedido_id: pedido.id,\n    pedido_numero: pedido.pedido_numero,\n    pedido_codigo: pedido.pedido_codigo || null,\n    tipo_despacho: 'retiro',\n    fee: 0,\n    subtotal: Number(pedido.subtotal || 0),\n    total: Number(pedido.subtotal || 0),\n    telefono: trigger.telefono,\n    session_id: trigger.session_id\n  }\n}];"
+        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido = $('Obtener Pedido Activo').first().json || {};\n\n// pedido.id puede ser string o numero segun variante de funcion; trigger.pedido_id es el fallback seguro\nconst pedidoId = pedido.id || pedido.pedido_id || trigger.pedido_id;\n\nreturn [{\n  json: {\n    pedido_id: pedidoId,\n    pedido_numero: pedido.pedido_numero,\n    pedido_codigo: pedido.pedido_codigo || null,\n    tipo_despacho: 'retiro',\n    fee: 0,\n    subtotal: Number(pedido.subtotal || 0),\n    total: Number(pedido.subtotal || 0),\n    telefono: trigger.telefono,\n    session_id: trigger.session_id\n  }\n}];"
       },
       "id": "08b49621-7d6c-45d4-a81b-2235f9ee899a",
       "name": "Preparar Retiro",
