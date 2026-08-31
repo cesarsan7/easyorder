@@ -75,7 +75,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT delivery_zone_id, zone_name, postal_code, fee, min_order_amount, estimated_minutes_min, estimated_minutes_max, is_active\nFROM public.delivery_zone\nWHERE is_active = true\n  AND restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\n  AND (\n    postal_code = '{{ $('Detectar Zona').first().json.postalCode }}'\n    OR lower(zone_name) = lower('{{ $('Detectar Zona').first().json.matchedZone }}')\n  )\nLIMIT 1",
+        "query": "SELECT delivery_zone_id, zone_name, postal_code, fee, min_order_amount, estimated_minutes_min, estimated_minutes_max, is_active\nFROM public.delivery_zone\nWHERE is_active = true\n  AND (\n    postal_code = '{{ (() => {\n      const t = $('When Executed by Another Workflow').first().json;\n      const p = $('Obtener Pedido Activo').first().json || {};\n      const TIPO_KW = ['delivery','retiro','retirar','recoger','pickup'];\n      const rawAddr = String(t.direccion_texto || '').trim();\n      const isTipo = TIPO_KW.includes(rawAddr.toLowerCase());\n      const efectiva = isTipo ? (p.direccion || '') : rawAddr;\n      const src = [t.codigo_postal, efectiva].filter(Boolean).join(' ');\n      const m = String(src).match(/\\b\\d{5}\\b/);\n      return m ? m[0] : '';\n    })() }}'\n    OR lower(zone_name) = lower('{{ (() => {\n      const t = $('When Executed by Another Workflow').first().json;\n      const p = $('Obtener Pedido Activo').first().json || {};\n      const TIPO_KW = ['delivery','retiro','retirar','recoger','pickup'];\n      const rawAddr = String(t.direccion_texto || '').trim();\n      const isTipo = TIPO_KW.includes(rawAddr.toLowerCase());\n      const efectiva = isTipo ? (p.direccion || '') : rawAddr;\n      const txt = ([t.codigo_postal, efectiva].filter(Boolean).join(' ')).toLowerCase();\n      if (txt.includes('arrecife')) return 'Arrecife';\n      if (txt.includes('playa honda')) return 'Playa Honda';\n      if (txt.includes('taiche')) return 'Taiche';\n      return '';\n    })() }}')\n  )\nLIMIT 1",
         "options": {}
       },
       "id": "8a7b359d-cc6c-4645-bf03-4418ffbc013e",
@@ -83,7 +83,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.4,
       "position": [
-        -448,
+        -672,
         576
       ],
       "alwaysOutputData": true,
@@ -101,7 +101,7 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "loose",
+            "typeValidation": "strict",
             "version": 3
           },
           "conditions": [
@@ -125,7 +125,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -224,
+        -448,
         576
       ]
     },
@@ -263,7 +263,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido  = $('Obtener Pedido Activo').first().json || {};\nconst detecta = $('Detectar Zona').first().json || {};\nconst zonasDB = $('Obtener Zonas Activas').all().map(i => i.json);\n\nconst address  = String(trigger.direccion_texto || detecta.efectivaDireccion || '').trim();\nconst cp       = String(trigger.codigo_postal || detecta.postalCode || '').trim();\nconst hasAddress = address.length > 0 || cp.length > 0;\n\nconst zonaNames = zonasDB.map(z => z.zone_name);\nconst zonasList = zonaNames.join(', ');\n\nfunction norm(s) {\n  return String(s).toLowerCase()\n    .normalize('NFD').replace(/[̀-ͯ]/g, '');\n}\nconst addrNorm = norm(address + ' ' + cp);\nconst hasZoneHint = zonaNames.some(z => addrNorm.includes(norm(z)))\n                  || /\\b\\d{5}\\b/.test(address + ' ' + cp);\n\nlet respuesta, motivo;\n\nif (!hasAddress) {\n  motivo    = 'sin_direccion';\n  respuesta = `Para delivery necesito tu dirección completa con zona. Zonas: ${zonasList}. ¿A qué dirección te lo enviamos? Ej: Calle Mayor 12, 3ºA, Arrecife.`;\n} else if (hasZoneHint) {\n  motivo    = 'fuera_cobertura';\n  respuesta = `Lo siento, no podemos entregar a \"${address}\". ¿Quieres cambiar la dirección o prefieres retiro en el local?`;\n} else {\n  motivo    = 'zona_no_identificada';\n  respuesta = `Recibí la dirección pero necesito saber la zona. Zonas disponibles: ${zonasList}. ¿En cuál está tu dirección?`;\n}\n\nreturn [{\n  json: {\n    success: false,\n    motivo,\n    respuesta_agente: respuesta,\n    puede_continuar: false,\n    mutar_db: false,\n    zonas_disponibles: zonaNames\n  }\n}];"
+        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido = $('Obtener Pedido Activo').first().json || {};\n\nconst address  = String(trigger.direccion_texto || '').trim();\nconst cp       = String(trigger.codigo_postal   || '').trim();\nconst hasAddress = address.length > 0 || cp.length > 0;\n\nconst ZONAS_DISPONIBLES = ['Arrecife', 'Playa Honda', 'Taiche'];\nconst zonasList = ZONAS_DISPONIBLES.join(', ');\n\n// Detectar si el texto de la dirección ya menciona zona o CP de 5 dígitos\nconst addressLower = (address + ' ' + cp).toLowerCase();\nconst hasZoneHint  = ZONAS_DISPONIBLES.some(z => addressLower.includes(z.toLowerCase()))\n                   || /\\b\\d{5}\\b/.test(address + ' ' + cp);\n\nlet respuesta;\nlet motivo;\n\nif (!hasAddress) {\n  motivo    = 'sin_direccion';\n  respuesta = `Para delivery necesito tu dirección completa con zona o CP. `\n            + `Zonas disponibles: ${zonasList}. `\n            + `¿A qué dirección te lo enviamos? Ej: Calle Mayor 12, 3ºA, Arrecife.`;\n} else if (!hasZoneHint) {\n  motivo    = 'zona_no_identificada';\n  respuesta = `Recibí la dirección \"${address}\", pero necesito saber en qué zona está para calcular el envío. `\n            + `¿Es Arrecife, Playa Honda o Taiche?`;\n} else {\n  motivo    = 'fuera_de_cobertura';\n  respuesta = `Lo siento, no llegamos a \"${address || cp}\". `\n            + `Nuestras zonas de delivery son: ${zonasList}. `\n            + `¿Quieres cambiar la dirección o prefieres retiro en el local?`;\n}\n\nreturn [{\n  json: {\n    success: false,\n    motivo,\n    respuesta_agente: respuesta,\n    pedido_id:     pedido.id,\n    pedido_numero: pedido.pedido_numero,\n    pedido_codigo: pedido.pedido_codigo || null,\n    subtotal:      Number(pedido.subtotal || 0)\n  }\n}];"
       },
       "id": "d2a42628-6c8b-4dd0-a47c-6dbfa846e299",
       "name": "Respuesta Fuera Cobertura",
@@ -413,40 +413,6 @@
         2208,
         368
       ]
-    },
-    {
-      "id": "31923c06-1ad5-4bd4-af39-47a8288c9107",
-      "name": "Obtener Zonas Activas",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        -896,
-        576
-      ],
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT zone_name, fee, min_order_amount, estimated_minutes_min, estimated_minutes_max\nFROM public.delivery_zone\nWHERE restaurante_id = {{ $('When Executed by Another Workflow').first().json.restaurante_id }}\n  AND is_active = true\nORDER BY zone_name",
-        "options": {}
-      },
-      "credentials": {
-        "postgres": {
-          "id": "1",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "id": "a47edeca-bb39-4dc4-97ef-67fc78af4e5e",
-      "name": "Detectar Zona",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -672,
-        476
-      ],
-      "parameters": {
-        "jsCode": "const trigger = $('When Executed by Another Workflow').first().json || {};\nconst pedido  = $('Obtener Pedido Activo').first().json || {};\nconst zonas   = $('Obtener Zonas Activas').all().map(i => i.json);\n\nconst TIPO_KW = ['delivery','retiro','retirar','recoger','pickup'];\nconst rawAddr = String(trigger.direccion_texto || '').trim();\nconst isTipo  = TIPO_KW.includes(rawAddr.toLowerCase());\nconst efectiva = isTipo ? (pedido.direccion || '') : rawAddr;\nconst srcText  = [trigger.codigo_postal, efectiva].filter(Boolean).join(' ');\n\n// Normalize: remove accents, lowercase\nfunction norm(s) {\n  return String(s).toLowerCase()\n    .normalize('NFD').replace(/[̀-ͯ]/g, '')\n    .replace(/[^a-z0-9\\s]/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nconst normSrc = norm(srcText);\n\n// Extract 5-digit postal code\nconst postalMatch = normSrc.match(/\\b\\d{5}\\b/);\nconst postalCode  = postalMatch ? postalMatch[0] : '';\n\n// Match zone name from DB against address text (accent-insensitive)\nlet matchedZone = '';\nfor (const z of zonas) {\n  const normZone = norm(z.zone_name);\n  if (normZone && normSrc.includes(normZone)) {\n    matchedZone = z.zone_name;\n    break;\n  }\n}\n\nreturn [{ json: { postalCode, matchedZone, efectivaDireccion: efectiva } }];"
-      }
     }
   ],
   "pinData": {},
@@ -491,7 +457,7 @@
         ],
         [
           {
-            "node": "Obtener Zonas Activas",
+            "node": "Consultar Zona Delivery",
             "type": "main",
             "index": 0
           }
@@ -736,28 +702,6 @@
         [
           {
             "node": "Devolver Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Obtener Zonas Activas": {
-      "main": [
-        [
-          {
-            "node": "Detectar Zona",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Detectar Zona": {
-      "main": [
-        [
-          {
-            "node": "Consultar Zona Delivery",
             "type": "main",
             "index": 0
           }
