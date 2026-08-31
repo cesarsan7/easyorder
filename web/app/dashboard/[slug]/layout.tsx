@@ -19,6 +19,7 @@ const NAV = [
   { path: '/menu',          icon: '≡', label: 'Menú',          tourId: 'tour-nav-menu'          },
   { path: '/clientes',      icon: '⊙', label: 'Clientes',      tourId: 'tour-nav-clientes'      },
   { path: '/mesas',         icon: '🪑', label: 'Mesas',         tourId: 'tour-nav-mesas'         },
+  { path: '/faqs',          icon: '❓', label: 'Preguntas',      tourId: 'tour-nav-faqs'          },
   { path: '/configuracion', icon: '⚙', label: 'Configuración', tourId: 'tour-nav-configuracion' },
   { path: '/escalaciones',  icon: '⚑', label: 'Derivados',     tourId: 'tour-nav-escalaciones'  },
   { path: '/equipo',        icon: '⊞', label: 'Equipo',        tourId: 'tour-nav-equipo'        },
