@@ -148,11 +148,24 @@ mesasRoutes.get('/:slug/mesas', async (c) => {
 });
 
 // PATCH /:slug/mesas/:mesa_id/estado — cambiar estado manual (libre/ocupada)
+// Si ocupada=false y la mesa tiene un pedido activo, lo desasocia (mesa_id = NULL)
 mesasRoutes.patch('/:slug/mesas/:mesa_id/estado', async (c) => {
   const rid    = c.get('restaurante_id');
   const mesaId = Number(c.req.param('mesa_id'));
   const { ocupada } = await c.req.json<{ ocupada: boolean }>();
   if (typeof ocupada !== 'boolean') return c.json({ error: 'ocupada requerido (boolean)' }, 400);
+
+  // Si liberamos la mesa, desasociar pedidos activos vinculados
+  if (!ocupada) {
+    await sql`
+      UPDATE public.pedidos
+      SET mesa_id = NULL
+      WHERE mesa_id = ${mesaId}
+        AND restaurante_id = ${rid}
+        AND estado NOT IN ('entregado','cancelado')
+    `;
+  }
+
   const [row] = await sql<{ id: number; ocupada_manual: boolean }[]>`
     UPDATE public.mesa
     SET ocupada_manual = ${ocupada}
@@ -161,6 +174,34 @@ mesasRoutes.patch('/:slug/mesas/:mesa_id/estado', async (c) => {
   `;
   if (!row) return c.json({ error: 'no encontrado' }, 404);
   return c.json({ mesa_id: row.id, ocupada_manual: row.ocupada_manual });
+});
+
+// POST /:slug/mesas/:mesa_id/asociar-pedido — asociar pedido a mesa por código
+mesasRoutes.post('/:slug/mesas/:mesa_id/asociar-pedido', async (c) => {
+  const rid    = c.get('restaurante_id');
+  const mesaId = Number(c.req.param('mesa_id'));
+  const { pedido_codigo } = await c.req.json<{ pedido_codigo: string }>();
+  if (!pedido_codigo?.trim()) return c.json({ error: 'pedido_codigo requerido' }, 400);
+
+  const [pedido] = await sql<{ id: number; pedido_codigo: string }[]>`
+    SELECT id, pedido_codigo FROM public.pedidos
+    WHERE restaurante_id = ${rid}
+      AND pedido_codigo = ${pedido_codigo.trim().toUpperCase()}
+      AND estado NOT IN ('entregado','cancelado')
+    LIMIT 1
+  `;
+  if (!pedido) return c.json({ error: 'Pedido no encontrado o ya cerrado' }, 404);
+
+  await sql`
+    UPDATE public.pedidos
+    SET mesa_id = ${mesaId}, tipo_despacho = 'mesa'
+    WHERE id = ${pedido.id}
+  `;
+  await sql`
+    UPDATE public.mesa SET ocupada_manual = false
+    WHERE id = ${mesaId} AND restaurante_id = ${rid}
+  `;
+  return c.json({ ok: true, pedido_id: pedido.id, pedido_codigo: pedido.pedido_codigo });
 });
 
 // POST /:slug/mesas

@@ -157,11 +157,39 @@ export default function MesasPage() {
   }
 
   async function toggleEstado(m: Mesa) {
-    // Solo cambia el estado manual; si tiene pedido activo sigue ocupada igual
+    const liberar = m.ocupada
+    if (liberar && m.pedido_id) {
+      const ok = confirm(`¿Marcar como libre? El pedido ${m.pedido_codigo ?? m.pedido_id} quedará desasociado de esta mesa.`)
+      if (!ok) return
+    }
     await authFetch(`${base}/dashboard/${slug}/mesas/${m.mesa_id}/estado`,
       { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ocupada: !m.ocupada_manual }) })
+        body: JSON.stringify({ ocupada: !liberar }) })
     load()
+  }
+
+  // ── Asociar pedido ──────────────────────────────────────────────────────────
+  const [asociarMesa,   setAsociarMesa]   = useState<Mesa | null>(null)
+  const [codigoPedido,  setCodigoPedido]  = useState('')
+  const [asociarError,  setAsociarError]  = useState<string | null>(null)
+  const [asociarSaving, setAsociarSaving] = useState(false)
+
+  async function doAsociarPedido() {
+    if (!asociarMesa || !codigoPedido.trim()) return
+    setAsociarSaving(true)
+    setAsociarError(null)
+    try {
+      const res = await authFetch(
+        `${base}/dashboard/${slug}/mesas/${asociarMesa.mesa_id}/asociar-pedido`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pedido_codigo: codigoPedido.trim() }) }
+      )
+      const d = await res.json()
+      if (!res.ok) { setAsociarError(d.error ?? 'Error'); return }
+      setAsociarMesa(null)
+      setCodigoPedido('')
+      load()
+    } finally { setAsociarSaving(false) }
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -234,7 +262,8 @@ export default function MesasPage() {
                     <MesaCard key={m.mesa_id} mesa={m} accent={accent}
                       onEdit={() => openEditMesa(m)}
                       onToggle={() => toggleMesa(m)}
-                      onToggleEstado={() => toggleEstado(m)} />
+                      onToggleEstado={() => toggleEstado(m)}
+                      onAsociar={() => { setAsociarMesa(m); setCodigoPedido(''); setAsociarError(null) }} />
                   ))}
                   {zm.length === 0 && (
                     <p className="col-span-3 text-xs text-gray-400 py-2">Sin mesas en esta zona</p>
@@ -251,7 +280,8 @@ export default function MesasPage() {
                     <MesaCard key={m.mesa_id} mesa={m} accent={accent}
                       onEdit={() => openEditMesa(m)}
                       onToggle={() => toggleMesa(m)}
-                      onToggleEstado={() => toggleEstado(m)} />
+                      onToggleEstado={() => toggleEstado(m)}
+                      onAsociar={() => { setAsociarMesa(m); setCodigoPedido(''); setAsociarError(null) }} />
                   ))}
                 </div>
               </section>
@@ -267,6 +297,34 @@ export default function MesasPage() {
           </>
         )}
       </div>
+
+      {/* Modal — Asociar pedido */}
+      {asociarMesa && (
+        <Modal title={`Asociar pedido a ${asociarMesa.nombre}`} onClose={() => setAsociarMesa(null)}>
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500">Ingresá el código del pedido activo que querés vincular a esta mesa.</p>
+            <Field label="Código de pedido">
+              <input
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': accent } as React.CSSProperties}
+                placeholder="Ej: 260903-1002"
+                value={codigoPedido}
+                onChange={e => setCodigoPedido(e.target.value.toUpperCase())}
+                onKeyDown={e => e.key === 'Enter' && doAsociarPedido()}
+              />
+            </Field>
+            {asociarError && <p className="text-xs text-red-600">{asociarError}</p>}
+            <button
+              onClick={doAsociarPedido}
+              disabled={asociarSaving || !codigoPedido.trim()}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+              style={{ backgroundColor: accent }}
+            >
+              {asociarSaving ? 'Asociando…' : 'Asociar pedido'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal — Zona */}
       {showZonaModal && (
@@ -341,14 +399,12 @@ export default function MesasPage() {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function MesaCard({ mesa, accent, onEdit, onToggle, onToggleEstado }: {
+function MesaCard({ mesa, accent, onEdit, onToggle, onToggleEstado, onAsociar }: {
   mesa: Mesa; accent: string;
-  onEdit: () => void; onToggle: () => void; onToggleEstado: () => void
+  onEdit: () => void; onToggle: () => void; onToggleEstado: () => void; onAsociar: () => void
 }) {
   const dot = !mesa.activa ? '#D1D5DB' : mesa.ocupada ? '#FB923C' : '#4ADE80'
   const bg  = !mesa.activa ? '#F9FAFB' : mesa.ocupada ? '#FFF7ED' : '#F0FDF4'
-  // Can toggle estado only if mesa is active and has no linked pedido
-  const canToggleEstado = mesa.activa && mesa.pedido_id === null
   return (
     <div className="rounded-2xl border p-3 flex flex-col gap-1.5" style={{ backgroundColor: bg, borderColor: dot + '55' }}>
       <div className="flex items-center justify-between">
@@ -360,18 +416,34 @@ function MesaCard({ mesa, accent, onEdit, onToggle, onToggleEstado }: {
       {mesa.ocupada && mesa.pedido_codigo && (
         <p className="text-xs font-medium" style={{ color: accent }}>Pedido {mesa.pedido_codigo}</p>
       )}
-      {/* Estado toggle — libre / ocupada manual */}
-      {canToggleEstado && (
+      {/* Estado toggle — libre / ocupada */}
+      {mesa.activa && (
+        mesa.ocupada ? (
+          <button
+            onClick={onToggleEstado}
+            className="mt-0.5 rounded-lg py-1 text-xs font-semibold w-full transition-colors"
+            style={{ backgroundColor: '#FEF9C3', color: '#854D0E' }}
+          >
+            ● Marcar como libre
+          </button>
+        ) : (
+          <button
+            onClick={onToggleEstado}
+            className="mt-0.5 rounded-lg py-1 text-xs font-semibold w-full transition-colors"
+            style={{ backgroundColor: '#DBEAFE', color: '#1E40AF' }}
+          >
+            ○ Marcar como ocupada
+          </button>
+        )
+      )}
+      {/* Asociar pedido — solo si la mesa está libre */}
+      {mesa.activa && !mesa.ocupada && (
         <button
-          onClick={onToggleEstado}
-          className="mt-0.5 rounded-lg py-1 text-xs font-semibold w-full transition-colors"
-          style={
-            mesa.ocupada_manual
-              ? { backgroundColor: '#FEF9C3', color: '#854D0E' }
-              : { backgroundColor: '#DBEAFE', color: '#1E40AF' }
-          }
+          onClick={onAsociar}
+          className="rounded-lg py-1 text-xs font-medium w-full transition-colors"
+          style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}
         >
-          {mesa.ocupada_manual ? '● Marcar como libre' : '○ Marcar como ocupada'}
+          + Asociar pedido
         </button>
       )}
       <div className="flex gap-1.5 mt-1">
