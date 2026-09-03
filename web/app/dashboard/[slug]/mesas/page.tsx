@@ -15,15 +15,16 @@ interface Zona {
 }
 
 interface Mesa {
-  mesa_id:     number
-  zona_id:     number | null
-  zona_nombre: string | null
-  numero:      number
-  nombre:      string
-  capacidad:   number | null
-  activa:      boolean
-  ocupada:     boolean
-  pedido_id:   number | null
+  mesa_id:       number
+  zona_id:       number | null
+  zona_nombre:   string | null
+  numero:        number
+  nombre:        string
+  capacidad:     number | null
+  activa:        boolean
+  ocupada:       boolean
+  ocupada_manual: boolean
+  pedido_id:     number | null
   pedido_codigo: string | null
 }
 
@@ -155,6 +156,14 @@ export default function MesasPage() {
     load()
   }
 
+  async function toggleEstado(m: Mesa) {
+    // Solo cambia el estado manual; si tiene pedido activo sigue ocupada igual
+    await authFetch(`${base}/dashboard/${slug}/mesas/${m.mesa_id}/estado`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ocupada: !m.ocupada_manual }) })
+    load()
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const mesasByZona = zonas.map(z => ({
@@ -224,7 +233,8 @@ export default function MesasPage() {
                   {zm.map(m => (
                     <MesaCard key={m.mesa_id} mesa={m} accent={accent}
                       onEdit={() => openEditMesa(m)}
-                      onToggle={() => toggleMesa(m)} />
+                      onToggle={() => toggleMesa(m)}
+                      onToggleEstado={() => toggleEstado(m)} />
                   ))}
                   {zm.length === 0 && (
                     <p className="col-span-3 text-xs text-gray-400 py-2">Sin mesas en esta zona</p>
@@ -240,7 +250,8 @@ export default function MesasPage() {
                   {sinZona.map(m => (
                     <MesaCard key={m.mesa_id} mesa={m} accent={accent}
                       onEdit={() => openEditMesa(m)}
-                      onToggle={() => toggleMesa(m)} />
+                      onToggle={() => toggleMesa(m)}
+                      onToggleEstado={() => toggleEstado(m)} />
                   ))}
                 </div>
               </section>
@@ -330,12 +341,14 @@ export default function MesasPage() {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function MesaCard({ mesa, accent, onEdit, onToggle }: {
+function MesaCard({ mesa, accent, onEdit, onToggle, onToggleEstado }: {
   mesa: Mesa; accent: string;
-  onEdit: () => void; onToggle: () => void
+  onEdit: () => void; onToggle: () => void; onToggleEstado: () => void
 }) {
   const dot = !mesa.activa ? '#D1D5DB' : mesa.ocupada ? '#FB923C' : '#4ADE80'
   const bg  = !mesa.activa ? '#F9FAFB' : mesa.ocupada ? '#FFF7ED' : '#F0FDF4'
+  // Can toggle estado only if mesa is active and has no linked pedido
+  const canToggleEstado = mesa.activa && mesa.pedido_id === null
   return (
     <div className="rounded-2xl border p-3 flex flex-col gap-1.5" style={{ backgroundColor: bg, borderColor: dot + '55' }}>
       <div className="flex items-center justify-between">
@@ -346,6 +359,20 @@ function MesaCard({ mesa, accent, onEdit, onToggle }: {
       {mesa.capacidad && <p className="text-xs text-gray-400">{mesa.capacidad} comensales</p>}
       {mesa.ocupada && mesa.pedido_codigo && (
         <p className="text-xs font-medium" style={{ color: accent }}>Pedido {mesa.pedido_codigo}</p>
+      )}
+      {/* Estado toggle — libre / ocupada manual */}
+      {canToggleEstado && (
+        <button
+          onClick={onToggleEstado}
+          className="mt-0.5 rounded-lg py-1 text-xs font-semibold w-full transition-colors"
+          style={
+            mesa.ocupada_manual
+              ? { backgroundColor: '#FEF9C3', color: '#854D0E' }
+              : { backgroundColor: '#DBEAFE', color: '#1E40AF' }
+          }
+        >
+          {mesa.ocupada_manual ? '● Marcar como libre' : '○ Marcar como ocupada'}
+        </button>
       )}
       <div className="flex gap-1.5 mt-1">
         <button onClick={onEdit}

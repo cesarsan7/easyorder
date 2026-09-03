@@ -109,13 +109,14 @@ mesasRoutes.delete('/:slug/mesas/zonas/:zona_id', async (c) => {
 
 // ─── Mesas ───────────────────────────────────────────────────────────────────
 
-// GET /:slug/mesas  — lista con estado ocupado/libre derivado de pedidos activos
+// GET /:slug/mesas  — lista con estado ocupado/libre (pedido activo + manual)
 mesasRoutes.get('/:slug/mesas', async (c) => {
   const rid = c.get('restaurante_id');
-  const rows = await sql<(MesaRow & { pedido_id: number | null; pedido_codigo: string | null })[]>`
+  const rows = await sql<(MesaRow & { ocupada_manual: boolean; pedido_id: number | null; pedido_codigo: string | null })[]>`
     SELECT
       m.id, m.zona_id, z.nombre AS zona_nombre,
       m.numero, m.nombre, m.capacidad, m.activa,
+      COALESCE(m.ocupada_manual, false) AS ocupada_manual,
       p.id        AS pedido_id,
       p.pedido_codigo
     FROM public.mesa m
@@ -132,17 +133,34 @@ mesasRoutes.get('/:slug/mesas', async (c) => {
     ORDER BY z.orden NULLS LAST, z.nombre NULLS LAST, m.numero
   `;
   return c.json(rows.map(r => ({
-    mesa_id:      r.id,
-    zona_id:      r.zona_id,
-    zona_nombre:  r.zona_nombre,
-    numero:       r.numero,
-    nombre:       r.nombre,
-    capacidad:    r.capacidad,
-    activa:       r.activa,
-    ocupada:      r.pedido_id !== null,
-    pedido_id:    r.pedido_id ?? null,
-    pedido_codigo: r.pedido_codigo ?? null,
+    mesa_id:        r.id,
+    zona_id:        r.zona_id,
+    zona_nombre:    r.zona_nombre,
+    numero:         r.numero,
+    nombre:         r.nombre,
+    capacidad:      r.capacidad,
+    activa:         r.activa,
+    ocupada:        r.pedido_id !== null || r.ocupada_manual,
+    ocupada_manual: r.ocupada_manual,
+    pedido_id:      r.pedido_id ?? null,
+    pedido_codigo:  r.pedido_codigo ?? null,
   })));
+});
+
+// PATCH /:slug/mesas/:mesa_id/estado — cambiar estado manual (libre/ocupada)
+mesasRoutes.patch('/:slug/mesas/:mesa_id/estado', async (c) => {
+  const rid    = c.get('restaurante_id');
+  const mesaId = Number(c.req.param('mesa_id'));
+  const { ocupada } = await c.req.json<{ ocupada: boolean }>();
+  if (typeof ocupada !== 'boolean') return c.json({ error: 'ocupada requerido (boolean)' }, 400);
+  const [row] = await sql<{ id: number; ocupada_manual: boolean }[]>`
+    UPDATE public.mesa
+    SET ocupada_manual = ${ocupada}
+    WHERE id = ${mesaId} AND restaurante_id = ${rid}
+    RETURNING id, ocupada_manual
+  `;
+  if (!row) return c.json({ error: 'no encontrado' }, 404);
+  return c.json({ mesa_id: row.id, ocupada_manual: row.ocupada_manual });
 });
 
 // POST /:slug/mesas
