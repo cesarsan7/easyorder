@@ -560,13 +560,6 @@ ordersRoutes.get('/:slug/orders/:pedido_codigo', async (c) => {
       updated_at:      p.updated_at,
     };
 
-    // M-4: always include the key when metodo_pago is 'transferencia' so the
-    // frontend can distinguish "bank details not configured" (null) from
-    // "payment method is not transferencia" (key absent).
-    if (p.metodo_pago === 'transferencia') {
-      body.datos_transferencia = p.datos_bancarios ?? null;
-    }
-
     return c.json(body, 200);
 
   } catch (err) {

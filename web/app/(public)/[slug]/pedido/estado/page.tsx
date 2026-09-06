@@ -38,7 +38,6 @@ interface OrderData {
   direccion: string | null
   postal_code: string | null
   tiempo_estimado: number | null
-  datos_transferencia?: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null
 }
 
 
@@ -141,25 +140,7 @@ export default function PedidoEstadoPage() {
             </div>
           </div>
 
-          {/* Instrucciones de transferencia */}
-          {order.estado === 'pendiente_pago' && order.metodo_pago === 'transferencia' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-5">
-              <p className="text-sm font-semibold text-amber-800 mb-2">📲 Realiza tu transferencia</p>
-              {order.datos_transferencia ? (
-                <div className="space-y-1 text-sm text-amber-700">
-                  {order.datos_transferencia.banco    && <p><span className="font-medium">Banco:</span> {order.datos_transferencia.banco}</p>}
-                  {order.datos_transferencia.titular  && <p><span className="font-medium">Titular:</span> {order.datos_transferencia.titular}</p>}
-                  {order.datos_transferencia.cuenta   && <p><span className="font-medium">Cuenta:</span> {order.datos_transferencia.cuenta}</p>}
-                  {order.datos_transferencia.alias    && <p><span className="font-medium">Alias:</span> {order.datos_transferencia.alias}</p>}
-                  <p className="font-semibold mt-2">Monto: {fmt(order.total)}</p>
-                </div>
-              ) : (
-                <p className="text-sm text-amber-700">
-                  Contacta al local para obtener los datos de transferencia.
-                </p>
-              )}
-            </div>
-          )}
+
 
           {/* Ítems */}
           <div className="bg-white rounded-2xl px-5 py-5 shadow-sm">

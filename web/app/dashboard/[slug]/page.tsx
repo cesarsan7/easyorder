@@ -35,7 +35,6 @@ interface OrderDetail {
   direccion: string | null
   postal_code: string | null
   tiempo_estimado: number | null
-  datos_transferencia?: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null
 }
 
 interface Order {
@@ -121,7 +120,7 @@ const FILTER_TABS = [
 ]
 
 const PAGO_LABEL: Record<string,string> = {
-  efectivo:'Efectivo', transferencia:'Transfer.', tarjeta:'Tarjeta', bizum:'Bizum', online:'Online',
+  efectivo:'Efectivo', tarjeta:'Tarjeta', bizum:'Bizum', online:'Online',
 }
 
 type SortField = 'pedido_codigo' | 'created_at' | 'nombre_cliente' | 'estado' | 'total'

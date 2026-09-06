@@ -36,7 +36,7 @@ export interface GeoPolygon {
   coordinates: number[][][]
 }
 
-export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia' | 'bizum' | 'online'
+export type PaymentMethod = 'efectivo' | 'tarjeta' | 'bizum' | 'online'
 
 // ─── Menú ────────────────────────────────────────────────────────────────────
 

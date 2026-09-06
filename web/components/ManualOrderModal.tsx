@@ -68,7 +68,6 @@ interface Props {
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo:      'Efectivo',
   tarjeta:       'Tarjeta',
-  transferencia: 'Transferencia',
   bizum:         'Bizum',
   online:        'Online',
 }

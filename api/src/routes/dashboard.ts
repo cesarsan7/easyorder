@@ -958,15 +958,6 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
     const skipNotify = estadoNuevo === 'listo' && pedido.tipo_despacho === 'delivery';
 
     if (NOTIFY_ESTADOS.has(estadoNuevo) && !skipNotify) {
-      let datosBancarios: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null = null;
-
-      if (estadoNuevo === 'confirmado' && pedido.metodo_pago === 'transferencia') {
-        const restRows = await sql<{ datos_bancarios: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null }[]>`
-          SELECT datos_bancarios FROM restaurante WHERE id = ${restaurante_id} LIMIT 1
-        `;
-        datosBancarios = restRows[0]?.datos_bancarios ?? null;
-      }
-
       fireNotification({
         event_type:      estadoNuevo,
         pedido_id:       u.id,
@@ -974,7 +965,6 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
         telefono:        pedido.telefono,
         tipo_despacho:   pedido.tipo_despacho,
         tiempo_estimado: pedido.tiempo_estimado,
-        datos_bancarios: datosBancarios,
       }, restaurante_id);
     }
 
@@ -1551,7 +1541,7 @@ const TEXT_FIELD_MAX_LENGTH: Record<typeof UPDATABLE_TEXT_FIELDS[number], number
   texto_banner:       500,
 };
 
-const VALID_PAYMENT_METHODS = ['efectivo', 'transferencia', 'tarjeta', 'bizum', 'online'] as const;
+const VALID_PAYMENT_METHODS = ['efectivo', 'tarjeta', 'bizum', 'online'] as const;
 
 const VALID_REDES = ['instagram','tiktok','facebook','twitter','youtube','whatsapp','telegram','linkedin','pinterest','web'] as const;
 

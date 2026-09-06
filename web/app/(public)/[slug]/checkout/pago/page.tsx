@@ -9,7 +9,6 @@ const STEPS = ['Datos', 'Despacho', 'Pago', 'Confirmar'] as const
 const METHOD_ICONS: Record<string, string> = {
   efectivo: '💵',
   tarjeta: '💳',
-  transferencia: '🏦',
   bizum: '📱',
   online: '🌐',
 }
@@ -17,7 +16,6 @@ const METHOD_ICONS: Record<string, string> = {
 const METHOD_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
   tarjeta: 'Tarjeta',
-  transferencia: 'Transferencia',
   bizum: 'Bizum',
   online: 'Online',
 }
@@ -63,10 +61,7 @@ export default function CheckoutPagoPage() {
   const setPaymentMethod = useCartStore((s) => s.setPaymentMethod)
   const accent           = useCartStore((s) => s.accentColor)
 
-  type DatosBancarios = { banco?: string; titular?: string; cuenta?: string; alias?: string } | null
-
   const [methods, setMethods]             = useState<string[]>([])
-  const [datosBancarios, setDatosBancarios] = useState<DatosBancarios>(null)
   const [loading, setLoading]             = useState(true)
   const [selected, setSelected]           = useState<string | null>(null)
 
@@ -82,12 +77,9 @@ export default function CheckoutPagoPage() {
         const base = process.env.NEXT_PUBLIC_API_URL
         const res = await fetch(`${base}/public/${slug}/restaurant`)
         if (!res.ok) return
-        const data: { payment_methods?: string[]; datos_bancarios?: DatosBancarios } = await res.json()
+        const data: { payment_methods?: string[] } = await res.json()
         if (Array.isArray(data.payment_methods)) {
           setMethods(data.payment_methods.map((m) => m.toLowerCase()))
-        }
-        if (data.datos_bancarios) {
-          setDatosBancarios(data.datos_bancarios)
         }
       } finally {
         setLoading(false)
@@ -181,29 +173,6 @@ export default function CheckoutPagoPage() {
                 )
               })}
             </div>
-          )}
-
-          {/* Datos bancarios — visible solo al seleccionar transferencia */}
-          {selected === 'transferencia' && datosBancarios && (
-            Object.values(datosBancarios).some(v => v) && (
-              <div
-                className="rounded-2xl border-2 px-5 py-4 space-y-3"
-                style={{ borderColor: accent, backgroundColor: `${accent}0D` }}
-              >
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: accent }}>
-                  🏦 Datos para la transferencia
-                </p>
-                <div className="space-y-1.5 text-sm">
-                  {datosBancarios.banco    && <div className="flex justify-between gap-4"><span className="text-gray-500">Banco</span><span className="font-medium text-gray-900 text-right">{datosBancarios.banco}</span></div>}
-                  {datosBancarios.titular  && <div className="flex justify-between gap-4"><span className="text-gray-500">Titular</span><span className="font-medium text-gray-900 text-right">{datosBancarios.titular}</span></div>}
-                  {datosBancarios.cuenta   && <div className="flex justify-between gap-4"><span className="text-gray-500">Cuenta / IBAN</span><span className="font-mono font-medium text-gray-900 text-right break-all">{datosBancarios.cuenta}</span></div>}
-                  {datosBancarios.alias    && <div className="flex justify-between gap-4"><span className="text-gray-500">Alias / Bizum</span><span className="font-medium text-gray-900 text-right">{datosBancarios.alias}</span></div>}
-                </div>
-                <p className="text-xs text-gray-400">
-                  Realiza la transferencia e indica tu nombre en el concepto. El pedido quedará en estado <strong>pendiente de pago</strong> hasta que se confirme la recepción.
-                </p>
-              </div>
-            )
           )}
         </div>
       </div>

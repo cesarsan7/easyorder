@@ -91,7 +91,6 @@ interface HorarioLocal {
 
 const ALL_PAYMENT_METHODS = [
   { key: 'efectivo',      label: 'Efectivo',      icon: '💵' },
-  { key: 'transferencia', label: 'Transferencia', icon: '🏦' },
   { key: 'tarjeta',       label: 'Tarjeta',       icon: '💳' },
   { key: 'bizum',         label: 'Bizum',         icon: '📱' },
   { key: 'online',        label: 'Online',        icon: '🌐' },
@@ -1090,18 +1089,7 @@ export default function ConfiguracionPage() {
               </div>
             </div>
 
-            {/* ── Datos bancarios ───────────────────────────────────────── */}
-            <SectionTitle>Datos bancarios (Transferencia)</SectionTitle>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-5 py-5 space-y-4">
-              <p className="text-xs text-gray-400">Se muestran al cliente cuando elige pago por transferencia.</p>
-              <Field label="Banco" value={banco} onChange={v => { setBanco(v); setBancosState('idle') }} placeholder="CaixaBank" maxLength={100} />
-              <Field label="Titular" value={titular} onChange={v => { setTitular(v); setBancosState('idle') }} placeholder="La Isla Pizzería S.L." maxLength={200} />
-              <Field label="Cuenta / IBAN" value={cuenta} onChange={v => { setCuenta(v); setBancosState('idle') }} placeholder="ES12 3456 7890 1234 5678 9012" maxLength={50} />
-              <Field label="Alias (Bizum, etc.)" value={alias} onChange={v => { setAlias(v); setBancosState('idle') }} placeholder="620123456" maxLength={50} />
-              <div className="flex justify-end pt-1">
-                <SaveButton state={bancosState} onClick={saveBancarios} />
-              </div>
-            </div>
+
 
             {/* ── Configuración avanzada (restaurante_config + config_operativa) ── */}
             <SectionTitle>Configuración avanzada</SectionTitle>

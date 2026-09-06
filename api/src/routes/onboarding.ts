@@ -15,7 +15,7 @@ const DIA_TO_DIA_SEMANA: Record<string, number> = {
   Lunes: 1, Martes: 2, 'Miércoles': 3, Jueves: 4, Viernes: 5, 'Sábado': 6, Domingo: 0,
 };
 
-const DEFAULT_PAYMENT_METHODS = ['efectivo', 'transferencia'];
+const DEFAULT_PAYMENT_METHODS = ['efectivo', 'tarjeta'];
 
 const TZ_PHONE_PREFIX: Record<string, string> = {
   'Atlantic/Canary':                   '+34',

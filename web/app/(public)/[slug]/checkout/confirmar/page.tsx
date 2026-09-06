@@ -15,7 +15,6 @@ const DISPATCH_LABELS: Record<string, string> = {
 const PAYMENT_LABELS: Record<string, string> = {
   efectivo: 'Efectivo',
   tarjeta: 'Tarjeta',
-  transferencia: 'Transferencia',
   bizum: 'Bizum',
   online: 'Online',
 }
@@ -192,7 +191,7 @@ export default function CheckoutConfirmarPage() {
     try {
       const base = process.env.NEXT_PUBLIC_API_URL
       const orderStatus =
-        paymentMethod === 'transferencia' ? 'pendiente_pago' : 'confirmado'
+        'confirmado'
 
       const res = await fetch(`${base}/public/${slug}/orders`, {
         method: 'POST',
