@@ -14,6 +14,12 @@ interface Zona {
   activa:  boolean
 }
 
+interface Mesero {
+  mesero_id: number
+  nombre:    string
+  activo:    boolean
+}
+
 interface Mesa {
   mesa_id:       number
   zona_id:       number | null
@@ -40,19 +46,24 @@ export default function MesasPage() {
 
   const [zonas,   setZonas]   = useState<Zona[]>([])
   const [mesas,   setMesas]   = useState<Mesa[]>([])
+  const [meseros, setMeseros] = useState<Mesero[]>([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
 
   // Modal state
-  const [showZonaModal, setShowZonaModal] = useState(false)
-  const [showMesaModal, setShowMesaModal] = useState(false)
-  const [editingZona,   setEditingZona]   = useState<Zona | null>(null)
-  const [editingMesa,   setEditingMesa]   = useState<Mesa | null>(null)
+  const [showZonaModal,   setShowZonaModal]   = useState(false)
+  const [showMesaModal,   setShowMesaModal]   = useState(false)
+  const [showMeseroModal, setShowMeseroModal] = useState(false)
+  const [editingZona,     setEditingZona]     = useState<Zona | null>(null)
+  const [editingMesa,     setEditingMesa]     = useState<Mesa | null>(null)
+  const [editingMesero,   setEditingMesero]   = useState<Mesero | null>(null)
 
   // Form state — zona
-  const [zonaForm, setZonaForm] = useState({ nombre: '', orden: 0 })
+  const [zonaForm,   setZonaForm]   = useState({ nombre: '', orden: 0 })
   // Form state — mesa
-  const [mesaForm, setMesaForm] = useState({ nombre: '', numero: '', zona_id: '', capacidad: '' })
+  const [mesaForm,   setMesaForm]   = useState({ nombre: '', numero: '', zona_id: '', capacidad: '' })
+  // Form state — mesero
+  const [meseroForm, setMeseroForm] = useState({ nombre: '' })
 
   const [saving, setSaving] = useState(false)
 
@@ -60,12 +71,14 @@ export default function MesasPage() {
     setLoading(true)
     setError(null)
     try {
-      const [zRes, mRes] = await Promise.all([
+      const [zRes, mRes, mrRes] = await Promise.all([
         authFetch(`${base}/dashboard/${slug}/mesas/zonas`),
         authFetch(`${base}/dashboard/${slug}/mesas`),
+        authFetch(`${base}/dashboard/${slug}/meseros`),
       ])
-      if (zRes.ok) setZonas(await zRes.json())
-      if (mRes.ok) setMesas(await mRes.json())
+      if (zRes.ok)  setZonas(await zRes.json())
+      if (mRes.ok)  setMesas(await mRes.json())
+      if (mrRes.ok) setMeseros(await mrRes.json())
     } catch {
       setError('Error al cargar mesas')
     } finally {
@@ -168,6 +181,44 @@ export default function MesasPage() {
     load()
   }
 
+  // ── Meseros CRUD ───────────────────────────────────────────────────────────
+
+  function openNewMesero() {
+    setEditingMesero(null)
+    setMeseroForm({ nombre: '' })
+    setShowMeseroModal(true)
+  }
+
+  function openEditMesero(mr: Mesero) {
+    setEditingMesero(mr)
+    setMeseroForm({ nombre: mr.nombre })
+    setShowMeseroModal(true)
+  }
+
+  async function saveMesero() {
+    if (!meseroForm.nombre.trim()) return
+    setSaving(true)
+    try {
+      const res = await authFetch(
+        editingMesero
+          ? `${base}/dashboard/${slug}/meseros/${editingMesero.mesero_id}`
+          : `${base}/dashboard/${slug}/meseros`,
+        { method: editingMesero ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: meseroForm.nombre.trim() }) }
+      )
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? 'Error al guardar'); return }
+      setShowMeseroModal(false)
+      load()
+    } finally { setSaving(false) }
+  }
+
+  async function toggleMesero(mr: Mesero) {
+    await authFetch(`${base}/dashboard/${slug}/meseros/${mr.mesero_id}`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: !mr.activo }) })
+    load()
+  }
+
   // ── Asociar pedido ──────────────────────────────────────────────────────────
   const [asociarMesa,   setAsociarMesa]   = useState<Mesa | null>(null)
   const [codigoPedido,  setCodigoPedido]  = useState('')
@@ -217,6 +268,11 @@ export default function MesasPage() {
           className="rounded-xl px-3 py-1.5 text-xs font-semibold text-white"
           style={{ backgroundColor: accent }}>
           + Mesa
+        </button>
+        <button onClick={openNewMesero}
+          className="rounded-xl px-3 py-1.5 text-xs font-semibold text-white"
+          style={{ backgroundColor: accent }}>
+          + Mesero
         </button>
       </div>
 
@@ -294,6 +350,48 @@ export default function MesasPage() {
                 <p className="text-sm mt-1">Crea una zona y luego añade mesas</p>
               </div>
             )}
+
+            {/* ── Meseros ─────────────────────────────────────────────────────── */}
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-sm font-bold text-gray-700">Meseros</h2>
+                <span className="text-xs text-gray-400">({meseros.length})</span>
+                <div className="flex-1" />
+                <button onClick={openNewMesero}
+                  className="text-xs font-semibold px-3 py-1 rounded-xl text-white"
+                  style={{ backgroundColor: accent }}>
+                  + Agregar
+                </button>
+              </div>
+              {meseros.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 py-8 text-center text-gray-400">
+                  <p className="text-2xl mb-2">🧑‍🍳</p>
+                  <p className="text-sm">Sin meseros registrados</p>
+                  <p className="text-xs mt-1">Agregá meseros para asignarlos a pedidos de mesa</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {meseros.map(mr => (
+                    <div key={mr.mesero_id}
+                      className="flex items-center gap-3 rounded-2xl border px-4 py-3"
+                      style={{ backgroundColor: mr.activo ? '#FFFFFF' : '#F9FAFB', borderColor: mr.activo ? '#E5E7EB' : '#E5E7EB' }}>
+                      <span className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: mr.activo ? '#4ADE80' : '#D1D5DB' }} />
+                      <span className="flex-1 text-sm font-medium text-gray-800">{mr.nombre}</span>
+                      <button onClick={() => openEditMesero(mr)}
+                        className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5 rounded-lg hover:bg-gray-100">
+                        Editar
+                      </button>
+                      <button onClick={() => toggleMesero(mr)}
+                        className="text-xs px-2 py-0.5 rounded-lg"
+                        style={{ color: mr.activo ? '#EF4444' : '#22C55E', backgroundColor: mr.activo ? '#FEF2F2' : '#F0FDF4' }}>
+                        {mr.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </>
         )}
       </div>
@@ -321,6 +419,28 @@ export default function MesasPage() {
               style={{ backgroundColor: accent }}
             >
               {asociarSaving ? 'Asociando…' : 'Asociar pedido'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal — Mesero */}
+      {showMeseroModal && (
+        <Modal title={editingMesero ? 'Editar mesero' : 'Nuevo mesero'} onClose={() => setShowMeseroModal(false)}>
+          <div className="space-y-3">
+            <Field label="Nombre *">
+              <input value={meseroForm.nombre}
+                onChange={e => setMeseroForm(f => ({ ...f, nombre: e.target.value }))}
+                placeholder="Ej: Carlos, María, Juan…"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                style={{ '--tw-ring-color': accent } as React.CSSProperties}
+                onKeyDown={e => e.key === 'Enter' && saveMesero()}
+              />
+            </Field>
+            <button onClick={saveMesero} disabled={saving || !meseroForm.nombre.trim()}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
+              style={{ backgroundColor: accent }}>
+              {saving ? 'Guardando…' : editingMesero ? 'Guardar cambios' : 'Crear mesero'}
             </button>
           </div>
         </Modal>

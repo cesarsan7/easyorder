@@ -1123,6 +1123,9 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
   if (tipo_despacho === 'mesa' && mesa_id === null)
     return c.json({ error: 'mesa_requires_mesa_id' }, 400);
 
+  const mesero_id: number | null = (typeof b.mesero_id === 'number' && Number.isInteger(b.mesero_id) && b.mesero_id >= 1)
+    ? b.mesero_id : null;
+
   const notasStr = typeof b.notas === 'string' ? b.notas.trim() || null : null;
   const notasJson = notasStr ? [{ item: 'general', nota: notasStr }] : null;
 
@@ -1215,7 +1218,7 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
           restaurante_id, telefono, usuario_id, items,
           subtotal, costo_envio, total, tipo_despacho, direccion,
           postal_code, tiempo_estimado, metodo_pago, estado, estado_pago,
-          notas, canal, nombre_pedido, mesa_id
+          notas, canal, nombre_pedido, mesa_id, mesero_id
         ) VALUES (
           ${restaurante_id}, ${telefono}, ${usuario_id},
           ${sql.json(itemsSnapshot)},
@@ -1228,7 +1231,8 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
           ${notasJson !== null ? sql.json(notasJson) : null},
           'telefono',
           ${nombrePedido},
-          ${mesa_id}
+          ${mesa_id},
+          ${mesero_id}
         )
         RETURNING id, pedido_codigo, estado
       `;

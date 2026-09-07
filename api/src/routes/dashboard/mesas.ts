@@ -281,3 +281,69 @@ mesasRoutes.post('/:slug/orders/:order_id/mesa', async (c) => {
 });
 
 export default mesasRoutes;
+
+// ─── Meseros ─────────────────────────────────────────────────────────────────
+
+interface MeseroRow {
+  id:     number;
+  nombre: string;
+  activo: boolean;
+}
+
+// GET /:slug/meseros
+mesasRoutes.get('/:slug/meseros', async (c) => {
+  const rid = c.get('restaurante_id');
+  const rows = await sql<MeseroRow[]>`
+    SELECT id, nombre, activo
+    FROM public.meseros
+    WHERE restaurante_id = ${rid}
+    ORDER BY nombre
+  `;
+  return c.json(rows.map(r => ({ mesero_id: r.id, nombre: r.nombre, activo: r.activo })));
+});
+
+// POST /:slug/meseros
+mesasRoutes.post('/:slug/meseros', async (c) => {
+  const rid = c.get('restaurante_id');
+  const b = await c.req.json();
+  const nombre = String(b.nombre ?? '').trim().slice(0, 100);
+  if (!nombre) return c.json({ error: 'nombre requerido' }, 400);
+
+  const [row] = await sql<MeseroRow[]>`
+    INSERT INTO public.meseros (restaurante_id, nombre)
+    VALUES (${rid}, ${nombre})
+    ON CONFLICT (restaurante_id, nombre) DO NOTHING
+    RETURNING id, nombre, activo
+  `;
+  if (!row) return c.json({ error: 'ya existe un mesero con ese nombre' }, 409);
+  return c.json({ mesero_id: row.id, nombre: row.nombre, activo: row.activo }, 201);
+});
+
+// PATCH /:slug/meseros/:mesero_id
+mesasRoutes.patch('/:slug/meseros/:mesero_id', async (c) => {
+  const rid      = c.get('restaurante_id');
+  const meseroId = Number(c.req.param('mesero_id'));
+  const b        = await c.req.json();
+
+  const obj: Record<string, unknown> = {};
+  if (typeof b.nombre === 'string' && b.nombre.trim()) obj.nombre = b.nombre.trim().slice(0, 100);
+  if (typeof b.activo === 'boolean') obj.activo = b.activo;
+  if (!Object.keys(obj).length) return c.json({ error: 'sin cambios' }, 400);
+
+  const [row] = await sql<MeseroRow[]>`
+    UPDATE public.meseros
+    SET ${sql(obj)}
+    WHERE id = ${meseroId} AND restaurante_id = ${rid}
+    RETURNING id, nombre, activo
+  `;
+  if (!row) return c.json({ error: 'mesero no encontrado' }, 404);
+  return c.json({ mesero_id: row.id, nombre: row.nombre, activo: row.activo });
+});
+
+// DELETE /:slug/meseros/:mesero_id  (desactivar)
+mesasRoutes.delete('/:slug/meseros/:mesero_id', async (c) => {
+  const rid      = c.get('restaurante_id');
+  const meseroId = Number(c.req.param('mesero_id'));
+  await sql`UPDATE public.meseros SET activo = false WHERE id = ${meseroId} AND restaurante_id = ${rid}`;
+  return c.json({ ok: true });
+});

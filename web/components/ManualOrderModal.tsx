@@ -39,6 +39,12 @@ interface Mesa {
   activa: boolean
 }
 
+interface Mesero {
+  mesero_id: number
+  nombre:    string
+  activo:    boolean
+}
+
 interface DeliveryZone {
   delivery_zone_id: number
   zone_name:        string
@@ -90,6 +96,8 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const [mesas,        setMesas]        = useState<Mesa[]>([])
   const [mesaId,       setMesaId]       = useState<number | null>(null)
   const [servicioMesa, setServicioMesa] = useState(false)
+  const [meseros,      setMeseros]      = useState<Mesero[]>([])
+  const [meseroId,     setMeseroId]     = useState<number | null>(null)
 
   // Payment
   const [metodoPago,     setMetodoPago]     = useState('')
@@ -110,11 +118,12 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const loadData = useCallback(async () => {
     setLoadingMenu(true)
     try {
-      const [menuRes, restRes, zonesRes, mesasRes] = await Promise.all([
+      const [menuRes, restRes, zonesRes, mesasRes, moserosRes] = await Promise.all([
         fetch(`${apiBase}/public/${slug}/menu`),
         fetch(`${apiBase}/public/${slug}/restaurant`),
         authFetch(`${apiBase}/dashboard/${slug}/delivery-zones`),
         authFetch(`${apiBase}/dashboard/${slug}/mesas`),
+        authFetch(`${apiBase}/dashboard/${slug}/meseros`),
       ])
       if (menuRes.ok) {
         const d: { categories: Category[] } = await menuRes.json()
@@ -137,6 +146,10 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
       if (mesasRes.ok) {
         const d: Mesa[] = await mesasRes.json()
         setMesas(d.filter(m => m.activa !== false))
+      }
+      if (moserosRes.ok) {
+        const d: Mesero[] = await moserosRes.json()
+        setMeseros(d.filter(m => m.activo !== false))
       }
     } finally {
       setLoadingMenu(false)
@@ -226,6 +239,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
           telefono:      telefono.trim().startsWith('+') ? telefono.trim() : `${phonePrefix}${telefono.trim().replace(/\D/g, '')}`,
           tipo_despacho: tipoDespacho,
           mesa_id:       tipoDespacho === 'mesa' ? mesaId : undefined,
+          mesero_id:     tipoDespacho === 'mesa' && meseroId ? meseroId : undefined,
           metodo_pago:   metodoPago,
           direccion:     tipoDespacho === 'delivery' ? direccion.trim() : undefined,
           zona_id:       tipoDespacho === 'delivery' ? zonaId : undefined,
@@ -337,7 +351,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
               ))}
             </div>
             {tipoDespacho === 'mesa' && (
-              <div>
+              <div className="space-y-2">
                 <select value={mesaId ?? ''} onChange={e => setMesaId(Number(e.target.value))}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
                   <option value="">Seleccionar mesa…</option>
@@ -351,6 +365,15 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                   <p className="text-xs text-gray-400 mt-1">
                     {mesas.filter(m => m.ocupada).length} mesa(s) ocupada(s) no mostradas
                   </p>
+                )}
+                {meseros.length > 0 && (
+                  <select value={meseroId ?? ''} onChange={e => setMeseroId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
+                    <option value="">Mesero (opcional)…</option>
+                    {meseros.map(m => (
+                      <option key={m.mesero_id} value={m.mesero_id}>{m.nombre}</option>
+                    ))}
+                  </select>
                 )}
               </div>
             )}
