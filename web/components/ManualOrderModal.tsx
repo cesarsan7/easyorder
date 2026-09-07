@@ -220,8 +220,8 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   // ── Submit ────────────────────────────────────────────────────────────────
   async function handleCreate() {
     setError('')
-    if (!nombre.trim()) { setError('Ingresa el nombre del cliente.'); return }
-    if (!telefono.trim()) { setError('Ingresa el teléfono del cliente.'); return }
+    if (tipoDespacho !== 'mesa' && !nombre.trim()) { setError('Ingresa el nombre del cliente.'); return }
+    if (tipoDespacho !== 'mesa' && !telefono.trim()) { setError('Ingresa el teléfono del cliente.'); return }
     if (cart.length === 0) { setError('Agrega al menos un producto.'); return }
     if (!metodoPago) { setError('Selecciona un método de pago.'); return }
     if (tipoDespacho === 'delivery' && !direccion.trim()) { setError('Ingresa la dirección.'); return }
@@ -285,7 +285,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
-            <h2 className="font-bold text-gray-900">📞 Pedido por teléfono</h2>
+            <h2 className="font-bold text-gray-900">🧾 Tomar pedido interno</h2>
             <p className="text-xs text-gray-400 mt-0.5">Crea un pedido manual para un cliente</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
@@ -306,14 +306,14 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Cliente</h3>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Nombre *</label>
+                <label className="block text-xs text-gray-500 mb-1">Nombre {tipoDespacho !== 'mesa' ? '*' : <span className="text-gray-400">(opcional)</span>}</label>
                 <input value={nombre} onChange={e => setNombre(e.target.value)}
                   placeholder="Nombre del cliente"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2"
                   style={{ '--tw-ring-color': accent } as React.CSSProperties} />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Teléfono *</label>
+                <label className="block text-xs text-gray-500 mb-1">Teléfono {tipoDespacho !== 'mesa' ? '*' : <span className="text-gray-400">(opcional)</span>}</label>
                 <div className="flex gap-1">
                   <span className="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50 px-2.5 text-xs text-gray-500 shrink-0 select-none">
                     {phonePrefix}
@@ -366,15 +366,16 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                     {mesas.filter(m => m.ocupada).length} mesa(s) ocupada(s) no mostradas
                   </p>
                 )}
-                {meseros.length > 0 && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Mesero <span className="text-gray-400">(opcional)</span></label>
                   <select value={meseroId ?? ''} onChange={e => setMeseroId(e.target.value ? Number(e.target.value) : null)}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none bg-white">
-                    <option value="">Mesero (opcional)…</option>
+                    <option value="">{meseros.length === 0 ? 'Sin meseros configurados' : '— Sin asignar —'}</option>
                     {meseros.map(m => (
                       <option key={m.mesero_id} value={m.mesero_id}>{m.nombre}</option>
                     ))}
                   </select>
-                )}
+                </div>
               </div>
             )}
             {tipoDespacho === 'delivery' && (
