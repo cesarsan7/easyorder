@@ -1092,16 +1092,16 @@ dashboardRoutes.post('/:slug/orders/manual', requireAuth, async (c) => {
 
   const b = body as Record<string, unknown>;
 
-  const telefono = typeof b.telefono === 'string' ? b.telefono.trim() : null;
-  if (!telefono || !/^\+?[0-9]{7,20}$/.test(telefono))
-    return c.json({ error: 'telefono_required' }, 400);
-
-  const nombre = typeof b.nombre === 'string' ? b.nombre.trim() : null;
-  if (!nombre) return c.json({ error: 'nombre_required' }, 400);
-
   const tipo_despacho = b.tipo_despacho === 'delivery' || b.tipo_despacho === 'retiro' || b.tipo_despacho === 'mesa'
     ? b.tipo_despacho : null;
   if (!tipo_despacho) return c.json({ error: 'invalid_tipo_despacho' }, 400);
+
+  const telefono = typeof b.telefono === 'string' ? b.telefono.trim() : null;
+  if (tipo_despacho !== 'mesa' && (!telefono || !/^\+?[0-9]{7,20}$/.test(telefono)))
+    return c.json({ error: 'telefono_required' }, 400);
+
+  const nombre = typeof b.nombre === 'string' ? b.nombre.trim() : null;
+  if (tipo_despacho !== 'mesa' && !nombre) return c.json({ error: 'nombre_required' }, 400);
 
   const metodo_pago = typeof b.metodo_pago === 'string' ? b.metodo_pago.trim() : null;
   if (!metodo_pago) return c.json({ error: 'metodo_pago_required' }, 400);
