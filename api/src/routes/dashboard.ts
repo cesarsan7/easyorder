@@ -24,6 +24,14 @@ interface NotificationPayload {
   tiempo_estimado: string | null;
   // Solo presente cuando event_type='confirmado' y metodo_pago='transferencia'
   datos_bancarios?: { banco?: string; titular?: string; cuenta?: string; alias?: string } | null;
+  // Campos enriquecidos para comanda (solo en confirmado)
+  nombre_cliente?:  string | null;
+  direccion?:       string | null;
+  metodo_pago?:     string | null;
+  subtotal?:        number | null;
+  total?:           number | null;
+  costo_envio?:     number | null;
+  items?:           unknown[] | null;
 }
 
 // Resolves the webhook URL for a restaurant: reads chatwoot_webhook_prod from
@@ -882,7 +890,8 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
     // Step 1 — read the order, verify tenant ownership in the same query.
     // telefono + tiempo_estimado are needed for WhatsApp notifications fired later.
     const rows = await sql<PedidoStatusRow[]>`
-      SELECT id, pedido_codigo, estado, tipo_despacho, telefono, tiempo_estimado, metodo_pago
+      SELECT id, pedido_codigo, estado, tipo_despacho, telefono, tiempo_estimado, metodo_pago,
+             nombre_pedido, direccion, subtotal, total, costo_envio, items
       FROM   pedidos
       WHERE  id             = ${id}
         AND  restaurante_id = ${restaurante_id}
@@ -965,6 +974,16 @@ dashboardRoutes.patch('/:slug/orders/:id/status', async (c) => {
         telefono:        pedido.telefono,
         tipo_despacho:   pedido.tipo_despacho,
         tiempo_estimado: pedido.tiempo_estimado,
+        // Comanda — only populated on confirmado
+        ...(estadoNuevo === 'confirmado' ? {
+          nombre_cliente: pedido.nombre_pedido ?? null,
+          direccion:      pedido.direccion      ?? null,
+          metodo_pago:    pedido.metodo_pago    ?? null,
+          subtotal:       pedido.subtotal    != null ? Number(pedido.subtotal)    : null,
+          total:          pedido.total       != null ? Number(pedido.total)       : null,
+          costo_envio:    pedido.costo_envio != null ? Number(pedido.costo_envio) : null,
+          items:          Array.isArray(pedido.items) ? pedido.items : null,
+        } : {}),
       }, restaurante_id);
     }
 
@@ -2271,6 +2290,12 @@ interface PedidoStatusRow {
   telefono:        string;
   tiempo_estimado: string | null;
   metodo_pago:     string | null;
+  nombre_pedido:   string | null;
+  direccion:       string | null;
+  subtotal:        string | null;
+  total:           string | null;
+  costo_envio:     string | null;
+  items:           unknown[] | null;
 }
 
 interface RestauranteSettingsRow {
