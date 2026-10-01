@@ -63,6 +63,7 @@ interface Order {
   nombre_pedido: string | null
   mesa_id: number | null
   mesa_nombre: string | null
+  mesero_nombre: string | null
   created_at: string
   updated_at: string
 }
@@ -356,27 +357,48 @@ function sortOrders(orders: Order[], field: SortField, dir: SortDir): Order[] {
 function buildComandaHtml(order:Order, items:OrderDetail['items'], tz:string):string {
   const despacho = order.tipo_despacho==='delivery'
     ? `🛵 Delivery${order.zone_name?' · '+order.zone_name:''}${order.direccion?'\n'+order.direccion:''}`
-    : '🏪 Retiro en local'
+    : order.tipo_despacho==='mesa'
+      ? `🪑 Mesa${order.mesa_nombre?' · '+order.mesa_nombre:''}`
+      : '🏪 Retiro en local'
   const pago = PAGO_LABEL[order.metodo_pago]??order.metodo_pago
+  // Notas generales del pedido (formato JSONB [{item,nota}] o [{item:'general',nota:'...'}])
+  const notasGenerales: string[] = []
+  if (Array.isArray(order.notas)) {
+    order.notas.forEach((n: {item:string;nota:string}) => { if (n.nota?.trim()) notasGenerales.push(n.nota.trim()) })
+  }
   return `<html><head><title>Comanda #${order.pedido_codigo}</title>
   <style>
+    /* ── Vista en pantalla (preview antes de imprimir) ── */
     *{box-sizing:border-box}
-    body{font-family:monospace;font-size:13px;width:280px;margin:0 auto;padding:8px}
-    h2{text-align:center;font-size:16px;font-weight:bold;margin:0 0 4px}
+    body{font-family:monospace;font-size:13px;width:302px;margin:0 auto;padding:8px;background:#fff;color:#000}
+    h2{text-align:center;font-size:15px;font-weight:bold;margin:0 0 4px}
     .center{text-align:center}
-    .row{display:flex;justify-content:space-between;margin:3px 0;gap:4px}
+    .row{display:flex;justify-content:space-between;margin:2px 0;gap:4px}
     .row span:first-child{flex:1;word-break:break-word}
-    .sep{border:none;border-top:1px dashed #000;margin:6px 0}
+    .sep{border:none;border-top:1px dashed #000;margin:5px 0}
     .bold{font-weight:bold}
-    .sm{font-size:11px;color:#555}
-    @media print{@page{margin:0;size:80mm auto}}
+    .sm{font-size:11px;color:#333}
+    .nota-box{border:1px solid #000;padding:4px 6px;margin:4px 0;font-size:11px;background:#fffbe6}
+    /* ── Impresión térmica 80mm ── */
+    @media print{
+      @page{margin:0;size:80mm auto}
+      body{width:72mm;margin:0;padding:3mm 4mm;font-size:9pt}
+      h2{font-size:12pt;margin:0 0 2mm}
+      .center{text-align:center}
+      .row{margin:1mm 0}
+      .sep{margin:2mm 0}
+      .sm{font-size:8pt;color:#000}
+      .bold{font-weight:bold}
+      .nota-box{border:0.5pt solid #000;padding:1mm 2mm;margin:2mm 0;font-size:8pt;background:#fff}
+    }
   </style></head><body>
   <h2>COMANDA</h2>
   <p class="center sm">${order.pedido_codigo} · ${formatTime(order.created_at,tz)}</p>
   <hr class="sep"/>
-  <div class="row bold"><span>${order.nombre_pedido || order.nombre_cliente}</span><span>${order.telefono}</span></div>
+  <div class="row bold"><span>${order.nombre_pedido || order.nombre_cliente || '—'}</span><span>${order.telefono||''}</span></div>
   ${order.nombre_pedido && order.nombre_pedido !== order.nombre_cliente ? `<div class="sm">Titular: ${order.nombre_cliente}</div>` : ''}
   <div class="sm">${despacho.replace(/\n/g,'<br/>')}</div>
+  ${order.mesero_nombre ? `<div class="sm">👤 Mesero: <strong>${order.mesero_nombre}</strong></div>` : ''}
   <hr class="sep"/>
   ${items.length>0
     ? items.map(i=>`
@@ -390,6 +412,10 @@ function buildComandaHtml(order:Order, items:OrderDetail['items'], tz:string):st
     : `<div class="center sm">(sin detalle de ítems)</div>`
   }
   <hr class="sep"/>
+  ${notasGenerales.length>0
+    ? `<div class="nota-box">⚠️ OBSERVACIONES: ${notasGenerales.join(' · ')}</div>`
+    : ''
+  }
   <div class="row bold"><span>TOTAL</span><span>€${order.total.toFixed(2)}</span></div>
   <div class="sm center">${pago}</div>
   </body></html>`

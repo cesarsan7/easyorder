@@ -431,7 +431,8 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
           COALESCE(u.nombre, p.telefono)  AS nombre_cliente,
           p.nombre_pedido,
           p.mesa_id,
-          m.nombre AS mesa_nombre,
+          m.nombre   AS mesa_nombre,
+          ms.nombre  AS mesero_nombre,
           p.direccion,
           p.postal_code,
           dz.zone_name,
@@ -451,6 +452,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         FROM   pedidos  p
         LEFT JOIN usuarios       u  ON u.id             = p.usuario_id
         LEFT JOIN mesa           m  ON m.id             = p.mesa_id
+        LEFT JOIN meseros        ms ON ms.id            = p.mesero_id
         LEFT JOIN LATERAL (
           SELECT
             zone_name,
@@ -509,6 +511,7 @@ dashboardRoutes.get('/:slug/orders', async (c) => {
         nombre_pedido:   o.nombre_pedido ?? null,
         mesa_id:         o.mesa_id ?? null,
         mesa_nombre:     o.mesa_nombre ?? null,
+        mesero_nombre:   o.mesero_nombre ?? null,
         direccion:        o.direccion ?? null,
         postal_code:      o.postal_code ?? null,
         zone_name:        o.zone_name ?? null,
@@ -2240,6 +2243,7 @@ interface OrderListRow {
   nombre_pedido:             string | null;
   mesa_id:                   number | null;
   mesa_nombre:               string | null;
+  mesero_nombre:             string | null;
   direccion:                 string | null;
   postal_code:               string | null;
   zone_name:                 string | null;
