@@ -80,6 +80,8 @@ interface LastOrderData {
   direccion:     string | null
   zona_id:       number | null
   items:         InitialCartItem[]
+  total:         number
+  created_at:    string | null
 }
 
 interface Props {
@@ -250,10 +252,12 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
               direccion:     string | null
               zona_id:       number | null
               items:         InitialCartItem[]
+              total:         number | string
+              created_at:    string | null
             }>
           }
           console.log('[lookup] pedidos:', data.pedidos?.length, '| items[0]:', data.pedidos?.[0]?.items?.length)
-          const pedidos = data.pedidos?.slice(0, 3) ?? []
+          const pedidos = data.pedidos?.slice(0, 5) ?? []
           if (pedidos.length > 0) {
             setLastOrders(pedidos.map(p => ({
               nombre:        data.cliente?.nombre ?? null,
@@ -262,6 +266,8 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
               direccion:     p.direccion,
               zona_id:       p.zona_id,
               items:         Array.isArray(p.items) ? p.items : [],
+              total:         typeof p.total === 'number' ? p.total : parseFloat(String(p.total ?? '0')),
+              created_at:    p.created_at ?? null,
             })))
             if (!nombre.trim() && data.cliente?.nombre) {
               setNombre(data.cliente.nombre)
@@ -476,44 +482,95 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             {!lookupLoading && lastOrders.length > 0 && !lookupApplied && (
               <div className="mt-2 rounded-xl border-2 overflow-hidden"
                 style={{ borderColor: `${accent}40` }}>
-                <div className="px-3 py-1.5 flex items-center gap-1.5"
+                {/* Header */}
+                <div className="px-3 py-2 flex items-center gap-2"
                   style={{ backgroundColor: `${accent}12` }}>
                   <span className="text-xs font-bold" style={{ color: accent }}>
                     🔁 {lastOrders[0].nombre
-                      ? `Últimos pedidos de ${lastOrders[0].nombre}`
+                      ? `Últimos pedidos — ${lastOrders[0].nombre}`
                       : 'Últimos pedidos encontrados'}
                   </span>
-                  <span className="ml-auto text-[11px] text-gray-400">
-                    {lastOrders.length === 1 ? '1 pedido' : `${lastOrders.length} pedidos`}
+                  <span className="ml-auto text-[11px] text-gray-400 shrink-0">
+                    {lastOrders.length} {lastOrders.length === 1 ? 'pedido' : 'pedidos'}
                   </span>
                   <button onClick={() => setLastOrders([])}
-                    className="text-gray-300 hover:text-gray-500 text-base leading-none ml-1">×</button>
+                    className="text-gray-300 hover:text-gray-500 text-lg leading-none shrink-0 ml-1">×</button>
                 </div>
+                {/* Order rows */}
                 <div className="divide-y divide-gray-100">
-                  {lastOrders.map((order, idx) => (
-                    <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-gray-800 truncate">
-                          {order.items.length > 0
-                            ? order.items.slice(0, 2).map(i => `${i.quantity}× ${i.item_name}`).join(', ')
-                                + (order.items.length > 2 ? ` +${order.items.length - 2} más` : '')
-                            : 'Sin ítems'}
-                        </p>
-                        <p className="text-[11px] text-gray-400 mt-0.5">
-                          {order.tipo_despacho ?? '—'}
-                          {order.metodo_pago ? ` · ${order.metodo_pago}` : ''}
-                          {order.direccion ? ` · ${order.direccion.slice(0, 25)}${order.direccion.length > 25 ? '…' : ''}` : ''}
-                        </p>
+                  {lastOrders.map((order, idx) => {
+                    const dt = order.created_at ? new Date(order.created_at) : null
+                    const dateStr = dt ? dt.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : ''
+                    const timeStr = dt ? dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : ''
+                    const sym = moneda === 'EUR' ? '€' : moneda
+                    const despachoIcon = order.tipo_despacho === 'delivery' ? '🛵' : order.tipo_despacho === 'mesa' ? '🪑' : '🏪'
+                    const pagoIcon = order.metodo_pago === 'efectivo' ? '💵' : order.metodo_pago === 'tarjeta' ? '💳' : order.metodo_pago === 'bizum' ? '📱' : '💰'
+                    return (
+                      <div key={idx} className="px-3 py-2.5 bg-white hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start gap-2">
+                          {/* Left: order number badge */}
+                          <div className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white mt-0.5"
+                            style={{ backgroundColor: idx === 0 ? accent : '#9ca3af' }}>
+                            {idx + 1}
+                          </div>
+                          {/* Center: info */}
+                          <div className="flex-1 min-w-0">
+                            {/* Date + dispatch + payment */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {dt && (
+                                <span className="text-[11px] font-semibold text-gray-500">
+                                  {dateStr} {timeStr}
+                                </span>
+                              )}
+                              <span className="text-[11px] text-gray-400">·</span>
+                              <span className="text-[11px] text-gray-600">
+                                {despachoIcon} {order.tipo_despacho ?? '—'}
+                              </span>
+                              {order.metodo_pago && (
+                                <>
+                                  <span className="text-[11px] text-gray-400">·</span>
+                                  <span className="text-[11px] text-gray-600">
+                                    {pagoIcon} {order.metodo_pago}
+                                  </span>
+                                </>
+                              )}
+                              {order.total > 0 && (
+                                <>
+                                  <span className="text-[11px] text-gray-400">·</span>
+                                  <span className="text-[11px] font-bold text-gray-700">
+                                    {sym}{order.total.toFixed(2)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                            {/* Items */}
+                            <p className="text-xs text-gray-800 mt-0.5 leading-relaxed">
+                              {order.items.length > 0
+                                ? order.items.map(i =>
+                                    `${i.quantity > 1 ? `${i.quantity}× ` : ''}${i.item_name}${i.variant_name && i.variant_name !== i.item_name ? ` (${i.variant_name})` : ''}`
+                                  ).join(' · ')
+                                : <span className="text-gray-400 italic">Sin ítems registrados</span>
+                              }
+                            </p>
+                            {/* Address for delivery */}
+                            {order.direccion && order.tipo_despacho === 'delivery' && (
+                              <p className="text-[11px] text-gray-400 mt-0.5">
+                                📍 {order.direccion}
+                              </p>
+                            )}
+                          </div>
+                          {/* Right: Usar button */}
+                          <button
+                            onClick={() => applyLastOrder(order)}
+                            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg text-white self-center"
+                            style={{ backgroundColor: accent }}
+                          >
+                            Usar
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => applyLastOrder(order)}
-                        className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg text-white"
-                        style={{ backgroundColor: accent }}
-                      >
-                        Usar
-                      </button>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
