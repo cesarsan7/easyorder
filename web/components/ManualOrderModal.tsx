@@ -237,9 +237,10 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
       setLookupLoading(true)
       setLastOrder(null)
       try {
-        const res = await authFetch(
-          `${apiBase}/dashboard/${slug}/clientes/${encodeURIComponent(fullPhone)}`
-        )
+        const url = `${apiBase}/dashboard/${slug}/clientes/${encodeURIComponent(fullPhone)}`
+        console.log('[lookup] GET', url)
+        const res = await authFetch(url)
+        console.log('[lookup] status:', res.status)
         if (res.ok) {
           const data = await res.json() as {
             cliente?: { nombre?: string | null }
@@ -251,6 +252,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
               items:         InitialCartItem[]
             }>
           }
+          console.log('[lookup] pedidos:', data.pedidos?.length, '| items[0]:', data.pedidos?.[0]?.items?.length)
           const pedido = data.pedidos?.[0]
           if (pedido) {
             const items = Array.isArray(pedido.items) ? pedido.items : []
@@ -265,11 +267,16 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             if (!nombre.trim() && data.cliente?.nombre) {
               setNombre(data.cliente.nombre)
             }
+          } else {
+            console.log('[lookup] no pedidos found for this customer')
           }
           setLookupPhoneRef(fullPhone)
+        } else {
+          const body = await res.text().catch(() => '')
+          console.warn('[lookup] non-ok:', res.status, body)
         }
-      } catch {
-        // silently ignore
+      } catch (err) {
+        console.error('[lookup] fetch error:', err)
       } finally {
         setLookupLoading(false)
       }
