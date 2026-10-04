@@ -73,6 +73,15 @@ interface InitialCartItem {
   extras:          { extra_id: number; name: string; price: number }[]
 }
 
+interface LastOrderData {
+  nombre:        string | null
+  tipo_despacho: string | null
+  metodo_pago:   string | null
+  direccion:     string | null
+  zona_id:       number | null
+  items:         InitialCartItem[]
+}
+
 interface Props {
   slug:        string
   accent:      string
@@ -125,6 +134,12 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const [error,       setError]       = useState('')
   const [loadingMenu, setLoadingMenu] = useState(true)
 
+  // Phone lookup — last order
+  const [lastOrder,      setLastOrder]      = useState<LastOrderData | null>(null)
+  const [lookupLoading,  setLookupLoading]  = useState(false)
+  const [lookupApplied,  setLookupApplied]  = useState(false)
+  const [lookupPhoneRef, setLookupPhoneRef] = useState('')
+
   // ── Load menu + zones + payment methods ──────────────────────────────────
   const loadData = useCallback(async () => {
     setLoadingMenu(true)
@@ -169,21 +184,16 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
 
   useEffect(() => { loadData() }, [loadData])
 
-  // ── Populate cart from initialCart after menu loads ───────────────────────
-  const initialCartApplied = useRef(false)
-  useEffect(() => {
-    if (!initialCart || initialCart.length === 0) return
-    if (loadingMenu) return
-    if (initialCartApplied.current) return
-    initialCartApplied.current = true
-    const newCart: CartLine[] = initialCart.map(ic => {
+  // ── Helper: build CartLine[] from raw items ──────────────────────────────
+  function buildCartFromItems(rawItems: InitialCartItem[]): CartLine[] {
+    return rawItems.map(ic => {
       let availableExtras: Extra[] = []
       for (const cat of categories) {
         const item = cat.items.find(i => i.menu_item_id === ic.menu_item_id)
         if (item) { availableExtras = item.extras ?? []; break }
       }
       const selectedExtras = availableExtras.filter(e =>
-        ic.extras.some(ie => ie.extra_id === e.extra_id)
+        (ic.extras ?? []).some(ie => ie.extra_id === e.extra_id)
       )
       return {
         menu_variant_id: ic.menu_variant_id,
@@ -196,8 +206,92 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         selectedExtras,
       }
     })
-    setCart(newCart)
+  }
+
+  // ── Populate cart from initialCart after menu loads ───────────────────────
+  const initialCartApplied = useRef(false)
+  useEffect(() => {
+    if (!initialCart || initialCart.length === 0) return
+    if (loadingMenu) return
+    if (initialCartApplied.current) return
+    initialCartApplied.current = true
+    setCart(buildCartFromItems(initialCart))
   }, [loadingMenu, categories, initialCart])
+
+  // ── Phone lookup — debounced, fires when ≥9 digits ───────────────────────
+  useEffect(() => {
+    const digits = telefono.replace(/\D/g, '')
+    if (digits.length < 9) {
+      setLastOrder(null)
+      setLookupApplied(false)
+      setLookupPhoneRef('')
+      return
+    }
+    const fullPhone = telefono.trim().startsWith('+')
+      ? telefono.trim()
+      : `${phonePrefix}${digits}`
+
+    if (fullPhone === lookupPhoneRef) return
+
+    const timer = setTimeout(async () => {
+      setLookupLoading(true)
+      setLastOrder(null)
+      try {
+        const res = await authFetch(
+          `${apiBase}/dashboard/${slug}/clientes/${encodeURIComponent(fullPhone)}`
+        )
+        if (res.ok) {
+          const data = await res.json() as {
+            cliente?: { nombre?: string | null }
+            pedidos?: Array<{
+              tipo_despacho: string | null
+              metodo_pago:   string | null
+              direccion:     string | null
+              zona_id:       number | null
+              items:         InitialCartItem[]
+            }>
+          }
+          const pedido = data.pedidos?.[0]
+          if (pedido) {
+            const items = Array.isArray(pedido.items) ? pedido.items : []
+            setLastOrder({
+              nombre:        data.cliente?.nombre ?? null,
+              tipo_despacho: pedido.tipo_despacho,
+              metodo_pago:   pedido.metodo_pago,
+              direccion:     pedido.direccion,
+              zona_id:       pedido.zona_id,
+              items,
+            })
+            if (!nombre.trim() && data.cliente?.nombre) {
+              setNombre(data.cliente.nombre)
+            }
+          }
+          setLookupPhoneRef(fullPhone)
+        }
+      } catch {
+        // silently ignore
+      } finally {
+        setLookupLoading(false)
+      }
+    }, 700)
+
+    return () => clearTimeout(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [telefono, phonePrefix])
+
+  // ── Apply last order ──────────────────────────────────────────────────────
+  function applyLastOrder() {
+    if (!lastOrder) return
+    const td = lastOrder.tipo_despacho
+    if (td === 'retiro' || td === 'delivery' || td === 'mesa') setTipoDespacho(td)
+    if (lastOrder.direccion) setDireccion(lastOrder.direccion)
+    if (lastOrder.zona_id)   setZonaId(lastOrder.zona_id)
+    if (lastOrder.metodo_pago && paymentMethods.includes(lastOrder.metodo_pago)) {
+      setMetodoPago(lastOrder.metodo_pago)
+    }
+    setCart(buildCartFromItems(lastOrder.items))
+    setLookupApplied(true)
+  }
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
   function addToCart(item: MenuItem, variant: Variant) {
@@ -366,6 +460,63 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                 </div>
               </div>
             </div>
+            {/* ── Phone lookup banner ────────────────────────────────── */}
+            {lookupLoading && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-400 px-1">
+                <div className="w-3 h-3 border-2 border-gray-200 rounded-full animate-spin shrink-0"
+                  style={{ borderTopColor: accent }} />
+                Buscando historial del cliente…
+              </div>
+            )}
+            {!lookupLoading && lastOrder && !lookupApplied && (
+              <div className="mt-2 rounded-xl border-2 p-3"
+                style={{ borderColor: `${accent}50`, backgroundColor: `${accent}08` }}>
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold mb-0.5" style={{ color: accent }}>
+                      🔁 {lastOrder.nombre ? `${lastOrder.nombre} — último pedido` : 'Último pedido encontrado'}
+                    </p>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      {lastOrder.items.length > 0
+                        ? lastOrder.items.slice(0, 3).map(i => `${i.quantity}× ${i.item_name}`).join(', ')
+                            + (lastOrder.items.length > 3 ? ` +${lastOrder.items.length - 3} más` : '')
+                        : 'Sin ítems registrados'}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {lastOrder.tipo_despacho ?? '—'}
+                      {lastOrder.metodo_pago ? ` · ${lastOrder.metodo_pago}` : ''}
+                      {lastOrder.direccion ? ` · ${lastOrder.direccion}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <button
+                      onClick={applyLastOrder}
+                      className="text-xs font-bold px-3 py-1.5 rounded-xl text-white transition-opacity"
+                      style={{ backgroundColor: accent }}
+                    >
+                      ✓ Usar pedido
+                    </button>
+                    <button
+                      onClick={() => setLastOrder(null)}
+                      className="text-xs px-3 py-1.5 rounded-xl text-gray-500 border border-gray-200 hover:bg-gray-50"
+                    >
+                      Ignorar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!lookupLoading && lookupApplied && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 rounded-xl px-3 py-2 border border-green-200">
+                <span>✓ Pedido anterior cargado</span>
+                <button
+                  onClick={() => { setLookupApplied(false); setCart([]) }}
+                  className="ml-auto text-xs text-gray-400 hover:text-gray-600 underline"
+                >
+                  deshacer
+                </button>
+              </div>
+            )}
             <div className="mt-3">
               <label className="block text-xs text-gray-500 mb-1">Pedido a nombre de <span className="text-gray-400">(opcional)</span></label>
               <input value={nombrePedido} onChange={e => setNombrePedido(e.target.value)}
