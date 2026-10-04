@@ -47,7 +47,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
   // Q3 has its own .catch() because restaurante_config.restaurante_id column
   // is a pending migration (CRÍTICO-2): if it doesn't exist yet, Q3 fails
   // gracefully and is_open_override falls back to null without breaking Q1/Q2.
-  const [restauranteRows, horariosRows, overrideRows, brandingRows, phonePrefixRows] = await Promise.all([
+  const [restauranteRows, horariosRows, overrideRows, brandingRows, phonePrefixRows, lookupLimitRows] = await Promise.all([
 
     // Q1: Public restaurant fields. datos_bancarios / lat / long excluded explicitly.
     sql<RestauranteRow[]>`
@@ -120,6 +120,14 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
         AND restaurante_id = ${restaurante_id}
       LIMIT 1
     `.catch(() => [] as { config_value: string }[]),
+
+    // Q6: Lookup pedidos limit — how many past orders to show in the order modal.
+    sql<{ config_value: string }[]>`
+      SELECT config_value FROM restaurante_config
+      WHERE config_key     = 'lookup_pedidos_limit'
+        AND restaurante_id = ${restaurante_id}
+      LIMIT 1
+    `.catch(() => [] as { config_value: string }[]),
   ]);
 
   // MEDIO-1: guard against race condition where restaurant is deleted between
@@ -177,7 +185,7 @@ publicRoutes.get('/:slug/restaurant', async (c) => {
     tarifa_envio_valor:  r.tarifa_envio_valor,
     payment_methods:         r.payment_methods ?? [],
     servicio_mesa:           Boolean(r.servicio_mesa_habilitado),
-    lookup_pedidos_limit:    Number(r.lookup_pedidos_limit ?? 5),
+    lookup_pedidos_limit:    Number(lookupLimitRows[0]?.config_value ?? 5),
     datos_bancarios:     r.datos_bancarios ?? null,
     is_open:             isOpen,
     is_open_override:    isOpenOverride,
