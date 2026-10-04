@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuthFetch } from '@/lib/hooks/useAuthFetch'
 
 interface Extra {
@@ -63,12 +63,23 @@ interface CartLine {
   selectedExtras:  Extra[]
 }
 
+interface InitialCartItem {
+  menu_variant_id: number
+  menu_item_id:    number
+  item_name:       string
+  variant_name:    string
+  quantity:        number
+  unit_price:      number
+  extras:          { extra_id: number; name: string; price: number }[]
+}
+
 interface Props {
-  slug:      string
-  accent:    string
-  moneda:    string
-  onClose:   () => void
-  onCreated: (pedidoCodigo: string) => void
+  slug:        string
+  accent:      string
+  moneda:      string
+  onClose:     () => void
+  onCreated:   (pedidoCodigo: string) => void
+  initialCart?: InitialCartItem[]
 }
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -78,7 +89,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   online:        'Online',
 }
 
-export default function ManualOrderModal({ slug, accent, moneda, onClose, onCreated }: Props) {
+export default function ManualOrderModal({ slug, accent, moneda, onClose, onCreated, initialCart }: Props) {
   const authFetch = useAuthFetch()
   const apiBase   = process.env.NEXT_PUBLIC_API_URL ?? ''
 
@@ -157,6 +168,36 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   }, [slug, apiBase, authFetch])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // ── Populate cart from initialCart after menu loads ───────────────────────
+  const initialCartApplied = useRef(false)
+  useEffect(() => {
+    if (!initialCart || initialCart.length === 0) return
+    if (loadingMenu) return
+    if (initialCartApplied.current) return
+    initialCartApplied.current = true
+    const newCart: CartLine[] = initialCart.map(ic => {
+      let availableExtras: Extra[] = []
+      for (const cat of categories) {
+        const item = cat.items.find(i => i.menu_item_id === ic.menu_item_id)
+        if (item) { availableExtras = item.extras ?? []; break }
+      }
+      const selectedExtras = availableExtras.filter(e =>
+        ic.extras.some(ie => ie.extra_id === e.extra_id)
+      )
+      return {
+        menu_variant_id: ic.menu_variant_id,
+        menu_item_id:    ic.menu_item_id,
+        item_name:       ic.item_name,
+        variant_name:    ic.variant_name,
+        quantity:        ic.quantity,
+        unit_price:      ic.unit_price,
+        availableExtras,
+        selectedExtras,
+      }
+    })
+    setCart(newCart)
+  }, [loadingMenu, categories, initialCart])
 
   // ── Cart helpers ──────────────────────────────────────────────────────────
   function addToCart(item: MenuItem, variant: Variant) {
