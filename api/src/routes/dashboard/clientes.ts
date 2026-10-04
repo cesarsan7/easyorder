@@ -32,6 +32,8 @@ interface PedidoClienteRow {
   costo_envio:     string;
   total:           string;
   items_count:     string;
+  items:           unknown[] | null;
+  notas:           unknown | null;
   direccion:       string | null;
   created_at:      Date;
 }
@@ -63,6 +65,8 @@ function mapPedidoCliente(row: PedidoClienteRow) {
     costo_envio:   parseFloat(row.costo_envio ?? '0'),
     total:         parseFloat(row.total ?? '0'),
     items_count:   Number(row.items_count ?? 0),
+    items:         Array.isArray(row.items) ? row.items : [],
+    notas:         row.notas ?? null,
     direccion:     row.direccion ?? null,
     created_at:    row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
   };
@@ -188,6 +192,8 @@ clientesRoutes.get('/:slug/clientes/:telefono', async (c) => {
         COALESCE(p.costo_envio, 0)   AS costo_envio,
         p.total,
         jsonb_array_length(COALESCE(p.items, '[]'::jsonb)) AS items_count,
+        COALESCE(p.items, '[]'::jsonb)                     AS items,
+        p.notas,
         p.direccion,
         p.created_at
       FROM pedidos p
