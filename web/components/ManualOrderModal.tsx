@@ -134,8 +134,8 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const [error,       setError]       = useState('')
   const [loadingMenu, setLoadingMenu] = useState(true)
 
-  // Phone lookup — last order
-  const [lastOrder,      setLastOrder]      = useState<LastOrderData | null>(null)
+  // Phone lookup — last orders
+  const [lastOrders,     setLastOrders]     = useState<LastOrderData[]>([])
   const [lookupLoading,  setLookupLoading]  = useState(false)
   const [lookupApplied,  setLookupApplied]  = useState(false)
   const [lookupPhoneRef, setLookupPhoneRef] = useState('')
@@ -222,7 +222,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   useEffect(() => {
     const digits = telefono.replace(/\D/g, '')
     if (digits.length < 9) {
-      setLastOrder(null)
+      setLastOrders([])
       setLookupApplied(false)
       setLookupPhoneRef('')
       return
@@ -235,7 +235,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
 
     const timer = setTimeout(async () => {
       setLookupLoading(true)
-      setLastOrder(null)
+      setLastOrders([])
       try {
         const url = `${apiBase}/dashboard/${slug}/clientes/${encodeURIComponent(fullPhone)}`
         console.log('[lookup] GET', url)
@@ -253,17 +253,16 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             }>
           }
           console.log('[lookup] pedidos:', data.pedidos?.length, '| items[0]:', data.pedidos?.[0]?.items?.length)
-          const pedido = data.pedidos?.[0]
-          if (pedido) {
-            const items = Array.isArray(pedido.items) ? pedido.items : []
-            setLastOrder({
+          const pedidos = data.pedidos?.slice(0, 3) ?? []
+          if (pedidos.length > 0) {
+            setLastOrders(pedidos.map(p => ({
               nombre:        data.cliente?.nombre ?? null,
-              tipo_despacho: pedido.tipo_despacho,
-              metodo_pago:   pedido.metodo_pago,
-              direccion:     pedido.direccion,
-              zona_id:       pedido.zona_id,
-              items,
-            })
+              tipo_despacho: p.tipo_despacho,
+              metodo_pago:   p.metodo_pago,
+              direccion:     p.direccion,
+              zona_id:       p.zona_id,
+              items:         Array.isArray(p.items) ? p.items : [],
+            })))
             if (!nombre.trim() && data.cliente?.nombre) {
               setNombre(data.cliente.nombre)
             }
@@ -287,16 +286,15 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   }, [telefono, phonePrefix])
 
   // ── Apply last order ──────────────────────────────────────────────────────
-  function applyLastOrder() {
-    if (!lastOrder) return
-    const td = lastOrder.tipo_despacho
+  function applyLastOrder(order: LastOrderData) {
+    const td = order.tipo_despacho
     if (td === 'retiro' || td === 'delivery' || td === 'mesa') setTipoDespacho(td)
-    if (lastOrder.direccion) setDireccion(lastOrder.direccion)
-    if (lastOrder.zona_id)   setZonaId(lastOrder.zona_id)
-    if (lastOrder.metodo_pago && paymentMethods.includes(lastOrder.metodo_pago)) {
-      setMetodoPago(lastOrder.metodo_pago)
+    if (order.direccion) setDireccion(order.direccion)
+    if (order.zona_id)   setZonaId(order.zona_id)
+    if (order.metodo_pago && paymentMethods.includes(order.metodo_pago)) {
+      setMetodoPago(order.metodo_pago)
     }
-    setCart(buildCartFromItems(lastOrder.items))
+    setCart(buildCartFromItems(order.items))
     setLookupApplied(true)
   }
 
@@ -475,49 +473,55 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                 Buscando historial del cliente…
               </div>
             )}
-            {!lookupLoading && lastOrder && !lookupApplied && (
-              <div className="mt-2 rounded-xl border-2 p-3"
-                style={{ borderColor: `${accent}50`, backgroundColor: `${accent}08` }}>
-                <div className="flex items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold mb-0.5" style={{ color: accent }}>
-                      🔁 {lastOrder.nombre ? `${lastOrder.nombre} — último pedido` : 'Último pedido encontrado'}
-                    </p>
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      {lastOrder.items.length > 0
-                        ? lastOrder.items.slice(0, 3).map(i => `${i.quantity}× ${i.item_name}`).join(', ')
-                            + (lastOrder.items.length > 3 ? ` +${lastOrder.items.length - 3} más` : '')
-                        : 'Sin ítems registrados'}
-                    </p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">
-                      {lastOrder.tipo_despacho ?? '—'}
-                      {lastOrder.metodo_pago ? ` · ${lastOrder.metodo_pago}` : ''}
-                      {lastOrder.direccion ? ` · ${lastOrder.direccion}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <button
-                      onClick={applyLastOrder}
-                      className="text-xs font-bold px-3 py-1.5 rounded-xl text-white transition-opacity"
-                      style={{ backgroundColor: accent }}
-                    >
-                      ✓ Usar pedido
-                    </button>
-                    <button
-                      onClick={() => setLastOrder(null)}
-                      className="text-xs px-3 py-1.5 rounded-xl text-gray-500 border border-gray-200 hover:bg-gray-50"
-                    >
-                      Ignorar
-                    </button>
-                  </div>
+            {!lookupLoading && lastOrders.length > 0 && !lookupApplied && (
+              <div className="mt-2 rounded-xl border-2 overflow-hidden"
+                style={{ borderColor: `${accent}40` }}>
+                <div className="px-3 py-1.5 flex items-center gap-1.5"
+                  style={{ backgroundColor: `${accent}12` }}>
+                  <span className="text-xs font-bold" style={{ color: accent }}>
+                    🔁 {lastOrders[0].nombre
+                      ? `Últimos pedidos de ${lastOrders[0].nombre}`
+                      : 'Últimos pedidos encontrados'}
+                  </span>
+                  <span className="ml-auto text-[11px] text-gray-400">
+                    {lastOrders.length === 1 ? '1 pedido' : `${lastOrders.length} pedidos`}
+                  </span>
+                  <button onClick={() => setLastOrders([])}
+                    className="text-gray-300 hover:text-gray-500 text-base leading-none ml-1">×</button>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {lastOrders.map((order, idx) => (
+                    <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-800 truncate">
+                          {order.items.length > 0
+                            ? order.items.slice(0, 2).map(i => `${i.quantity}× ${i.item_name}`).join(', ')
+                                + (order.items.length > 2 ? ` +${order.items.length - 2} más` : '')
+                            : 'Sin ítems'}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          {order.tipo_despacho ?? '—'}
+                          {order.metodo_pago ? ` · ${order.metodo_pago}` : ''}
+                          {order.direccion ? ` · ${order.direccion.slice(0, 25)}${order.direccion.length > 25 ? '…' : ''}` : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => applyLastOrder(order)}
+                        className="shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg text-white"
+                        style={{ backgroundColor: accent }}
+                      >
+                        Usar
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
             {!lookupLoading && lookupApplied && (
               <div className="mt-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 rounded-xl px-3 py-2 border border-green-200">
-                <span>✓ Pedido anterior cargado</span>
+                <span>✓ Pedido cargado</span>
                 <button
-                  onClick={() => { setLookupApplied(false); setCart([]) }}
+                  onClick={() => { setLookupApplied(false); setLastOrders([]); setCart([]) }}
                   className="ml-auto text-xs text-gray-400 hover:text-gray-600 underline"
                 >
                   deshacer
