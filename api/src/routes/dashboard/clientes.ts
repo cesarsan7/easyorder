@@ -35,7 +35,6 @@ interface PedidoClienteRow {
   items:           unknown[] | null;
   notas:           unknown | null;
   direccion:       string | null;
-  zona_id:         number | null;
   created_at:      Date;
 }
 
@@ -69,7 +68,7 @@ function mapPedidoCliente(row: PedidoClienteRow) {
     items:         Array.isArray(row.items) ? row.items : [],
     notas:         row.notas ?? null,
     direccion:     row.direccion ?? null,
-    zona_id:       row.zona_id ?? null,
+    zona_id:       null,   // zona_id removed from query — column may not exist yet
     created_at:    row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
   };
 }
@@ -197,7 +196,6 @@ clientesRoutes.get('/:slug/clientes/:telefono', async (c) => {
         COALESCE(p.items, '[]'::jsonb)                     AS items,
         p.notas,
         p.direccion,
-        p.zona_id,
         p.created_at
       FROM pedidos p
       WHERE p.telefono      = ${telefono}
