@@ -131,10 +131,11 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
   const [cart,       setCart]       = useState<CartLine[]>([])
 
   // UI
-  const [notas,       setNotas]       = useState('')
-  const [saving,      setSaving]      = useState(false)
-  const [error,       setError]       = useState('')
-  const [loadingMenu, setLoadingMenu] = useState(true)
+  const [notas,        setNotas]        = useState('')
+  const [saving,       setSaving]       = useState(false)
+  const [error,        setError]        = useState('')
+  const [loadingMenu,  setLoadingMenu]  = useState(true)
+  const [lookupLimit,  setLookupLimit]  = useState(5)
 
   // Phone lookup — last orders
   const [lastOrders,     setLastOrders]     = useState<LastOrderData[]>([])
@@ -158,12 +159,13 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
         setCategories(d.categories ?? [])
       }
       if (restRes.ok) {
-        const d: { payment_methods?: string[]; phone_prefix?: string; servicio_mesa?: boolean } = await restRes.json()
+        const d: { payment_methods?: string[]; phone_prefix?: string; servicio_mesa?: boolean; lookup_pedidos_limit?: number } = await restRes.json()
         const methods = d.payment_methods ?? []
         setPaymentMethods(methods)
         if (methods.length > 0) setMetodoPago(methods[0])
         if (d.phone_prefix) setPhonePrefix(d.phone_prefix)
         if (d.servicio_mesa) setServicioMesa(true)
+        if (d.lookup_pedidos_limit) setLookupLimit(d.lookup_pedidos_limit)
       }
       if (zonesRes.ok) {
         const d: { zones: DeliveryZone[] } = await zonesRes.json()
@@ -257,7 +259,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
             }>
           }
           console.log('[lookup] pedidos:', data.pedidos?.length, '| items[0]:', data.pedidos?.[0]?.items?.length)
-          const pedidos = data.pedidos?.slice(0, 5) ?? []
+          const pedidos = data.pedidos?.slice(0, lookupLimit) ?? []
           if (pedidos.length > 0) {
             setLastOrders(pedidos.map(p => ({
               nombre:        data.cliente?.nombre ?? null,
@@ -269,7 +271,7 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
               total:         typeof p.total === 'number' ? p.total : parseFloat(String(p.total ?? '0')),
               created_at:    p.created_at ?? null,
             })))
-            if (!nombre.trim() && data.cliente?.nombre) {
+            if (data.cliente?.nombre) {
               setNombre(data.cliente.nombre)
             }
           } else {
@@ -562,10 +564,10 @@ export default function ManualOrderModal({ slug, accent, moneda, onClose, onCrea
                           {/* Right: Usar button */}
                           <button
                             onClick={() => applyLastOrder(order)}
-                            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg text-white self-center"
+                            className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg text-white self-center whitespace-nowrap"
                             style={{ backgroundColor: accent }}
                           >
-                            Usar
+                            ↩ Reordenar
                           </button>
                         </div>
                       </div>
